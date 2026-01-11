@@ -1,0 +1,100 @@
+/**
+ * 第三方外掛相容性樣式
+ * 
+ * 此檔案處理各種第三方外掛的相容性問題
+ * 
+ * @package YANGSHEEP_Checkout_Optimization
+ * @version 1.0.0
+ * @since 2026-01-08
+ */
+
+/* ========================================
+   PayUni 統一金流超取相容性
+   ======================================== */
+
+/**
+ * 功能：隱藏 PayUni 超取的額外標題文字
+ * 外掛：PayUni 統一金流
+ * 說明：PayUni 會在超取選項旁顯示「超商門市」標題，與我們的設計不符
+ */
+.yangsheep-shipping-cards-container .payuni-select-store-heading {
+    display: none !important;
+}
+
+/**
+ * 功能：超取門市選擇器設為全寬
+ * 外掛：PayUni 統一金流
+ */
+.payuni-store-selector {
+    width: 100%;
+    margin-top: 15px;
+}
+
+.payuni-store-selector .payuni-store-map-btn {
+    width: 100%;
+    display: block;
+}
+
+
+
+/* ========================================
+   ECPay 綠界超取相容性
+   ======================================== */
+
+/**
+ * 功能：隱藏 ECPay 超取的額外標題
+ * 外掛：ECPay 綠界金流
+ */
+.yangsheep-shipping-cards-container .ecpay-shipping-store-title,
+.yangsheep-shipping-cards-container [class*="ecpay"]>label {
+    display: none !important;
+}
+
+/**
+ * 功能：ECPay 超取按鈕全寬
+ * 外掛：ECPay 綠界金流
+ */
+.yangsheep-shipping-cards-container [class*="ecpay"] button {
+    width: 100%;
+    display: block;
+    margin-top: 15px;
+}
+
+/* ========================================
+   RY WooCommerce Tools 相容性
+   ======================================== */
+
+/**
+ * 功能：隱藏 RY Tools 超取的額外元素
+ * 外掛：RY WooCommerce Tools
+ */
+.yangsheep-shipping-cards-container .ry-shipping-store-selector>label,
+.yangsheep-shipping-cards-container .ry-shipping-store-selector>span:not(.ry-store-name) {
+    display: none !important;
+}
+
+/* ========================================
+   通用超取按鈕樣式
+   ======================================== */
+
+/**
+ * 功能：統一所有超取按鈕的樣式
+ * 說明：確保按鈕在容器內全寬顯示
+ */
+.yangsheep-shipping-cards-container button[type="button"]:not(.yangsheep-qty-btn) {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px 20px;
+    background: var(--theme-button-background-initial-color, #6b7a95);
+    color: #fff;
+    border: none;
+    border-radius: var(--block-border-radius, 8px);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.yangsheep-shipping-cards-container button[type="button"]:not(.yangsheep-qty-btn):hover {
+    opacity: 0.9;
+}

@@ -1,0 +1,283 @@
+/**
+ * 結帳側邊欄樣式
+ * 
+ * @package YANGSHEEP_Checkout_Optimization
+ * @version 1.3.0
+ * @since 2026-01-07
+ */
+
+/* ===== 側邊欄容器 ===== */
+.yangsheep-checkout-sidebar-wrapper {
+    margin-bottom: 20px;
+}
+
+/* ===== 訂單金額摘要 ===== */
+.yangsheep-order-summary {
+    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    background-color: var(--yangsheep-sidebar-bg, #ffffff);
+    border-radius: var(--block-border-radius, 8px);
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+/* H3 標題：與區塊標題相同配色 */
+.yangsheep-sidebar-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    color: inherit;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.yangsheep-summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.yangsheep-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* 最後一個以及總計前一個（運費）都不要底線 */
+.yangsheep-summary-row:last-child,
+.yangsheep-summary-row:only-child,
+.yangsheep-summary-row+.yangsheep-summary-row.yangsheep-total {
+    border-bottom: none;
+}
+
+/* 運費行無底線（總計會有上方邊框，所以運費不需要底線） */
+.yangsheep-summary-row.yangsheep-shipping {
+    border-bottom: none;
+}
+
+/* 商品小計、運費 label */
+.yangsheep-summary-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* 金額 */
+.yangsheep-summary-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3c3c3c;
+}
+
+/* 總計行特殊樣式 */
+.yangsheep-summary-row.yangsheep-total {
+    border-top: none;
+    border-bottom: none;
+    padding-top: 10px;
+    margin-top: 5px;
+}
+
+/* 應付總額 文字 12px */
+.yangsheep-summary-row.yangsheep-total .yangsheep-summary-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+.yangsheep-total-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.yangsheep-currency {
+    font-size: 14px;
+    color: var(--theme-button-background-initial-color, #c9a86c);
+}
+
+/* 應付總額 金額 24px */
+.yangsheep-amount {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--theme-button-background-initial-color, #c9a86c);
+    line-height: 1;
+}
+
+/* 折扣行 */
+.yangsheep-summary-row.yangsheep-discount .yangsheep-summary-value {
+    color: #e74c3c;
+}
+
+/* 免運費 */
+.yangsheep-free-shipping {
+    color: #28a745;
+    font-weight: 500;
+}
+
+/* ===== 運輸方式顯示區塊 ===== */
+.yangsheep-shipping-display {
+    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    background-color: var(--yangsheep-sidebar-bg, #ffffff);
+    border-radius: var(--block-border-radius, 8px);
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* 運輸方式 label */
+.yangsheep-shipping-display-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* 運輸方式名稱 */
+.yangsheep-shipping-display-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3c3c3c;
+}
+
+/* ===== 購物車內容 ===== */
+.yangsheep-cart-contents {
+    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    background-color: var(--yangsheep-sidebar-bg, #ffffff);
+    border-radius: var(--block-border-radius, 8px);
+    padding: 20px;
+    /* 不需要 margin-bottom，因為 yangsheep-checkout-sidebar-wrapper 本身有 margin */
+}
+
+.yangsheep-collapsible {
+    cursor: pointer;
+    user-select: none;
+}
+
+.yangsheep-toggle-icon {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.yangsheep-collapsible.collapsed .yangsheep-toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.yangsheep-cart-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.yangsheep-cart-items.collapsed {
+    display: none;
+}
+
+.yangsheep-cart-item {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.yangsheep-cart-item:last-child,
+.yangsheep-cart-item:only-child {
+    border-bottom: none;
+}
+
+.yangsheep-cart-item .yangsheep-item-name {
+    flex: 1;
+    text-align: left;
+}
+
+.yangsheep-cart-item .yangsheep-item-qty {
+    flex-shrink: 0;
+    text-align: right;
+}
+
+/* 購物車商品名稱 */
+.yangsheep-item-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* 購物車數量 */
+.yangsheep-item-qty {
+    font-size: 12px;
+    color: #3c3c3c;
+}
+
+.yangsheep-cart-summary {
+    font-size: 12px;
+    color: #3c3c3c;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: none;
+}
+
+/* ===== RWD: 桌機版 >=1000px ===== */
+@media (min-width: 1000px) {
+
+    .yangsheep-order-summary,
+    .yangsheep-cart-contents,
+    .yangsheep-shipping-display {
+        padding: 20px;
+    }
+
+    /* 
+     * 側邊欄樣式由 yangsheep-checkout.css 統一控制
+     * 這裡只設定內部元素樣式
+     */
+}
+
+/* ===== RWD: 手機版 <=999px ===== */
+@media (max-width: 999.9px) {
+
+    .yangsheep-order-summary,
+    .yangsheep-cart-contents {
+        padding: 15px;
+    }
+
+    .yangsheep-amount {
+        font-size: 24px;
+    }
+
+    /* 商品明細：手機版佈局調整 - 橫向排列 */
+    .yangsheep-cart-items {
+        gap: 5px;
+    }
+
+    .yangsheep-cart-item {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+    }
+
+    /* 商品名稱：左側，佔據剩餘空間 */
+    .yangsheep-cart-item .yangsheep-item-name {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    /* 數量：右側，固定寬度 */
+    .yangsheep-cart-item .yangsheep-item-qty {
+        flex-shrink: 0;
+        text-align: right;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+}

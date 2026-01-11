@@ -1,0 +1,101 @@
+/* === MyAccount 導航與按鈕樣式 === */
+.woocommerce-MyAccount-navigation {
+    float: none !important;
+    width: 100% !important;
+    background: #f5f5f5;
+    margin-bottom: 20px;
+}
+.woocommerce-MyAccount-navigation ul {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    background: #eee;
+    margin: 0;
+    padding: 0;
+}
+.woocommerce-MyAccount-navigation ul li {
+    list-style: none;
+    flex: 1 1 0;
+    max-width: none;
+}
+.woocommerce-MyAccount-navigation ul li a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px !important;
+    font-size: 16px;
+    font-weight: 600;
+    height: 55px !important;
+    box-sizing: border-box;
+    text-align: center;
+}
+/* PC 微調 */
+@media (min-width: 768px) {
+    .woocommerce-MyAccount-navigation ul li a {
+        padding: 0 5px !important;
+        height: 60px !important;
+        font-weight: 500;
+    }
+}
+/* 999px 以下縮文字 */
+@media (max-width: 999px) {
+    .woocommerce-MyAccount-navigation ul li a {
+        font-size: 14px !important;
+    }
+}
+/* 750px 以下垂直 */
+@media (max-width: 750px) {
+    .woocommerce-MyAccount-navigation ul {
+        flex-direction: column !important;
+    }
+    .woocommerce-MyAccount-navigation ul li a {
+        justify-content: flex-start !important;
+        font-size: 16px !important;
+    }
+}
+/* 全寬 ≥ 690px，避免 Blocksy 干擾 */
+@media (min-width: 690px) {
+    .ct-woo-account {
+        display: flex !important;
+        flex-direction: column;
+    }
+}
+/* 內容區 */
+.woocommerce-MyAccount-content {
+    padding: 20px 0 0;
+}
+/* 右上連結 */
+.ct-account-user-box a {
+    font-size: 16px;
+}
+/* 訂單按鈕 */
+td.woocommerce-orders-table__cell-order-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+}
+td.woocommerce-orders-table__cell-order-actions a {
+    padding: 5px !important;
+    margin: 5px 0 !important;
+    background: none;
+}
+/* 條碼按鈕 */
+.paynow_payment_details td a {
+    background: #950a0a;
+    padding: 10px;
+    border-radius: 5px;
+    color: #fff !important;
+}
+.paynow_payment_details td a:hover {
+    background: #da6262;
+}
+/* 容器最小高度 */
+.ct-container-full {
+    min-height: 500px;
+}
+/* 歡迎文字 */
+.ct-account-welcome {
+    font-size: 18px;
+    font-weight: 600;
+}

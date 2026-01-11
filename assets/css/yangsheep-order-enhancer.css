@@ -1,0 +1,424 @@
+/* 
+ * YangSheep Checkout Optimizer - Order Enhancer
+ * 卡片式訂單列表與物流詳情樣式
+ */
+
+/* ----------------------------------------------------
+   Logistics Status Badge
+   ---------------------------------------------------- */
+.ys-shipping-status-cell {
+    position: relative;
+    white-space: nowrap;
+}
+
+/* 服務名稱（如：7-11 超商取貨） */
+.ys-status-service-name {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.ys-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    /* 使用 CSS 變數，可由後台自訂 */
+    background: var(--ys-status-default-bg, #f0f0f0);
+    color: var(--ys-status-default-text, #666);
+}
+
+/* Status Colors - 使用柔和淺色 */
+.ys-status-pending {
+    background: var(--ys-status-pending-bg, #f5f5f5);
+    color: var(--ys-status-pending-text, #888);
+}
+
+.ys-status-preparing,
+.ys-status-waiting {
+    background: var(--ys-status-preparing-bg, #e8f4fd);
+    color: var(--ys-status-preparing-text, #3b82f6);
+}
+
+.ys-status-shipping {
+    background: var(--ys-status-shipping-bg, #fef3e2);
+    color: var(--ys-status-shipping-text, #f59e0b);
+}
+
+.ys-status-arrived {
+    background: var(--ys-status-arrived-bg, #ecfdf5);
+    color: var(--ys-status-arrived-text, #10b981);
+}
+
+.ys-status-completed {
+    background: var(--ys-status-completed-bg, #f3f4f6);
+    color: var(--ys-status-completed-text, #6b7280);
+}
+
+.ys-status-default {
+    background: var(--ys-status-default-bg, #f5f5f5);
+    color: var(--ys-status-default-text, #666);
+}
+
+/* Main Table Styling Upgrades */
+.woocommerce-account .woocommerce-orders-table {
+    border-collapse: separate;
+    border-spacing: 0 10px;
+    /* Gap between rows for card effect */
+}
+
+/* Row Styling - Rounded Corners & Shadow */
+.woocommerce-account .woocommerce-orders-table__row {
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.woocommerce-account .woocommerce-orders-table__cell,
+.woocommerce-account .woocommerce-orders-table__header {
+    vertical-align: middle !important;
+    padding: 15px 10px !important;
+    font-size: 14px !important;
+    border: none !important;
+    /* Remove default borders to keep card look */
+}
+
+/* Rounded Corners for Row via Cells */
+.woocommerce-account .woocommerce-orders-table__row td:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+.woocommerce-account .woocommerce-orders-table__row td:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+/* Expand Toggle Button */
+.ys-expand-toggle {
+    background: none;
+    border: none;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    padding: 0;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
+
+.ys-expand-toggle:hover {
+    opacity: 0.7;
+}
+
+.ys-expand-toggle.expanded .ys-toggle-triangle {
+    transform: rotate(180deg);
+}
+
+.ys-toggle-triangle {
+    font-size: 10px;
+    color: #999;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+/* ----------------------------------------------------
+   Card Style Order List (My Account)
+   ---------------------------------------------------- */
+
+/* Remove Default Table Borders */
+table.woocommerce-orders-table {
+    border: none !important;
+    border-collapse: separate !important;
+    border-spacing: 0 15px !important;
+    /* Card Spacing */
+}
+
+table.woocommerce-orders-table th,
+table.woocommerce-orders-table td {
+    border: none !important;
+}
+
+/* Header style - unobtrusive */
+table.woocommerce-orders-table th {
+    padding: 10px 20px !important;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+/* Row as Card */
+table.woocommerce-orders-table tr.woocommerce-orders-table__row {
+    background-color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    /* Soft Shadow */
+    border-radius: 10px;
+    /* As requested: 10px */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+table.woocommerce-orders-table tr.woocommerce-orders-table__row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Cell Styling */
+table.woocommerce-orders-table tr.woocommerce-orders-table__row td {
+    background-color: #fff;
+    padding: 20px !important;
+    vertical-align: middle;
+}
+
+/* Rounded Corners for First and Last Cells */
+table.woocommerce-orders-table tr.woocommerce-orders-table__row td:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+table.woocommerce-orders-table tr.woocommerce-orders-table__row td:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    text-align: right;
+}
+
+/* Fix for Expanded Panel: Adjust Bottom Radius used when expanded */
+table.woocommerce-orders-table tr.woocommerce-orders-table__row.has-expanded-panel td:first-child {
+    border-bottom-left-radius: 0;
+}
+
+table.woocommerce-orders-table tr.woocommerce-orders-table__row.has-expanded-panel td:last-child {
+    border-bottom-right-radius: 0;
+}
+
+/* Order Number Link */
+.woocommerce-orders-table__cell-order-number a {
+    font-weight: 700;
+    color: #333;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+/* Date */
+.woocommerce-orders-table__cell-order-date {
+    color: #777;
+    font-size: 14px;
+}
+
+/* 'View' Button Polish */
+.woocommerce-button.button.view {
+    background-color: #ebf0f5 !important;
+    color: #333 !important;
+    font-weight: 500 !important;
+    padding: 6px 16px !important;
+    border-radius: 20px !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    transition: all 0.2s;
+}
+
+.woocommerce-button.button.view:hover {
+    background-color: #dfe6ed !important;
+    color: #000 !important;
+}
+
+/* ----------------------------------------------------
+   Logistics Expanded Panel
+   ---------------------------------------------------- */
+
+/* The hidden row container */
+tr.ys-expanded-row td {
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* The panel itself */
+.ys-order-expanded-panel {
+    background: #fafafa;
+    border-top: 1px solid #eee;
+    padding: 20px 25px;
+    margin: 0 5px 15px 5px;
+    /* Inset slightly */
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    /* Match card shadow */
+    animation: ys-slideDown 0.3s ease-out;
+}
+
+@keyframes ys-slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Panel Header */
+.ys-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.ys-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+}
+
+.ys-panel-refresh {
+    font-size: 12px;
+    color: #0073aa;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ys-panel-refresh:hover {
+    text-decoration: underline;
+}
+
+/* Panel Content */
+.ys-status-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.ys-status-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1565c0;
+    margin-bottom: 5px;
+}
+
+.ys-status-time {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Mini Progress Bar */
+.ys-mini-progress {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    position: relative;
+    padding: 0 5%;
+}
+
+/* 底層灰色線條 */
+.ys-mini-progress::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 5%;
+    right: 5%;
+    height: 3px;
+    background: #ddd;
+    z-index: 0;
+}
+
+/* 活躍段落的藍色線條 - 透過 JS 動態計算 */
+.ys-mini-progress::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 5%;
+    height: 3px;
+    background: #1565c0;
+    z-index: 1;
+    width: var(--progress-width, 0%);
+    transition: width 0.3s ease;
+}
+
+.ys-mini-step {
+    position: relative;
+    text-align: center;
+    z-index: 2;
+    flex: 1;
+}
+
+.ys-mini-step .step-dot {
+    width: 14px;
+    height: 14px;
+    background: #ddd;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    border: 2px solid #fafafa;
+    transition: all 0.3s ease;
+}
+
+.ys-mini-step.active .step-dot {
+    background: #1565c0;
+    transform: scale(1.2);
+    border-color: #1565c0;
+}
+
+.ys-mini-step .step-label {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 2px;
+}
+
+.ys-mini-step.active .step-label {
+    color: #1565c0;
+    font-weight: 600;
+}
+
+/* Details Grid */
+.ys-panel-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.detail-item .detail-label {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.detail-item .detail-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+.ys-panel-loading,
+.ys-panel-error {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+}
+
+.ys-panel-error {
+    color: #d32f2f;
+}

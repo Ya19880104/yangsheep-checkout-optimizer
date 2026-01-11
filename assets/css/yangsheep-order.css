@@ -1,0 +1,16 @@
+/* 訂單明細 Table */
+.woocommerce-order-details table.order_details {
+    border-bottom: 2px solid #e2c6c4;
+    margin-bottom: 50px;
+}
+/* 顧客資料區兩欄顯示 */
+.woocommerce-customer-details {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px;
+}
+@media (min-width: 768px) {
+    .woocommerce-customer-details {
+        flex-direction: row;
+    }
+}
