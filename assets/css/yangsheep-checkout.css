@@ -1,3 +1,60 @@
+/* ===== 莫蘭迪配色系統 - 固定文字色彩變數 ===== */
+/* 這些是不連動後台的固定文字色彩，用於統一視覺 */
+:root {
+    /* 主要文字色 - 深灰（高對比） */
+    --ys-text-primary: #3d4852;
+    /* 次要文字色 - 中灰 */
+    --ys-text-secondary: #5a6570;
+    /* 輔助文字色 - 淺灰（說明文字、placeholder） */
+    --ys-text-muted: #8a939c;
+    /* 標題文字色 */
+    --ys-text-heading: #2d3748;
+    /* 錯誤/刪除色 */
+    --ys-text-danger: #c53030;
+    /* 白色文字 */
+    --ys-text-white: #ffffff;
+}
+
+/* ===== 結帳頁面基礎文字樣式 ===== */
+.yangsheep-design-checkout-page {
+    color: var(--ys-text-primary);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+/* 段落文字 */
+.yangsheep-design-checkout-page p {
+    color: var(--ys-text-primary);
+    margin-bottom: 12px;
+}
+
+/* 說明文字 */
+.yangsheep-design-checkout-page .description,
+.yangsheep-design-checkout-page .yangsheep-coupon-text,
+.yangsheep-design-checkout-page .woocommerce-info {
+    color: var(--ys-text-secondary);
+    font-size: 14px;
+}
+
+/* 標籤文字 */
+.yangsheep-design-checkout-page label {
+    color: var(--ys-text-primary);
+    font-weight: 500;
+}
+
+/* 表單欄位文字 */
+.yangsheep-design-checkout-page input,
+.yangsheep-design-checkout-page select,
+.yangsheep-design-checkout-page textarea {
+    color: var(--ys-text-primary);
+}
+
+/* placeholder 文字 */
+.yangsheep-design-checkout-page input::placeholder,
+.yangsheep-design-checkout-page textarea::placeholder {
+    color: var(--ys-text-muted);
+}
+
 /* 區塊順序 */
 .yangsheep-login-block {
     order: 1;
@@ -268,11 +325,12 @@ ul#shipping_method li {
 .yangsheep-shipping-title,
 .ct-order-review h3,
 h3.yangsheep-h3-title,
-h3#order_review_heading {
+h3#order_review_heading,
+.yangsheep-payment .yangsheep-h3-title {
     margin: 0 0 15px 0;
     font-size: 18px;
     font-weight: 600;
-    color: inherit;
+    color: var(--ys-text-heading);
 }
 
 /* ===== 同訂購人 / 備註 Checkbox 樣式（與物流卡片一致）===== */
@@ -290,7 +348,7 @@ h3#order_review_heading {
 .yangsheep-order-notes-toggle span {
     font-size: 16px;
     font-weight: 500;
-    color: #333;
+    color: var(--ys-text-primary);
     line-height: 1.4;
 }
 
@@ -493,7 +551,7 @@ a.woocommerce-remove-coupon {
     margin: 10px 0 0 !important;
     display: block !important;
     width: 100% !important;
-    color: #53565C !important;
+    color: var(--ys-text-secondary) !important;
 }
 
 .yangsheep-coupon-point .ywpar_apply_discounts {
@@ -631,7 +689,7 @@ a.woocommerce-remove-coupon {
 
     .yangsheep-account-note {
         font-size: 13px;
-        color: #888;
+        color: var(--ys-text-muted);
         margin-bottom: 10px;
         padding: 10px 15px;
         background: rgba(0, 0, 0, 0.03);
@@ -741,7 +799,7 @@ a.woocommerce-remove-coupon {
     background: transparent;
     cursor: pointer;
     font-size: 20px;
-    color: #ccc;
+    color: var(--ys-text-muted);
     transition: color 0.2s ease;
     display: flex;
     align-items: center;
@@ -751,7 +809,7 @@ a.woocommerce-remove-coupon {
 }
 
 .yangsheep-cart-item .yangsheep-remove-item:hover {
-    color: #e74c3c;
+    color: var(--ys-text-danger);
 }
 
 /* 商品圖片 */
@@ -780,14 +838,14 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-cart-item .yangsheep-item-name {
     font-size: 14px;
-    color: #333;
+    color: var(--ys-text-primary);
     line-height: 1.4;
     margin-bottom: 4px;
 }
 
 .yangsheep-cart-item .yangsheep-item-price {
     font-size: 13px;
-    color: #888;
+    color: var(--ys-text-muted);
 }
 
 /* 數量控制 */
@@ -811,7 +869,7 @@ a.woocommerce-remove-coupon {
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    color: #666;
+    color: var(--ys-text-secondary);
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -821,7 +879,7 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-qty-btn:hover {
     background: var(--theme-button-background-initial-color, #6b7a95);
-    color: #fff;
+    color: var(--ys-text-white);
 }
 
 .yangsheep-qty-value {
@@ -900,7 +958,7 @@ a.woocommerce-remove-coupon {
     height: 20px !important;
     border: none !important;
     background: rgba(0, 0, 0, 0.1) !important;
-    color: #666 !important;
+    color: var(--ys-text-secondary) !important;
     border-radius: 50% !important;
     cursor: pointer;
     font-size: 14px;
@@ -916,7 +974,7 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-order-item > .yangsheep-remove-item:hover {
     background: #e74c3c !important;
-    color: #fff !important;
+    color: var(--ys-text-white) !important;
 }
 
 /* 內容區塊 - 電腦版 Flex 橫向 */
@@ -951,7 +1009,7 @@ a.woocommerce-remove-coupon {
 .yangsheep-order-item .yangsheep-item-name {
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ys-text-primary);
     margin-bottom: 4px;
 }
 
@@ -968,7 +1026,7 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-order-item .yangsheep-item-price {
     font-size: 13px;
-    color: #888;
+    color: var(--ys-text-muted);
 }
 
 /* 數量控制 */
@@ -992,7 +1050,7 @@ a.woocommerce-remove-coupon {
     background: none;
     cursor: pointer;
     font-size: 16px;
-    color: #666;
+    color: var(--ys-text-secondary);
     line-height: 1;
 }
 
@@ -1082,7 +1140,7 @@ a.woocommerce-remove-coupon {
 
     .yangsheep-order-item .yangsheep-item-price {
         font-size: 12px;
-        color: #888;
+        color: var(--ys-text-muted);
     }
 
     /* 下排：數量控制 + 小計 - row 2, col 2 */
