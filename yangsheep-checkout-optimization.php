@@ -183,15 +183,11 @@ function yangsheep_render_order_items() {
     echo '</div>';
 }
 
-// 自訂訂單總計輸出
+// 自訂訂單總計輸出（不再呼叫 woocommerce_order_review 避免重複渲染商品項目）
 add_action('yangsheep_order_totals', 'yangsheep_render_order_totals');
 function yangsheep_render_order_totals() {
-    // 使用 WooCommerce 的 cart totals（隱藏但保留功能性）
-    ?>
-    <div id="order_review" class="woocommerce-checkout-review-order" style="display:none;">
-        <?php woocommerce_order_review(); ?>
-    </div>
-    <?php
+    // 直接輸出必要的 totals，不再使用 woocommerce_order_review()
+    // 這樣可以避免主題 hook 插入額外的商品項目
 }
 
 // 註冊 AJAX Fragment 更新自訂商品項目

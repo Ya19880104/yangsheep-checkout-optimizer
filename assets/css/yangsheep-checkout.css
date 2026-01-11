@@ -1165,14 +1165,9 @@ a.woocommerce-remove-coupon {
     /* ===== 收件人姓名電話強制並排（一般模式）===== */
     /* 確保姓名和電話欄位在 Grid 中保持並排 */
     #shipping_last_name_field,
-    #shipping_first_name_field {
-        grid-column: span 1 !important;
-        width: auto !important;
-    }
-
+    #shipping_first_name_field,
     #shipping_phone_field {
         grid-column: span 1 !important;
-        width: auto !important;
     }
 }
 
@@ -1193,12 +1188,18 @@ a.woocommerce-remove-coupon {
         grid-column: 1 / -1;
     }
 
+    /* 建立帳號區塊全寬 */
+    .woocommerce-billing-fields__field-wrapper .yangsheep-create-account,
+    .woocommerce-billing-fields__field-wrapper .create-account,
+    #createaccount_field {
+        grid-column: 1 / -1;
+    }
+
     /* 收件人姓名電話強制並排 */
     #shipping_last_name_field,
     #shipping_first_name_field,
     #shipping_phone_field {
         grid-column: span 1 !important;
-        width: auto !important;
     }
 }
 
