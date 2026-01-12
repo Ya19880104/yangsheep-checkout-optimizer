@@ -22,10 +22,10 @@
 
 /* H3 標題：與區塊標題相同配色 */
 .yangsheep-sidebar-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     margin: 0 0 15px 0;
-    color: inherit;
+    color: var(--ys-text-heading, #2d3748);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -59,16 +59,16 @@
 
 /* 商品小計、運費 label */
 .yangsheep-summary-label {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ys-text-secondary, #5a6570);
 }
 
 /* 金額 */
 .yangsheep-summary-value {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
-    color: #3c3c3c;
+    color: var(--ys-text-primary, #3d4852);
 }
 
 /* 總計行特殊樣式 */
@@ -79,11 +79,11 @@
     margin-top: 5px;
 }
 
-/* 應付總額 文字 12px */
+/* 應付總額 文字 */
 .yangsheep-summary-row.yangsheep-total .yangsheep-summary-label {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
-    color: #333;
+    color: var(--ys-text-secondary, #5a6570);
 }
 
 .yangsheep-total-amount {
@@ -107,12 +107,12 @@
 
 /* 折扣行 */
 .yangsheep-summary-row.yangsheep-discount .yangsheep-summary-value {
-    color: #e74c3c;
+    color: var(--ys-text-danger, #c53030);
 }
 
 /* 免運費 */
 .yangsheep-free-shipping {
-    color: #28a745;
+    color: #2f855a;
     font-weight: 500;
 }
 
@@ -128,18 +128,18 @@
     gap: 5px;
 }
 
-/* 運輸方式 label */
+/* 運輸方式 label - 與區塊標題一致 */
 .yangsheep-shipping-display-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ys-text-heading, #2d3748);
 }
 
 /* 運輸方式名稱 */
 .yangsheep-shipping-display-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: #3c3c3c;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ys-text-primary, #3d4852);
 }
 
 /* ===== 購物車內容 ===== */
@@ -204,21 +204,23 @@
 
 /* 購物車商品名稱 */
 .yangsheep-item-name {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ys-text-primary, #3d4852);
     line-height: 1.4;
 }
 
 /* 購物車數量 */
 .yangsheep-item-qty {
-    font-size: 12px;
-    color: #3c3c3c;
+    font-size: 14px;
+    color: var(--ys-text-secondary, #5a6570);
 }
 
+/* 合計有X項商品 - 與應付總額一致 */
 .yangsheep-cart-summary {
-    font-size: 12px;
-    color: #3c3c3c;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ys-text-secondary, #5a6570);
     margin-top: 10px;
     padding-top: 10px;
     border-top: none;

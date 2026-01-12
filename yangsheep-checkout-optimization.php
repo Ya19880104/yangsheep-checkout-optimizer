@@ -415,11 +415,8 @@ add_action('wp_head',function(){
     echo '.woocommerce-shipping-fields__field-wrapper .yangsheep-tw-full,';
     echo '.woocommerce-shipping-fields__field-wrapper #shipping_address_1_field {';
     echo 'grid-column: 1 / -1!important;}';
-    // 國家欄位全寬（如果隱藏則不佔空間）
+    // 國家欄位：被移到上方區塊，在這裡隱藏避免佔空間
     echo '.woocommerce-shipping-fields__field-wrapper #shipping_country_field {';
-    echo 'grid-column: 1 / -1!important;}';
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_country_field[style*=\"display: none\"],';
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_country_field.hidden {';
     echo 'display:none!important;}';
     echo '}';
 
