@@ -60,19 +60,19 @@
     order: 1;
 }
 
-.yangsheep-checkout-country {
+.yangsheep-review-wrapper {
     order: 2;
 }
 
-.yangsheep-review-wrapper {
+.yangsheep-smart-coupon {
     order: 3;
 }
 
-.yangsheep-smart-coupon {
+.yangsheep-coupon-block {
     order: 4;
 }
 
-.yangsheep-coupon-block {
+.yangsheep-checkout-country {
     order: 5;
 }
 
