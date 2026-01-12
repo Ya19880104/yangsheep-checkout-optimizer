@@ -7,6 +7,45 @@
 
 ---
 
+## [1.3.34] - 2026-01-12
+
+### 新增
+- **WPLoyalty（購物金）整合功能**
+  - 新增後台「購物金整合」設定頁籤
+  - 自動偵測 WPLoyalty (WooCommerce Loyalty Rewards) 外掛
+  - 美化購物金兌換區塊，與結帳頁面視覺整合
+  - 顯示可用點數、說明文字、兌換按鈕
+  - 按鈕樣式自動連動佈景主題設定
+
+- **側邊欄優惠券刪除按鈕**
+  - 結帳金額摘要中的優惠券現在顯示刪除按鈕
+  - 可直接在側邊欄移除已套用的優惠券
+
+- **訂單狀態設定頁籤**
+  - 將訂單狀態顏色設定獨立為「訂單狀態」頁籤
+  - 後台設定頁面結構優化
+
+### 變更
+- **結帳頁面區塊順序調整**
+  - 國家選擇移至「折扣代碼」與「物流選擇」之間
+  - 新順序：商品明細 → 折扣代碼/購物金 → 國家選擇 → 物流選擇 → 客戶資料 → 付款
+
+### 修復
+- 修正購物金區塊因 JS 時序問題被誤隱藏的問題
+- 修正後台購物金整合頁籤的 DIV 結構
+- 修正後台 Toggle Switch 的 CSS class 名稱不一致問題
+
+### 技術變更
+- 新增 `class-yangsheep-wployalty-integration.php` - WPLoyalty 整合類別
+- 新增 `yangsheep-wployalty.js` - 前端購物金區塊美化處理
+- 新增 `yangsheep-wployalty.css` - 購物金區塊樣式
+- `yangsheep-checkout.js` - 新增 WPLoyalty 整合啟用時跳過購物金區塊管理
+- `class-yangsheep-checkout-sidebar.php` - 新增優惠券顯示與刪除功能
+- `yangsheep-sidebar.css` - 新增優惠券行樣式
+- `form-checkout.php` v3.6.0 - 調整區塊順序
+
+---
+
 ## [1.3.31] - 2026-01-11
 
 ### 變更

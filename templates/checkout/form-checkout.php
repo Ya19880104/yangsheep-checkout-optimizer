@@ -1,19 +1,19 @@
 <?php
 /**
  * Template Override: form-checkout.php
- * 
- * 區塊順序（符合 CSS order）：
+ *
+ * 區塊順序：
  * 1. login-block（layout 外）
- * 2. checkout-country
- * 3. review-wrapper
- * 4. smart-coupon
- * 5. coupon-block
- * 6. shipping-cards-wrapper
- * 7. customer-details
+ * 2. review-wrapper（商品明細）
+ * 3. smart-coupon
+ * 4. coupon-block（折扣代碼 & 購物金）
+ * 5. checkout-country（國家選擇）
+ * 6. shipping-cards-wrapper（物流選擇）
+ * 7. customer-details（客戶資料）
  * 8. sidebar-wrapper（桌機版移至 sidebar-column）
- * 9. payment
- * 
- * @version 3.5.0
+ * 9. payment（付款）
+ *
+ * @version 3.6.0
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 if ( function_exists('WC') && version_compare(WC()->version,'3.5.0','<') ) wc_print_notices();
@@ -35,13 +35,8 @@ $checkout_url=apply_filters('woocommerce_get_checkout_url',wc_get_checkout_url()
     
     <!-- 表單區域 -->
     <form name="checkout" method="post" class="checkout woocommerce-checkout yangsheep-form-column" action="<?php echo esc_url($checkout_url);?>" enctype="multipart/form-data">
-      
-      <!-- 2. 國家選擇 -->
-      <div class="yangsheep-checkout-country">
-        <h3 id="order_country_heading"><?php esc_html_e('請選擇商品運送國家','yangsheep-checkout-optimization');?></h3>
-      </div>
-      
-      <!-- 3. 商品明細 -->
+
+      <!-- 2. 商品明細 -->
       <div class="yangsheep-review-wrapper">
         <div class="yangsheep-order-review">
           <h3 id="order_review_heading"><?php esc_html_e('商品明細','yangsheep-checkout-optimization');?></h3>
@@ -56,18 +51,26 @@ $checkout_url=apply_filters('woocommerce_get_checkout_url',wc_get_checkout_url()
         </div>
       </div>
       
-      <!-- 4. Smart Coupon -->
+      <!-- 3. Smart Coupon -->
       <div class="yangsheep-smart-coupon"></div>
-      
-      <!-- 5. 折扣代碼 -->
+
+      <!-- 4. 折扣代碼 & 購物金 -->
       <div class="yangsheep-coupon-block">
         <div class="yangsheep-coupon">
           <h3 class="yangsheep-h3-title"><?php esc_html_e('折扣代碼','yangsheep-checkout-optimization');?></h3>
           <div class="yangsheep-coupon-text" style="font-size:15px;"><?php esc_html_e('若您有折扣代碼，請直接輸入代碼折抵。','yangsheep-checkout-optimization');?></div>
           <?php do_action('yangsheep_coupon');?>
         </div>
+        <div class="yangsheep-coupon-point">
+          <!-- 購物金區塊：JS 會將 .wlr_point_redeem_message 移入此處 -->
+        </div>
       </div>
-      
+
+      <!-- 5. 國家選擇 -->
+      <div class="yangsheep-checkout-country">
+        <h3 id="order_country_heading"><?php esc_html_e('請選擇商品運送國家','yangsheep-checkout-optimization');?></h3>
+      </div>
+
       <!-- 6. 物流選擇 -->
       <div class="yangsheep-shipping-cards-wrapper">
         <div class="yangsheep-shipping-cards-container">
@@ -75,7 +78,7 @@ $checkout_url=apply_filters('woocommerce_get_checkout_url',wc_get_checkout_url()
         </div>
       </div>
       
-      <!-- 7. 客戶資料 -->
+      <!-- 7. 客戶資料（訂購人/收件人） -->
       <div class="yangsheep-customer-details">
         <?php if($checkout->get_checkout_fields()): 
           do_action('woocommerce_checkout_before_customer_details');?>

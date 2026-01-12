@@ -125,10 +125,41 @@ class YANGSHEEP_Checkout_Sidebar {
                 </div>
                 <?php endif; ?>
                 
-                <?php if ( $cart->get_discount_total() > 0 ) : ?>
+                <?php
+                // 顯示已套用的優惠券（含刪除按鈕）
+                $applied_coupons = $cart->get_applied_coupons();
+                if ( ! empty( $applied_coupons ) ) :
+                    foreach ( $applied_coupons as $coupon_code ) :
+                        $coupon = new WC_Coupon( $coupon_code );
+                        $discount_amount = $cart->get_coupon_discount_amount( $coupon_code, $cart->display_cart_ex_tax );
+                        ?>
+                        <div class="yangsheep-summary-row yangsheep-coupon-row">
+                            <span class="yangsheep-summary-label"><?php echo esc_html( $coupon_code ); ?></span>
+                            <span class="yangsheep-summary-value yangsheep-discount-value">
+                                -<?php echo wc_price( $discount_amount ); ?>
+                                <a href="<?php echo esc_url( add_query_arg( 'remove_coupon', rawurlencode( $coupon_code ), wc_get_checkout_url() ) ); ?>"
+                                   class="yangsheep-remove-coupon woocommerce-remove-coupon"
+                                   data-coupon="<?php echo esc_attr( $coupon_code ); ?>"
+                                   title="<?php esc_attr_e( '移除優惠券', 'yangsheep-checkout-optimization' ); ?>">
+                                    <span class="yangsheep-remove-icon">&times;</span>
+                                </a>
+                            </span>
+                        </div>
+                        <?php
+                    endforeach;
+                endif;
+
+                // 如果有其他折扣（非優惠券，如購物金等）
+                $coupon_discount = 0;
+                foreach ( $applied_coupons as $coupon_code ) {
+                    $coupon_discount += $cart->get_coupon_discount_amount( $coupon_code, $cart->display_cart_ex_tax );
+                }
+                $other_discount = $cart->get_discount_total() - $coupon_discount;
+
+                if ( $other_discount > 0 ) : ?>
                 <div class="yangsheep-summary-row yangsheep-discount">
-                    <span class="yangsheep-summary-label"><?php esc_html_e( '折扣', 'yangsheep-checkout-optimization' ); ?></span>
-                    <span class="yangsheep-summary-value">-<?php echo wc_price( $cart->get_discount_total() ); ?></span>
+                    <span class="yangsheep-summary-label"><?php esc_html_e( '其他折扣', 'yangsheep-checkout-optimization' ); ?></span>
+                    <span class="yangsheep-summary-value yangsheep-discount-value">-<?php echo wc_price( $other_discount ); ?></span>
                 </div>
                 <?php endif; ?>
                 

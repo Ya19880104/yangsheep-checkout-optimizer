@@ -1,0 +1,78 @@
+/**
+ * YANGSHEEP WPLoyalty 整合樣式
+ *
+ * @package YANGSHEEP_Checkout_Optimizer
+ * @version 1.0.0
+ * @since 2026-01-12
+ */
+
+/* ===== 購物金區塊容器 ===== */
+.yangsheep-coupon-point {
+    display: none;
+}
+
+.yangsheep-coupon-point.has-content {
+    display: block;
+}
+
+/* ===== WPLoyalty 自訂區塊 ===== */
+.ys-wployalty-block {
+    padding: 0;
+}
+
+/* 標題 - 繼承 .yangsheep-coupon-block .yangsheep-h3-title 樣式 (18px) */
+/* 不需要額外設定，由主 CSS 統一控制 */
+
+/* 可用點數文字 */
+.ys-points-available {
+    font-size: 14px;
+    color: var(--ys-text-secondary, #5a6570);
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+/* 說明文字 */
+.ys-points-hint {
+    font-size: 13px;
+    color: var(--ys-text-muted, #718096);
+    margin: 0 0 15px 0;
+    line-height: 1.4;
+}
+
+/* 點數數值強調 */
+.ys-points-value {
+    font-weight: 700;
+    color: var(--theme-button-background-initial-color, #c9a86c);
+    font-size: 16px;
+}
+
+/* 兌換按鈕 - 繼承佈景主題 .button 樣式，只補充必要屬性 */
+.ys-wployalty-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+/* ===== 隱藏原始 WLR 訊息 ===== */
+.wlr_point_redeem_message {
+    display: none !important;
+}
+
+/* ===== RWD: 手機版 ===== */
+@media (max-width: 767.9px) {
+    .ys-points-available {
+        font-size: 13px;
+    }
+
+    .ys-points-value {
+        font-size: 15px;
+    }
+
+    .ys-wployalty-button {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}

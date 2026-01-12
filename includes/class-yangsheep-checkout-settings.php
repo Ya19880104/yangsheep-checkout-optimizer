@@ -168,6 +168,9 @@ class YANGSHEEP_Checkout_Settings {
             'yangsheep_nav_button_hover_color',
             'yangsheep_nav_button_active_color',
 
+            // CVS Shipping Methods
+            'yangsheep_cvs_shipping_methods',
+
             // Order Status Badge Colors
             'yangsheep_status_pending_bg',
             'yangsheep_status_pending_text',
@@ -185,6 +188,10 @@ class YANGSHEEP_Checkout_Settings {
             if ( in_array( $opt, $this->checkbox_options ) ) {
                 register_setting( 'yangsheep_checkout_optimization_group', $opt, array(
                     'sanitize_callback' => array( $this, 'sanitize_checkbox' ),
+                ) );
+            } elseif ( $opt === 'yangsheep_cvs_shipping_methods' ) {
+                register_setting( 'yangsheep_checkout_optimization_group', $opt, array(
+                    'sanitize_callback' => array( $this, 'sanitize_cvs_shipping_methods' ),
                 ) );
             } else {
                 register_setting( 'yangsheep_checkout_optimization_group', $opt );
@@ -206,8 +213,12 @@ class YANGSHEEP_Checkout_Settings {
         add_settings_section( 'ys_checkout_fields_section', '', array( $this, 'checkout_fields_section_header' ), 'yangsheep_tab_checkout' );
         add_settings_field( 'ys_checkout_shipping_check', __( 'WooCommerce 運送設定', 'yangsheep-checkout-optimization' ), array( $this, 'shipping_setting_check_callback' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_close_lname', __( '關閉 Last Name', 'yangsheep-checkout-optimization' ), __( '啟用後只顯示「姓名」欄位（使用 First Name）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
-        $this->add_checkbox_field( 'yangsheep_checkout_tw_fields', __( '台灣化欄位', 'yangsheep-checkout-optimization' ), __( '帳單只保留：姓名、電話、電子郵件', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+        $this->add_checkbox_field( 'yangsheep_checkout_tw_fields', __( '台灣化欄位', 'yangsheep-checkout-optimization' ), __( '帳單只保留：姓名、電話、電子郵件；運送欄位調整為台灣格式', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_order_note', __( '訂單備註開關', 'yangsheep-checkout-optimization' ), __( '用戶勾選才顯示備註欄位', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+
+        // 超取物流方式設定
+        add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );
+        add_settings_field( 'yangsheep_cvs_shipping_methods', __( '超取物流方式', 'yangsheep-checkout-optimization' ), array( $this, 'cvs_shipping_methods_callback' ), 'yangsheep_tab_checkout', 'ys_cvs_shipping_section' );
 
         // 登入區塊
         add_settings_section( 'ys_checkout_login_section', '', array( $this, 'login_section_header' ), 'yangsheep_tab_checkout' );
@@ -261,7 +272,7 @@ class YANGSHEEP_Checkout_Settings {
         // --- Tab 3: 我的帳號樣式 ---
         add_settings_section( 'ys_account_style_section', '', array( $this, 'account_section_header' ), 'yangsheep_tab_account' );
 
-        $this->add_checkbox_field( 'yangsheep_myaccount_visual', __( '啟用視覺優化', 'yangsheep-checkout-optimization' ), __( '套用自訂色彩至「我的帳號」頁面', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_checkbox_field( 'yangsheep_myaccount_visual', __( '啟用我的帳號頁面強化設計 (BETA)', 'yangsheep-checkout-optimization' ), __( '套用自訂色彩與強化樣式至「我的帳號」頁面', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_account', 'ys_account_style_section' );
         $this->add_color_field( 'yangsheep_myaccount_button_bg_color', __( '導航按鈕背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_button_bg_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
         $this->add_color_field( 'yangsheep_myaccount_button_text_color', __( '導航按鈕文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_button_text_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
         $this->add_color_field( 'yangsheep_nav_button_hover_color', __( '導航 Hover 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_nav_button_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
@@ -269,18 +280,19 @@ class YANGSHEEP_Checkout_Settings {
         $this->add_color_field( 'yangsheep_myaccount_link_color', __( '連結顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_link_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
         $this->add_color_field( 'yangsheep_myaccount_link_hover_color', __( '連結 Hover', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_link_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
 
-        // 訂單狀態標籤
-        add_settings_section( 'ys_order_status_colors_section', '', array( $this, 'status_section_header' ), 'yangsheep_tab_account' );
-        $this->add_color_field( 'yangsheep_status_pending_bg', __( '待處理 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_bg'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_pending_text', __( '待處理 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_text'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_preparing_bg', __( '備貨中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_bg'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_preparing_text', __( '備貨中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_text'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_shipping_bg', __( '運送中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_bg'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_shipping_text', __( '運送中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_text'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_arrived_bg', __( '已到店 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_bg'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_arrived_text', __( '已到店 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_text'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_completed_bg', __( '已完成 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_bg'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_text'], 'yangsheep_tab_account', 'ys_order_status_colors_section' );
+
+        // --- Tab 4: 訂單狀態強化 ---
+        add_settings_section( 'ys_order_status_colors_section', '', array( $this, 'status_section_header' ), 'yangsheep_tab_order_status' );
+        $this->add_color_field( 'yangsheep_status_pending_bg', __( '待處理 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_pending_text', __( '待處理 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_preparing_bg', __( '備貨中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_preparing_text', __( '備貨中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_shipping_bg', __( '運送中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_shipping_text', __( '運送中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_arrived_bg', __( '已到店 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_arrived_text', __( '已到店 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_completed_bg', __( '已完成 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
     }
 
     // Section Headers
@@ -308,12 +320,15 @@ class YANGSHEEP_Checkout_Settings {
     public function shipping_section_header() {
         echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-car"></span> 物流卡片</h3>';
     }
-    // cvs_section_header 已移除 - 超商區域設定移至 PayNow 物流外掛
+    public function cvs_shipping_section_header() {
+        echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-store"></span> 超取物流方式設定</h3>';
+        echo '<p class="ys-section-desc" style="margin:0 0 15px 0;color:#666;">選擇哪些物流方式為「超商取貨」，選中的物流方式將隱藏地址欄位。若未勾選任何項目，系統將使用自動偵測。</p>';
+    }
     public function account_section_header() {
-        echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-id-alt"></span> 我的帳號與訂單樣式</h3>';
+        echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-id-alt"></span> 我的帳號頁面</h3>';
     }
     public function status_section_header() {
-        echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-tag"></span> 訂單狀態標籤顏色</h3>';
+        echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-tag"></span> 訂單狀態標籤顏色</h3>';
     }
 
     // Helper: Add Color Field
@@ -367,6 +382,13 @@ class YANGSHEEP_Checkout_Settings {
         return ( $value === 'yes' ) ? 'yes' : 'no';
     }
 
+    public function sanitize_cvs_shipping_methods( $value ) {
+        if ( ! is_array( $value ) ) {
+            return array();
+        }
+        return array_map( 'sanitize_text_field', $value );
+    }
+
     public function handle_checkbox_save( $value, $option, $old_value ) {
         if ( in_array( $option, $this->checkbox_options ) ) {
             if ( isset( $_POST[ $option . '_submitted' ] ) && $_POST[ $option . '_submitted' ] === '1' ) {
@@ -399,6 +421,98 @@ class YANGSHEEP_Checkout_Settings {
         echo '<textarea name="yangsheep_checkout_login_welcome_text" class="large-text" rows="3" placeholder="輸入歡迎文字...">' . esc_textarea( $val ) . '</textarea>';
     }
 
+    /**
+     * 超取物流方式多選 callback
+     */
+    public function cvs_shipping_methods_callback() {
+        $saved_methods = get_option( 'yangsheep_cvs_shipping_methods', array() );
+        if ( ! is_array( $saved_methods ) ) {
+            $saved_methods = array();
+        }
+
+        // 取得所有運送區域及其物流方式
+        $all_methods = $this->get_all_shipping_methods_with_zones();
+
+        if ( empty( $all_methods ) ) {
+            echo '<p style="color:#666;">' . __( '尚未設定任何物流方式', 'yangsheep-checkout-optimization' ) . '</p>';
+            return;
+        }
+
+        echo '<div class="ys-cvs-methods-list" style="max-height:300px;overflow-y:auto;border:1px solid #c5d1d8;border-radius:6px;padding:10px;background:#fff;">';
+
+        foreach ( $all_methods as $zone_name => $methods ) {
+            echo '<div class="ys-zone-group" style="margin-bottom:15px;">';
+            echo '<div class="ys-zone-title" style="font-weight:600;color:#5a7080;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #eee;">' . esc_html( $zone_name ) . '</div>';
+
+            foreach ( $methods as $method ) {
+                $method_id = $method['rate_id'];
+                $method_title = $method['title'];
+                $checked = in_array( $method_id, $saved_methods ) ? 'checked' : '';
+
+                echo '<label style="display:block;margin:6px 0;cursor:pointer;">';
+                echo '<input type="checkbox" name="yangsheep_cvs_shipping_methods[]" value="' . esc_attr( $method_id ) . '" ' . $checked . ' style="margin-right:8px;" />';
+                echo '<span>' . esc_html( $method_title ) . '</span>';
+                echo '<code style="margin-left:8px;font-size:11px;color:#888;background:#f0f0f1;padding:2px 6px;border-radius:3px;">' . esc_html( $method_id ) . '</code>';
+                echo '</label>';
+            }
+
+            echo '</div>';
+        }
+
+        echo '</div>';
+        echo '<p class="description" style="margin-top:10px;">' . __( '勾選的物流方式將被視為「超商取貨」，會隱藏地址相關欄位。', 'yangsheep-checkout-optimization' ) . '</p>';
+    }
+
+    /**
+     * 取得所有物流方式（依運送區域分組）
+     */
+    private function get_all_shipping_methods_with_zones() {
+        if ( ! class_exists( 'WC_Shipping_Zones' ) ) {
+            return array();
+        }
+
+        $result = array();
+
+        // 取得所有運送區域
+        $zones = WC_Shipping_Zones::get_zones();
+
+        foreach ( $zones as $zone_data ) {
+            $zone = new WC_Shipping_Zone( $zone_data['zone_id'] );
+            $zone_name = $zone->get_zone_name();
+            $methods = $zone->get_shipping_methods( true ); // true = only enabled
+
+            if ( empty( $methods ) ) {
+                continue;
+            }
+
+            $result[ $zone_name ] = array();
+
+            foreach ( $methods as $method ) {
+                $result[ $zone_name ][] = array(
+                    'rate_id' => $method->get_rate_id(),
+                    'title'   => $method->get_title() ? $method->get_title() : $method->get_method_title(),
+                );
+            }
+        }
+
+        // 加入「其他地點」區域（zone_id = 0）
+        $zone_rest = new WC_Shipping_Zone( 0 );
+        $methods_rest = $zone_rest->get_shipping_methods( true );
+
+        if ( ! empty( $methods_rest ) ) {
+            $result[ __( '其他地點', 'yangsheep-checkout-optimization' ) ] = array();
+
+            foreach ( $methods_rest as $method ) {
+                $result[ __( '其他地點', 'yangsheep-checkout-optimization' ) ][] = array(
+                    'rate_id' => $method->get_rate_id(),
+                    'title'   => $method->get_title() ? $method->get_title() : $method->get_method_title(),
+                );
+            }
+        }
+
+        return $result;
+    }
+
     // AJAX: Reset Colors
     public function ajax_reset_colors() {
         check_ajax_referer( 'yangsheep_reset_colors', 'nonce' );
@@ -412,6 +526,98 @@ class YANGSHEEP_Checkout_Settings {
         }
 
         wp_send_json_success( '已恢復預設配色' );
+    }
+
+    /**
+     * 渲染購物金整合頁籤
+     */
+    public function render_loyalty_tab() {
+        // 處理表單提交
+        if ( isset( $_POST['yangsheep_wployalty_save'] ) && check_admin_referer( 'yangsheep_wployalty_settings_nonce' ) ) {
+            $settings = array(
+                'enable_checkout_integration' => isset( $_POST['enable_checkout_integration'] ) ? 1 : 0,
+            );
+            YANGSHEEP_WPLoyalty_Integration::save_settings( $settings );
+            echo '<div class="notice notice-success is-dismissible"><p>' . __( '設定已儲存', 'yangsheep-checkout-optimization' ) . '</p></div>';
+        }
+
+        // 取得目前設定
+        $settings = get_option( YANGSHEEP_WPLoyalty_Integration::OPTION_NAME, YANGSHEEP_WPLoyalty_Integration::get_default_settings() );
+        $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
+        ?>
+        <div class="ys-section-card">
+            <h3 class="ys-section-title"><span class="dashicons dashicons-star-filled"></span> WPLoyalty (WooCommerce Loyalty Rewards) 整合</h3>
+
+            <?php if ( ! $is_wployalty_active ) : ?>
+                <div class="notice notice-warning inline" style="margin:15px 0;">
+                    <p><span class="dashicons dashicons-warning" style="color:#dba617;"></span>
+                    <strong><?php _e( '未偵測到 WPLoyalty 外掛', 'yangsheep-checkout-optimization' ); ?></strong> -
+                    <?php _e( '請先安裝並啟用 WooCommerce Loyalty Rewards (WPLoyalty) 外掛才能使用此功能。', 'yangsheep-checkout-optimization' ); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="">
+                <?php wp_nonce_field( 'yangsheep_wployalty_settings_nonce' ); ?>
+
+                <table class="form-table ys-form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="enable_checkout_integration"><?php _e( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ); ?></label>
+                        </th>
+                        <td>
+                            <label class="ys-toggle-switch">
+                                <input type="checkbox"
+                                       name="enable_checkout_integration"
+                                       id="enable_checkout_integration"
+                                       value="1"
+                                       <?php checked( ! empty( $settings['enable_checkout_integration'] ) ); ?>
+                                       <?php disabled( ! $is_wployalty_active ); ?> />
+                                <span class="ys-toggle-slider"></span>
+                            </label>
+                            <span class="ys-toggle-desc"><?php _e( '啟用後，系統將自動偵測並美化 WPLoyalty 的購物金兌換訊息', 'yangsheep-checkout-optimization' ); ?></span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="ys-notice-box" style="background:#fff8e5;border-left:4px solid #ffb900;padding:12px 15px;margin:20px 0;border-radius:4px;">
+                    <p style="margin:0;"><strong><span class="dashicons dashicons-info" style="color:#ffb900;"></span> <?php _e( '重要設定說明', 'yangsheep-checkout-optimization' ); ?></strong></p>
+                    <p style="margin:10px 0 0;">
+                        <?php _e( '請至 WPLoyalty 後台設定 > 結帳頁面 > 「兌換訊息 Redeem Message」保持以下原始文字：', 'yangsheep-checkout-optimization' ); ?>
+                    </p>
+                    <code style="display:block;background:#f5f5f5;padding:10px;margin:10px 0;border-radius:4px;font-size:12px;">You have {wlr_redeem_cart_points} {wlr_points_label} earned choose your rewards {wlr_reward_link}</code>
+                    <p style="margin:0;color:#666;font-size:13px;">
+                        <?php _e( '系統將會自動偵測並顯示為中文，與結帳頁面視覺整合。', 'yangsheep-checkout-optimization' ); ?>
+                    </p>
+                </div>
+
+                <div class="ys-preview-section" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:20px;margin:20px 0;">
+                    <h4 style="margin:0 0 15px;color:#5a7080;"><span class="dashicons dashicons-visibility"></span> <?php _e( '預覽效果', 'yangsheep-checkout-optimization' ); ?></h4>
+                    <div style="background:#fff;border:2px solid var(--theme-section-border-color, #c5d1d8);border-radius:8px;padding:20px;">
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                            <!-- 折扣代碼區塊 -->
+                            <div style="flex:1;min-width:200px;">
+                                <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '折扣代碼', 'yangsheep-checkout-optimization' ); ?></h5>
+                                <p style="margin:0 0 10px;font-size:13px;color:#666;"><?php _e( '若您有折扣代碼，請直接輸入代碼折抵。', 'yangsheep-checkout-optimization' ); ?></p>
+                                <input type="text" placeholder="Coupon" style="width:100%;padding:8px 12px;border:1px solid #c5d1d8;border-radius:4px;margin-bottom:10px;" disabled />
+                                <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '使用折扣代碼', 'yangsheep-checkout-optimization' ); ?></button>
+                            </div>
+                            <!-- 購物金區塊 -->
+                            <div style="flex:1;min-width:200px;border-left:1px solid #e0e0e0;padding-left:20px;">
+                                <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '購物金', 'yangsheep-checkout-optimization' ); ?></h5>
+                                <p style="margin:0 0 8px;font-size:13px;color:#666;"><?php _e( '目前有', 'yangsheep-checkout-optimization' ); ?> <strong style="color:var(--theme-button-background-initial-color, #8fa8b8);">500 Points</strong> <?php _e( '可用', 'yangsheep-checkout-optimization' ); ?></p>
+                                <p style="margin:0 0 15px;font-size:12px;color:#718096;"><?php _e( '按下兌換按鈕，於彈出視窗中兌換', 'yangsheep-checkout-optimization' ); ?></p>
+                                <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '點此兌換折扣', 'yangsheep-checkout-optimization' ); ?></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="submit">
+                    <input type="submit" name="yangsheep_wployalty_save" class="button button-primary" value="<?php _e( '儲存設定', 'yangsheep-checkout-optimization' ); ?>" />
+                </p>
+            </form>
+        </div>
+        <?php
     }
 
     public function settings_page() {
@@ -429,7 +635,7 @@ class YANGSHEEP_Checkout_Settings {
         <div class="ys-settings-wrap">
             <div class="ys-settings-header">
                 <h2><span class="dashicons dashicons-cart"></span> <?php echo esc_html( get_admin_page_title() ); ?></h2>
-                <p class="ys-settings-desc">優化 WooCommerce 結帳流程與訂單管理體驗</p>
+                <p class="ys-settings-desc">強化 WooCommerce 結帳流程與訂單管理體驗</p>
             </div>
 
             <div class="ys-settings-actions">
@@ -448,6 +654,12 @@ class YANGSHEEP_Checkout_Settings {
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'account' ? 'nav-tab-active' : ''; ?>" data-tab="account">
                     <span class="dashicons dashicons-id-alt"></span> <?php _e( '我的帳號', 'yangsheep-checkout-optimization' ); ?>
                 </a>
+                <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'order_status' ? 'nav-tab-active' : ''; ?>" data-tab="order_status">
+                    <span class="dashicons dashicons-tag"></span> <?php _e( '訂單狀態', 'yangsheep-checkout-optimization' ); ?>
+                </a>
+                <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'loyalty' ? 'nav-tab-active' : ''; ?>" data-tab="loyalty">
+                    <span class="dashicons dashicons-star-filled"></span> <?php _e( '購物金整合', 'yangsheep-checkout-optimization' ); ?>
+                </a>
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'docs' ? 'nav-tab-active' : ''; ?>" data-tab="docs">
                     <span class="dashicons dashicons-media-document"></span> <?php _e( '說明文件', 'yangsheep-checkout-optimization' ); ?>
                 </a>
@@ -458,31 +670,36 @@ class YANGSHEEP_Checkout_Settings {
 
                 <div class="ys-tab-content" id="ys-tab-general" style="<?php echo $active_tab !== 'general' ? 'display:none;' : ''; ?>">
                     <?php do_settings_sections( 'yangsheep_tab_general' ); ?>
-                    </div>
+                    </div><!-- close ys-section-card -->
                 </div>
 
                 <div class="ys-tab-content" id="ys-tab-checkout" style="<?php echo $active_tab !== 'checkout' ? 'display:none;' : ''; ?>">
                     <?php do_settings_sections( 'yangsheep_tab_checkout' ); ?>
-                    </div>
+                    </div><!-- close ys-section-card -->
                 </div>
 
                 <div class="ys-tab-content" id="ys-tab-account" style="<?php echo $active_tab !== 'account' ? 'display:none;' : ''; ?>">
                     <?php do_settings_sections( 'yangsheep_tab_account' ); ?>
-                    </div>
+                    </div><!-- close ys-section-card -->
+                </div>
+
+                <div class="ys-tab-content" id="ys-tab-order_status" style="<?php echo $active_tab !== 'order_status' ? 'display:none;' : ''; ?>">
+                    <?php do_settings_sections( 'yangsheep_tab_order_status' ); ?>
+                    </div><!-- close ys-section-card -->
                 </div>
 
                 <div class="ys-tab-content" id="ys-tab-docs" style="<?php echo $active_tab !== 'docs' ? 'display:none;' : ''; ?>">
                     <div class="ys-docs-card">
                         <h2><span class="dashicons dashicons-book"></span> 結帳強化功能說明</h2>
-                        <p>本外掛旨在優化 WooCommerce 結帳流程與訂單管理體驗，整合了 PayNow 與 PayUni 物流系統的進階顯示功能。</p>
+                        <p>本外掛旨在強化 WooCommerce 結帳流程與訂單管理體驗，整合了 PayNow 與 PayUni 物流系統的進階顯示功能。</p>
 
                         <div class="ys-docs-section">
-                            <h3><span class="dashicons dashicons-list-view"></span> 1. 訂單列表優化</h3>
+                            <h3><span class="dashicons dashicons-list-view"></span> 1. 訂單列表強化</h3>
                             <p>啟用「訂單配送狀態強化」後，前台「我的帳號 > 訂單」列表將升級為卡片式設計，並支援：</p>
                             <ul>
                                 <li><strong>PayNow / PayUni 物流</strong>：顯示即時物流進度條</li>
                                 <li><strong>手動物流單</strong>：後台輸入手動單號顯示進度</li>
-                                <li><strong>UI 優化</strong>：圓角卡片設計、狀態顏色區分</li>
+                                <li><strong>UI 強化</strong>：圓角卡片設計、狀態顏色區分</li>
                             </ul>
                         </div>
 
@@ -499,10 +716,63 @@ class YANGSHEEP_Checkout_Settings {
                             <h3><span class="dashicons dashicons-admin-appearance"></span> 3. 配色說明</h3>
                             <p>本外掛預設使用<strong>莫蘭迪綠藍色系</strong>，營造柔和舒適的視覺體驗。您可以點擊「一鍵恢復預設配色」按鈕隨時恢復預設值。</p>
                         </div>
+
+                        <div class="ys-docs-section">
+                            <h3><span class="dashicons dashicons-store"></span> 4. 第三方物流相容性</h3>
+                            <p>本外掛內建支援以下第三方物流外掛的超商取貨功能：</p>
+                            <ul>
+                                <li><strong>好用版 RY Tools for WooCommerce（綠界 ECPay）</strong>
+                                    <ul>
+                                        <li>支援 7-11、全家、萊爾富、OK 超商</li>
+                                        <li>CVS 欄位（門市名稱、地址、電話）僅在選擇綠界超商物流時顯示</li>
+                                        <li>「超商門市」選擇按鈕自動置中加粗</li>
+                                    </ul>
+                                </li>
+                                <li><strong>好用版 PayNow Shipping（PayNow 超取）</strong>
+                                    <ul>
+                                        <li>支援 7-11、全家、萊爾富、OK 超商（C2C/B2C）</li>
+                                        <li>超取欄位（門市名稱、門市代號、地址）僅在選擇 PayNow 超取時顯示</li>
+                                        <li>「選擇超商」按鈕自動置中加粗</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                            <p><strong>欄位排版：</strong>所有超取欄位自動設為 2 欄排版（桌機與手機）。</p>
+                            <p><strong>自動偵測：</strong>系統會根據選擇的物流方式自動顯示/隱藏對應的 CVS 欄位，無需額外設定。</p>
+                        </div>
+
+                        <div class="ys-docs-section">
+                            <h3><span class="dashicons dashicons-forms"></span> 5. 結帳欄位說明</h3>
+                            <ul>
+                                <li><strong>關閉 Last Name</strong>：啟用後只顯示「姓名」欄位（使用 First Name），適合台灣使用習慣</li>
+                                <li><strong>台灣化欄位</strong>：
+                                    <ul>
+                                        <li>帳單欄位簡化為：姓名、電話、電子郵件</li>
+                                        <li>運送欄位調整為台灣格式（郵遞區號、縣市、鄉鎮市區、地址）</li>
+                                        <li>整合 TWzipcode 郵遞區號自動帶入</li>
+                                    </ul>
+                                </li>
+                                <li><strong>訂單備註開關</strong>：用戶需勾選「我需要填寫訂單備註」才顯示備註欄位，其他欄位（如身分證字號）不受影響</li>
+                                <li><strong>收件人電話</strong>：收件人區塊的電話欄位預設為必填</li>
+                            </ul>
+                        </div>
+
+                        <div class="ys-docs-section">
+                            <h3><span class="dashicons dashicons-car"></span> 6. 物流卡片功能</h3>
+                            <ul>
+                                <li>物流選項以卡片式呈現，提升使用者體驗</li>
+                                <li>虛擬商品自動隱藏物流選擇區塊與收件人欄位</li>
+                                <li>AJAX 即時更新，地址變更時自動重新計算可用物流</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
-                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo $active_tab === 'docs' ? 'display:none;' : ''; ?>">
+                <!-- 購物金整合頁籤（獨立表單，不在 options.php 表單內） -->
+                <div class="ys-tab-content" id="ys-tab-loyalty" style="<?php echo $active_tab !== 'loyalty' ? 'display:none;' : ''; ?>">
+                    <?php $this->render_loyalty_tab(); ?>
+                </div>
+
+                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo ($active_tab === 'docs' || $active_tab === 'loyalty') ? 'display:none;' : ''; ?>">
                     <?php submit_button( __( '儲存設定', 'yangsheep-checkout-optimization' ), 'primary large', 'submit', false ); ?>
                 </div>
             </form>
@@ -758,7 +1028,7 @@ class YANGSHEEP_Checkout_Settings {
                 $('.ys-tab-content').hide();
                 $('#ys-tab-' + tab).show();
 
-                if (tab === 'docs') {
+                if (tab === 'docs' || tab === 'loyalty') {
                     $('#ys-submit-button').hide();
                 } else {
                     $('#ys-submit-button').show();

@@ -40,6 +40,12 @@ class YANGSHEEP_Checkout_Fields {
         // 超取時修改必填欄位（在 checkout_fields 過濾器中處理，確保 AJAX 更新時也生效）
         add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
 
+        // 強制確保電話欄位存在（最高優先級，在所有外掛之後執行）
+        add_filter( 'woocommerce_checkout_fields', array( $this, 'force_phone_fields' ), 9999 );
+        add_filter( 'woocommerce_billing_fields', array( $this, 'force_billing_phone' ), 9999 );
+
+        // 收件人電話格式驗證（台灣手機：09 開頭，10 位數字）
+        add_action( 'woocommerce_checkout_process', array( $this, 'validate_shipping_phone' ) );
     }
 
     /**
@@ -77,7 +83,8 @@ class YANGSHEEP_Checkout_Fields {
     
     /**
      * 檢查當前選擇的運送方式是否為超取
-     * 
+     * 優先使用後台設定的超取物流清單，若未設定則使用自動偵測
+     *
      * @return bool
      */
     private function is_cvs_shipping_selected() {
@@ -90,34 +97,58 @@ class YANGSHEEP_Checkout_Fields {
             $shipping_methods = WC()->session ? WC()->session->get( 'chosen_shipping_methods', array() ) : array();
         }
         // phpcs:enable WordPress.Security.NonceVerification.Missing
-        
+
         if ( empty( $shipping_methods ) || ! is_array( $shipping_methods ) ) {
             return false;
         }
-        
+
+        // 取得後台設定的超取物流清單
+        $cvs_methods = get_option( 'yangsheep_cvs_shipping_methods', array() );
+        $use_manual_settings = ! empty( $cvs_methods ) && is_array( $cvs_methods );
+
         foreach ( $shipping_methods as $method ) {
             if ( empty( $method ) ) {
                 continue;
             }
-            
-            $method_id = strstr( $method, ':', true ) ?: $method;
-            
 
-            
-            // PayUni 超取
-            if ( strpos( $method_id, 'payuni_' ) === 0 && 
-                 ( strpos( $method_id, '711' ) !== false || 
-                   strpos( $method_id, 'fami' ) !== false || 
-                   strpos( $method_id, 'hilife' ) !== false ) ) {
-                return true;
-            }
-            
-            // ECPay 超取
-            if ( strpos( $method_id, 'ecpay' ) !== false && strpos( $method_id, 'cvs' ) !== false ) {
-                return true;
+            if ( $use_manual_settings ) {
+                // 使用後台設定的物流清單
+                foreach ( $cvs_methods as $cvs_method ) {
+                    // 精確比對
+                    if ( $method === $cvs_method ) {
+                        return true;
+                    }
+                    // 比對 method_id 部分（忽略 instance_id）
+                    $method_base = strstr( $method, ':', true ) ?: $method;
+                    $cvs_base = strstr( $cvs_method, ':', true ) ?: $cvs_method;
+                    if ( $method_base === $cvs_base && strpos( $method, $cvs_method ) === 0 ) {
+                        return true;
+                    }
+                }
+            } else {
+                // 未設定則使用自動偵測（向下相容）
+                $method_id = strstr( $method, ':', true ) ?: $method;
+
+                // PayUni 超取
+                if ( strpos( $method_id, 'payuni_' ) === 0 &&
+                     ( strpos( $method_id, '711' ) !== false ||
+                       strpos( $method_id, 'fami' ) !== false ||
+                       strpos( $method_id, 'hilife' ) !== false ) ) {
+                    return true;
+                }
+
+                // ECPay 超取
+                if ( strpos( $method_id, 'ecpay' ) !== false && strpos( $method_id, 'cvs' ) !== false ) {
+                    return true;
+                }
+
+                // YS PayNow 超取
+                if ( preg_match( '/ys_paynow_(711|family|hilife)/i', $method_id ) ) {
+                    return true;
+                }
             }
         }
-        
+
         return false;
     }
     
@@ -323,16 +354,19 @@ class YANGSHEEP_Checkout_Fields {
      * 作用於結帳頁面和我的帳號編輯地址頁面
      */
     public function add_shipping_phone( $fields ) {
-        // 加入收件人電話
+        // 加入收件人電話（必填）
         if ( ! isset( $fields['shipping_phone'] ) ) {
             $fields['shipping_phone'] = array(
                 'label'       => __( '收件人電話', 'yangsheep-checkout-optimization' ),
-                'required'    => false,
+                'required'    => true,
                 'class'       => array( 'form-row-last' ),  // 改為 form-row-last 以便與姓名並排顯示
                 'priority'    => 25,
                 'type'        => 'tel',
                 'validate'    => array( 'phone' ),
             );
+        } else {
+            // 確保收件人電話為必填
+            $fields['shipping_phone']['required'] = true;
         }
         
         // 移除公司欄位（結帳頁面和我的帳號都生效）
@@ -375,6 +409,107 @@ class YANGSHEEP_Checkout_Fields {
         }
         
         return $fields;
+    }
+
+    /**
+     * 強制確保電話欄位存在（最高優先級）
+     * 某些結帳欄位外掛可能會移除電話欄位，這裡強制恢復
+     *
+     * @param array $fields 結帳欄位
+     * @return array
+     */
+    public function force_phone_fields( $fields ) {
+        // 強制確保 billing_phone 存在且必填
+        if ( ! isset( $fields['billing']['billing_phone'] ) ) {
+            $fields['billing']['billing_phone'] = array(
+                'label'       => __( '電話', 'woocommerce' ),
+                'required'    => true,
+                'type'        => 'tel',
+                'class'       => array( 'form-row-wide' ),
+                'validate'    => array( 'phone' ),
+                'priority'    => 100,
+            );
+        } else {
+            // 確保電話欄位為必填
+            $fields['billing']['billing_phone']['required'] = true;
+        }
+
+        // 強制確保 shipping_phone 存在且必填
+        if ( ! isset( $fields['shipping']['shipping_phone'] ) ) {
+            $fields['shipping']['shipping_phone'] = array(
+                'label'       => __( '收件人電話', 'yangsheep-checkout-optimization' ),
+                'required'    => true,
+                'class'       => array( 'form-row-last' ),
+                'priority'    => 25,
+                'type'        => 'tel',
+                'validate'    => array( 'phone' ),
+            );
+        } else {
+            // 確保收件人電話為必填
+            $fields['shipping']['shipping_phone']['required'] = true;
+        }
+
+        return $fields;
+    }
+
+    /**
+     * 強制確保 billing_phone 欄位存在（用於 woocommerce_billing_fields 過濾器）
+     *
+     * @param array $fields Billing 欄位
+     * @return array
+     */
+    public function force_billing_phone( $fields ) {
+        if ( ! isset( $fields['billing_phone'] ) ) {
+            $fields['billing_phone'] = array(
+                'label'       => __( '電話', 'woocommerce' ),
+                'required'    => true,
+                'type'        => 'tel',
+                'class'       => array( 'form-row-wide' ),
+                'validate'    => array( 'phone' ),
+                'priority'    => 100,
+            );
+        } else {
+            // 確保電話欄位為必填
+            $fields['billing_phone']['required'] = true;
+        }
+
+        return $fields;
+    }
+
+    /**
+     * 驗證收件人電話格式
+     *
+     * 台灣手機格式驗證：
+     * - 必須為 09 開頭
+     * - 必須為 10 位數字
+     *
+     * @return void
+     */
+    public function validate_shipping_phone() {
+        // 檢查是否有勾選「運送到不同地址」
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        $ship_to_different = isset( $_POST['ship_to_different_address'] ) ? wc_clean( wp_unslash( $_POST['ship_to_different_address'] ) ) : '';
+        $shipping_phone    = isset( $_POST['shipping_phone'] ) ? wc_clean( wp_unslash( $_POST['shipping_phone'] ) ) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+
+        // 只有在運送到不同地址且有填寫 shipping_phone 時才驗證
+        if ( empty( $ship_to_different ) || empty( $shipping_phone ) ) {
+            return;
+        }
+
+        // 移除非數字字元
+        $phone_numeric = preg_replace( '/\D/', '', $shipping_phone );
+
+        // 驗證格式：必須是 09 開頭的 10 位數字
+        if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
+            if ( substr( $phone_numeric, 0, 2 ) !== '09' ) {
+                wc_add_notice( __( '收件人電話必須為 09 開頭的手機號碼', 'yangsheep-checkout-optimization' ), 'error' );
+            } elseif ( strlen( $phone_numeric ) !== 10 ) {
+                wc_add_notice( __( '收件人電話必須為 10 位數字', 'yangsheep-checkout-optimization' ), 'error' );
+            } else {
+                wc_add_notice( __( '請輸入有效的收件人手機號碼', 'yangsheep-checkout-optimization' ), 'error' );
+            }
+        }
     }
 }
 

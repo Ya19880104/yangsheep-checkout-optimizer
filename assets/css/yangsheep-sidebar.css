@@ -110,6 +110,49 @@
     color: var(--ys-text-danger, #c53030);
 }
 
+/* ===== 優惠券行樣式 ===== */
+.yangsheep-summary-row.yangsheep-coupon-row {
+    padding: 8px 0;
+}
+
+/* 優惠券折扣金額（含刪除按鈕） */
+.yangsheep-coupon-row .yangsheep-discount-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ys-text-danger, #c53030);
+    font-weight: 600;
+}
+
+/* 刪除按鈕 */
+.yangsheep-remove-coupon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--ys-remove-bg, #fed7d7);
+    color: var(--ys-text-danger, #c53030);
+    border-radius: 50%;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.yangsheep-remove-coupon:hover {
+    background: var(--ys-text-danger, #c53030);
+    color: #ffffff;
+}
+
+.yangsheep-remove-icon {
+    display: block;
+    line-height: 1;
+    margin-top: -1px;
+}
+
 /* 免運費 */
 .yangsheep-free-shipping {
     color: #2f855a;

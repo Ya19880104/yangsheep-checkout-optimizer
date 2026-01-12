@@ -145,12 +145,7 @@
 }
 
 /* 結帳欄位順序 - 已改用 Grid 和 priority 控制，不再使用 order */
-/* 保留 CVS 超商欄位的樣式設定 */
-#CVSStoreName_field,
-#CVSAddress_field,
-#CVSTelephone_field {
-    grid-column: 1 / -1 !important;
-}
+/* CVS 超商欄位樣式已移至 class-yangsheep-third-party-shipping-compat.php */
 
 /* 國家樣式 */
 form.checkout {
@@ -270,11 +265,18 @@ ul#shipping_method li {
     border: 1px solid;
 }
 
-/* 欄位樣式 */
+/* 欄位樣式 - 隱藏地址欄位的「選填」文字（超商取貨模式由外掛設為選填） */
 #shipping_postcode_field .optional,
 #shipping_state_field .optional,
-#shipping_city_field .optional {
-    display: none;
+#shipping_city_field .optional,
+#shipping_address_1_field .optional,
+#shipping_address_2_field .optional,
+#billing_postcode_field .optional,
+#billing_state_field .optional,
+#billing_city_field .optional,
+#billing_address_1_field .optional,
+#billing_address_2_field .optional {
+    display: none !important;
 }
 
 .yangsheep-wide50,
@@ -422,16 +424,7 @@ h3#order_review_heading,
     position: relative;
 }
 
-/* 取貨超商 */
-
-
-#CVSStoreName_field,
-#CVSAddress_field,
-#CVSTelephone_field {
-    border: 2px solid var(--theme-form-field-border-initial-color);
-    padding: 10px 15px;
-    background: var(--form-field-bg-color) !important;
-}
+/* 取貨超商 - 樣式已移至 class-yangsheep-third-party-shipping-compat.php */
 
 /* 隱藏超取欄位的「選填」文字 */
 #CVSStoreName_field .optional,
@@ -493,6 +486,7 @@ h3#ship-to-different-address {
     background-color: var(--section-bg-color);
     border-radius: var(--block-border-radius, 8px);
     margin-bottom: 20px;
+    gap: 0;
 }
 
 a.woocommerce-remove-coupon {
@@ -502,6 +496,34 @@ a.woocommerce-remove-coupon {
 .yangsheep-coupon,
 .yangsheep-coupon-point {
     background-color: var(--coupon-block-bg-color);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 折扣代碼區塊 - 預設佔滿，有購物金時各佔 50% */
+.yangsheep-coupon {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+/* 購物金區塊 - 預設隱藏，JS 控制顯示 */
+.yangsheep-coupon-point {
+    flex: 1 1 50%;
+    min-width: 0;
+    border-left: 1px solid var(--theme-section-border-color);
+    display: none;
+    border-radius: 0 var(--block-border-radius, 8px) var(--block-border-radius, 8px) 0;
+}
+
+/* 購物金區塊顯示時（有 has-content class 或 inline style） */
+.yangsheep-coupon-point.has-content,
+.yangsheep-coupon-point[style*="display: block"] {
+    display: block !important;
+}
+
+/* 沒有購物金時，折扣代碼全寬 */
+.yangsheep-coupon-block:not(.has-point) .yangsheep-coupon {
+    flex: 1 1 100%;
 }
 
 .yangsheep-coupon input {
@@ -660,8 +682,7 @@ a.woocommerce-remove-coupon {
     .yangsheep-checkout-country,
     .yangsheep-payment,
     .yangsheep-order-review,
-    .ct-order-review,
-    .yangsheep-coupon-block {
+    .ct-order-review {
         padding: 20px !important;
     }
 
@@ -669,12 +690,6 @@ a.woocommerce-remove-coupon {
         width: 100%;
         margin-bottom: 10px;
         display: block !important;
-    }
-
-    .yangsheep-coupon,
-    .yangsheep-coupon-point {
-        margin: 0;
-        width: 100%;
     }
 
     #coupons_list {
@@ -701,7 +716,7 @@ a.woocommerce-remove-coupon {
     }
 }
 
-/* RWD: <=999.9px */
+/* RWD: <=999.9px（平板以下通用） */
 @media(max-width:999.9px) {
     .yangsheep-login {
         padding: 20px 15px;
@@ -709,12 +724,6 @@ a.woocommerce-remove-coupon {
 
     .yangsheep-wide50,
     #shipping_phone_field {
-        width: 100%;
-    }
-
-    .yangsheep-coupon,
-    .yangsheep-coupon-point {
-        margin: 0;
         width: 100%;
     }
 
@@ -729,8 +738,7 @@ a.woocommerce-remove-coupon {
     .yangsheep-checkout-country,
     .yangsheep-payment,
     .yangsheep-order-review,
-    .ct-order-review,
-    .yangsheep-coupon-block {
+    .ct-order-review {
         padding: 20px 15px !important;
     }
 
@@ -738,6 +746,52 @@ a.woocommerce-remove-coupon {
     .woocommerce-billing-fields__field-wrapper #account_username_field,
     .woocommerce-billing-fields__field-wrapper #account_password_field {
         width: 100% !important;
+    }
+}
+
+/* RWD: 平板以上 (>=768px) - 折扣代碼 & 購物金左右並排 */
+@media(min-width:768px) {
+    .yangsheep-coupon-block {
+        flex-direction: row !important;
+        padding: 20px 0 !important;
+    }
+
+    .yangsheep-coupon-block.has-point {
+        padding: 20px 0 !important;
+    }
+
+    .yangsheep-coupon,
+    .yangsheep-coupon-point {
+        flex: 1 1 50%;
+        padding: 0 20px;
+    }
+
+    .yangsheep-coupon-point.has-content {
+        border-left: 1px solid var(--theme-section-border-color);
+        border-top: none;
+    }
+}
+
+/* RWD: 手機版 (<768px) - 折扣代碼 & 購物金上下堆疊 */
+@media(max-width:767.9px) {
+    .yangsheep-coupon-block {
+        flex-direction: column !important;
+        padding: 20px 0 !important;
+    }
+
+    .yangsheep-coupon,
+    .yangsheep-coupon-point {
+        margin: 0;
+        width: 100%;
+        flex: 1 1 100%;
+        padding: 0 15px;
+    }
+
+    .yangsheep-coupon-point.has-content {
+        border-left: none;
+        border-top: 1px solid var(--theme-section-border-color);
+        margin-top: 20px;
+        padding-top: 20px;
     }
 }
 
@@ -1343,16 +1397,4 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     grid-column: span 1 !important;
 }
 
-/* 超取時的超商資訊欄位（全寬） */
-body.yangsheep-cvs-mode #CVSStoreName_field,
-body.yangsheep-cvs-mode #CVSAddress_field,
-body.yangsheep-cvs-mode #CVSTelephone_field {
-    grid-column: 1 / -1 !important;
-}
-
-/* 手機版超取模式 */
-@media (max-width: 767.9px) {
-    body.yangsheep-cvs-mode .woocommerce-shipping-fields__field-wrapper {
-        grid-template-columns: 1fr !important;
-    }
-}
+/* 超取時的超商資訊欄位 - 樣式已移至 class-yangsheep-third-party-shipping-compat.php */

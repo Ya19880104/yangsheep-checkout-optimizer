@@ -33,18 +33,54 @@ defined('ABSPATH') || exit;
         </div>
     <?php endif; ?>
 </div>
+<?php
+// 取得 order 欄位
+$order_fields = $checkout->get_checkout_fields('order');
+
+// 檢查外掛的「訂單備註開關」設定
+$order_notes_optional = get_option( 'yangsheep_checkout_order_note', 'no' ) === 'yes';
+
+// 檢查 WooCommerce 原生設定
+$wc_order_notes_enabled = apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) );
+
+// 分離出 order_comments 和其他欄位
+$order_comments_field = isset( $order_fields['order_comments'] ) ? $order_fields['order_comments'] : null;
+$other_order_fields = array();
+if ( ! empty( $order_fields ) ) {
+    foreach ( $order_fields as $key => $field ) {
+        if ( $key !== 'order_comments' ) {
+            $other_order_fields[ $key ] = $field;
+        }
+    }
+}
+
+// 判斷是否需要顯示「其他內容」區塊
+$has_order_comments = $order_comments_field && ( $order_notes_optional || $wc_order_notes_enabled );
+$has_other_fields = ! empty( $other_order_fields );
+
+// 只有有內容時才顯示區塊
+if ( $has_order_comments || $has_other_fields ) :
+?>
 <div class="woocommerce-additional-fields">
     <h3 class="yangsheep-h3-title"><?php esc_html_e('其他內容', 'yangsheep-checkout-optimization'); ?></h3>
     <?php do_action('woocommerce_before_order_notes',$checkout); ?>
+
     <?php
-    // 檢查外掛的「訂單備註開關」設定
-    $order_notes_optional = get_option( 'yangsheep_checkout_order_note', 'no' ) === 'yes';
+    // 先渲染其他欄位（如身分證字號等），這些欄位不受備註開關控制
+    if ( $has_other_fields ) :
+    ?>
+        <div class="woocommerce-additional-fields__other-wrapper">
+            <?php
+            foreach ( $other_order_fields as $key => $field ) :
+                woocommerce_form_field( $key, $field, $checkout->get_value( $key ) );
+            endforeach;
+            ?>
+        </div>
+    <?php endif; ?>
 
-    // 檢查 WooCommerce 原生設定
-    $wc_order_notes_enabled = apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) );
-
-    // 只要外掛開關啟用 或 WooCommerce 原生啟用，就顯示備註區塊
-    if ( $order_notes_optional || $wc_order_notes_enabled ):
+    <?php
+    // 渲染訂單備註欄位（受備註開關控制）
+    if ( $has_order_comments ) :
     ?>
         <?php if ( $order_notes_optional ): ?>
             <!-- 訂單備註 Checkbox：用戶勾選才顯示備註欄位 -->
@@ -55,15 +91,12 @@ defined('ABSPATH') || exit;
             </label>
         <?php endif; ?>
 
-        <div class="woocommerce-additional-fields__field-wrapper" <?php if ( $order_notes_optional ) echo 'style="display:none;"'; ?>>
+        <div class="woocommerce-additional-fields__field-wrapper yangsheep-order-comments-wrapper" <?php if ( $order_notes_optional ) echo 'style="display:none;"'; ?>>
             <?php
-            $order_fields = $checkout->get_checkout_fields('order');
-            if ( ! empty( $order_fields ) ) :
-                foreach( $order_fields as $key => $field ):
-                    woocommerce_form_field( $key, $field, $checkout->get_value( $key ) );
-                endforeach;
+            if ( $order_comments_field ) :
+                woocommerce_form_field( 'order_comments', $order_comments_field, $checkout->get_value( 'order_comments' ) );
             else:
-                // 如果沒有 order 欄位，手動加入訂單備註
+                // 如果沒有 order_comments 欄位，手動加入訂單備註
                 woocommerce_form_field( 'order_comments', array(
                     'type'        => 'textarea',
                     'class'       => array( 'notes' ),
@@ -74,5 +107,7 @@ defined('ABSPATH') || exit;
             ?>
         </div>
     <?php endif; ?>
+
     <?php do_action('woocommerce_after_order_notes',$checkout); ?>
 </div>
+<?php endif; ?>

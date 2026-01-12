@@ -385,7 +385,17 @@ class YANGSHEEP_Checkout_Order_Enhancer {
     /**
      * Add Manual Tracking Metabox
      *
-     * 只有在訂單不是使用 PayNow/PayUni 自動串接物流時才顯示
+     * 只有在訂單不是使用 PayUni / YS PayNow 自動串接物流時才顯示
+     *
+     * 隱藏條件：
+     * - PayUni 物流（payuni_ 前綴）
+     * - YS PayNow 物流（ys_paynow_shipping_ 前綴）
+     * - 有 _ys_logistic_service_id 或 _payuni_shipping_ship_type meta
+     *
+     * 顯示條件：
+     * - 好用版 PayNow (paynow_shipping_ 前綴，非 ys_)
+     * - 綠界 ECPay (ry_ecpay_ 前綴)
+     * - 其他物流方式
      */
     public function add_manual_tracking_metabox( $post_type, $post_or_order = null ) {
         // 取得訂單物件
@@ -399,11 +409,30 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             $order = wc_get_order( absint( $_GET['id'] ) );
         }
 
-        // 檢查是否為 PayNow/PayUni 自動串接物流 - 如果是，不顯示 metabox
+        // 檢查是否為 PayUni / YS PayNow 自動串接物流 - 如果是，不顯示 metabox
         if ( $order ) {
-            $is_auto_logistics = $order->get_meta( '_ys_logistic_service_id' ) || $order->get_meta( '_payuni_shipping_ship_type' );
-            if ( $is_auto_logistics ) {
-                return; // 使用自動物流，不顯示手動配送 metabox
+            // 方法1：檢查訂單 meta（YS PayNow / PayUni 會設定這些 meta）
+            $ys_logistic_id = $order->get_meta( '_ys_logistic_service_id' );
+            $payuni_ship_type = $order->get_meta( '_payuni_shipping_ship_type' );
+
+            if ( $ys_logistic_id || $payuni_ship_type ) {
+                return; // 使用 YS PayNow / PayUni 自動物流，不顯示手動配送 metabox
+            }
+
+            // 方法2：檢查訂單的物流方式 method_id
+            $shipping_methods = $order->get_shipping_methods();
+            foreach ( $shipping_methods as $shipping_method ) {
+                $method_id = $shipping_method->get_method_id();
+
+                // PayUni 物流（所有 payuni_ 前綴，包含超取、宅配、冷凍等）
+                if ( strpos( $method_id, 'payuni_' ) === 0 ) {
+                    return;
+                }
+
+                // YS PayNow 物流（ys_paynow_shipping_ 前綴，包含超取、宅配、冷凍等）
+                if ( strpos( $method_id, 'ys_paynow_shipping_' ) === 0 ) {
+                    return;
+                }
             }
         }
 
@@ -832,14 +861,14 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             line-height: 1.4;
             white-space: nowrap;
         }
-        .ys-status-pending { background: #f0f4f7; color: #7a8b95; }
-        .ys-status-waiting { background: #e8eff5; color: #6b8a9a; }
-        .ys-status-created { background: #e1f0ff; color: #0073aa; }
-        .ys-status-shipping { background: #fef6e8; color: #b8860b; }
-        .ys-status-arrived { background: #f3e5f5; color: #7b1fa2; }
-        .ys-status-completed { background: #e8eff5; color: #6b8a9a; }
-        .ys-status-cancelled { background: #ffebee; color: #c62828; }
-        .ys-status-default { background: #f0f4f7; color: #7a8b95; }
+        .ys-status-pending { background: #f0f4f7; color: #7a8b95; }   /* 待建立 - 灰 */
+        .ys-status-waiting { background: #e8eff5; color: #6b8a9a; }   /* 等待寄件 - 淡藍 */
+        .ys-status-created { background: #e1f0ff; color: #0073aa; }   /* 已建立 - 藍 */
+        .ys-status-shipping { background: #fef6e8; color: #b8860b; }  /* 配送中 - 橘黃 */
+        .ys-status-arrived { background: #f3e5f5; color: #7b1fa2; }   /* 到店待取 - 紫 */
+        .ys-status-completed { background: #e8f5e9; color: #2e7d32; } /* 已完成 - 深綠 */
+        .ys-status-cancelled { background: #ffebee; color: #c62828; } /* 已取消/退貨 - 紅 */
+        .ys-status-default { background: #f0f4f7; color: #7a8b95; }   /* 預設 - 灰 */
         </style>';
     }
 

@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:     YANGSHEEP 結帳優化
+ * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.art
- * Description:     優化 WooCommerce 結帳頁面，myaccount，訂單頁面；包含自訂佈局、TWzipcode、後台可調色和圓角、物流卡片選擇。
- * Version:         1.3.31
+ * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
+ * Version:         1.3.34
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.art
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,18 +12,25 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.3.31' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.3.34' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 
+// 定義常數供其他類別使用
+define( 'YANGSHEEP_CHECKOUT_URL', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL );
+define( 'YANGSHEEP_CHECKOUT_VERSION', YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+
 // 載入核心
 add_action( 'plugins_loaded', function(){
+    // WPLoyalty 整合類別需要在設定類別之前載入（因為設定頁面會引用它）
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-wployalty-integration.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-settings.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-customizer.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-shipping-cards.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-sidebar.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-fields.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-order-enhancer.php';
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-third-party-shipping-compat.php';
 });
 
 // 啟動設定與自訂器
@@ -33,6 +40,7 @@ add_action( 'init', function(){
     YANGSHEEP_Shipping_Cards::get_instance();
     YANGSHEEP_Checkout_Sidebar::get_instance();
     YANGSHEEP_Checkout_Order_Enhancer::get_instance();
+    YANGSHEEP_Third_Party_Shipping_Compat::get_instance();
 });
 
 // 前端 CSS/JS
@@ -41,7 +49,12 @@ add_action( 'wp_enqueue_scripts', function(){
         wp_enqueue_style( 'yangsheep-checkout-optimization', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-checkout.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
         wp_enqueue_script( 'jquery-twzipcode', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/jquery.twzipcode.min.js', [ 'jquery' ], '1.7.12', true );
         wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
-        // 注意：twzipcode 功能已整合在 yangsheep-checkout.js 的 initShippingTwzipcode()
+
+        // 傳遞超取物流方式清單到前端
+        $cvs_methods = get_option( 'yangsheep_cvs_shipping_methods', array() );
+        wp_localize_script( 'yangsheep-checkout-custom', 'yangsheep_checkout_params', array(
+            'cvs_shipping_methods' => is_array( $cvs_methods ) ? $cvs_methods : array(),
+        ) );
     }
     // 物流卡片 CSS/JS（僅結帳頁）
     if ( is_checkout() && ! is_wc_endpoint_url() ) {

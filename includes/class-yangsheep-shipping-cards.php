@@ -138,6 +138,10 @@ class YANGSHEEP_Shipping_Cards {
             // AJAX 更新後重新執行
             $(document.body).on('updated_checkout', function() {
                 setTimeout(processOriginalShipping, 200);
+
+                // 內容為空就隱藏
+                $('.yangsheep-shipping-cards-wrapper').toggle($('.yangsheep-shipping-cards-container').children().length > 0);
+                $('.woocommerce-shipping-fields').toggle($('.woocommerce-shipping-fields').children().length > 0);
             });
         });
         </script>
@@ -170,21 +174,21 @@ class YANGSHEEP_Shipping_Cards {
     
     /**
      * 註冊 AJAX Fragment
-     * 
+     *
      * 當結帳頁面地址變更時，WooCommerce 會觸發 AJAX 更新
      * 此 filter 讓我們的物流卡片區塊也能被更新
      */
     public function register_fragment( $fragments ) {
         // 開始輸出緩衝
         ob_start();
-        
+
         echo '<div class="yangsheep-shipping-cards-container">';
         $this->render_shipping_cards();
         echo '</div>';
-        
+
         // 將輸出存入 fragments
         $fragments['.yangsheep-shipping-cards-container'] = ob_get_clean();
-        
+
         return $fragments;
     }
     

@@ -43,10 +43,62 @@ jQuery(function ($) {
     }
 
     // ===== 3. 購物金相關 =====
-    $(".wlr_point_redeem_message").detach().appendTo('.yangsheep-coupon-point');
-    var cp = document.querySelector(".yangsheep-coupon-point");
-    if (cp && !cp.innerHTML.trim()) cp.style.display = 'none';
+    // 移動 WooCommerce Loyalty Rewards (WLR) 購物金訊息到購物金區塊
+    // 注意：如果啟用了 WPLoyalty 整合（yangsheep_wployalty 變數存在且 enabled），
+    //       會完全交由 yangsheep-wployalty.js 處理，這裡不再干預
+    function initPointRedeemBlock() {
+        // 如果 WPLoyalty 整合已啟用，完全交由 yangsheep-wployalty.js 處理
+        if (typeof yangsheep_wployalty !== 'undefined' && yangsheep_wployalty.enabled) {
+            console.log('[YS Checkout] WPLoyalty integration enabled, skipping point block management');
+            return;
+        }
 
+        var $pointBlock = $('.yangsheep-coupon-point');
+        var $couponBlock = $('.yangsheep-coupon-block');
+
+        // 只偵測 WLR 購物金訊息 class
+        var $wlrMessage = $('.wlr_point_redeem_message').not('.yangsheep-coupon-point *');
+
+        // 如果有 WLR 購物金訊息且不在購物金區塊內，移入
+        if ($wlrMessage.length && $pointBlock.length) {
+            $wlrMessage.each(function() {
+                if (!$(this).closest('.yangsheep-coupon-point').length) {
+                    $(this).detach().appendTo($pointBlock);
+                }
+            });
+        }
+
+        // 根據購物金區塊是否有內容決定顯示/隱藏
+        if ($pointBlock.length) {
+            // 檢查是否有實際內容（排除空白和註解）
+            var hasContent = $pointBlock.children().length > 0;
+
+            if (hasContent) {
+                $pointBlock.addClass('has-content').css('display', 'block');
+                $couponBlock.addClass('has-point');
+            } else {
+                $pointBlock.removeClass('has-content').css('display', 'none');
+                $couponBlock.removeClass('has-point');
+            }
+
+            console.log('[YS Checkout] Point block initialized, hasContent:', hasContent);
+        }
+    }
+
+    // 初始執行（延遲確保 DOM 載入完成）
+    setTimeout(initPointRedeemBlock, 500);
+
+    // AJAX 更新後重新檢查
+    $(document.body).on('updated_checkout', function() {
+        setTimeout(initPointRedeemBlock, 300);
+    });
+
+    // 頁面載入完成後再次檢查
+    $(window).on('load', function() {
+        setTimeout(initPointRedeemBlock, 100);
+    });
+
+    // YITH Points and Rewards 同步
     $('input[name="ywpar_input_points"]').on('change', function () {
         $('#yith-par-message-reward-cart input[name="ywpar_input_points"]').val(this.value || 0);
     });
@@ -86,6 +138,7 @@ jQuery(function ($) {
     // ===== 7. 台灣地址 Twzipcode =====
     // 只處理 twzipcode 初始化，不干擾其他欄位顯示
     var postcodeTimer = null;
+    var twzipcodeInitialized = false;
 
     function initTwzipcode() {
         if (typeof $.fn.twzipcode !== 'function') return;
@@ -96,7 +149,8 @@ jQuery(function ($) {
             return;
         }
 
-        if ($('#shipping-zipcode-fields').length > 0) return;
+        // 使用 flag 和 class 來檢查是否已初始化
+        if (twzipcodeInitialized && $('.yangsheep-twzipcode-element').length > 0) return;
 
         console.log('[YS Checkout] 初始化 twzipcode');
 
@@ -104,14 +158,18 @@ jQuery(function ($) {
         var initCity = $('#shipping_city').val() || '';
         var initZipcode = $('#shipping_postcode').val() || '';
 
-        var $cont = $('<div id="shipping-zipcode-fields"></div>').insertBefore('#shipping_address_1_field');
+        // 建立暫時容器（會在初始化完成後移除）
+        var $cont = $('<div id="shipping-zipcode-fields-temp"></div>').appendTo('body').hide();
 
         function syncInputs() {
-            $cont.twzipcode('get', function (county, district, zipcode) {
-                $('#shipping_state').val(county);
-                $('#shipping_city').val(district);
-                $('#shipping_postcode').val(zipcode);
-            });
+            // 使用移動後的 select 元素來同步
+            var county = $('select[name="shipping_state_tw"]').val() || '';
+            var district = $('select[name="shipping_city_tw"]').val() || '';
+            var zipcode = $('input[name="shipping_postcode_tw"]').val() || '';
+
+            $('#shipping_state').val(county);
+            $('#shipping_city').val(district);
+            $('#shipping_postcode').val(zipcode);
         }
 
         function onDistrictSelect() {
@@ -139,30 +197,39 @@ jQuery(function ($) {
         $('#shipping_city_field .woocommerce-input-wrapper').hide();
         $('#shipping_postcode_field .woocommerce-input-wrapper').hide();
 
+        // 移動 twzipcode 元素到各自的 field 內
         $('#shipping_state_field').append($cont.find('select[name="shipping_state_tw"]'));
         $('#shipping_city_field').append($cont.find('select[name="shipping_city_tw"]'));
         $('#shipping_postcode_field').append($cont.find('input[name="shipping_postcode_tw"]').addClass('input-text'));
 
+        // 設定初始值（在元素移動後）
         if (initState || initCity || initZipcode) {
-            $cont.twzipcode('set', {
-                county: initState,
-                district: initCity,
-                zipcode: initZipcode
-            });
+            $('select[name="shipping_state_tw"]').val(initState).trigger('change');
+            setTimeout(function() {
+                $('select[name="shipping_city_tw"]').val(initCity).trigger('change');
+                $('input[name="shipping_postcode_tw"]').val(initZipcode);
+            }, 100);
         }
+
+        // 移除暫時容器
+        $cont.remove();
+
+        twzipcodeInitialized = true;
     }
 
     function destroyTwzipcode() {
-        if ($('#shipping-zipcode-fields').length === 0) return;
+        if (!twzipcodeInitialized && $('.yangsheep-twzipcode-element').length === 0) return;
 
         console.log('[YS Checkout] 銷毀 twzipcode');
 
-        $('#shipping-zipcode-fields').remove();
         $('.yangsheep-twzipcode-element').remove();
+        $('#shipping-zipcode-fields-temp').remove();
 
         $('#shipping_state_field .woocommerce-input-wrapper').show();
         $('#shipping_city_field .woocommerce-input-wrapper').show();
         $('#shipping_postcode_field .woocommerce-input-wrapper').show();
+
+        twzipcodeInitialized = false;
     }
 
     $(document.body).on('change', '#shipping_country', function () {
@@ -180,7 +247,9 @@ jQuery(function ($) {
     $(document.body).on('updated_checkout', function () {
         console.log('[YS Checkout] updated_checkout');
         var country = $('#shipping_country').val();
-        if (country === 'TW' && $('#shipping-zipcode-fields').length === 0) {
+        // 檢查 twzipcode 元素是否存在，若不存在則重新初始化
+        if (country === 'TW' && $('.yangsheep-twzipcode-element').length === 0) {
+            twzipcodeInitialized = false;
             setTimeout(initTwzipcode, 150);
         }
     });
@@ -279,14 +348,20 @@ jQuery(function ($) {
      * 根據運送方式切換地址欄位顯示
      * - 超取時：隱藏地址欄位（郵遞區號、縣市、區、地址）
      * - 宅配時：顯示地址欄位
-     * 
+     *
      * 使用 CSS class 控制，避免被 WooCommerce AJAX 覆蓋
-     * 
-     * @version 2.3.0
-     * @since 2026-01-08
+     * 優先使用後台設定的超取物流清單，若未設定則使用自動偵測
+     *
+     * @version 2.4.0
+     * @since 2026-01-12
      */
     var lastShippingMethod = null;
     var shippingFieldsTimer = null;
+
+    // 取得後台設定的超取物流方式清單
+    var cvsShippingMethods = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.cvs_shipping_methods)
+        ? yangsheep_checkout_params.cvs_shipping_methods
+        : [];
 
     function updateShippingFieldsVisibility(forceUpdate) {
         // 取得選中的運送方式
@@ -301,10 +376,29 @@ jQuery(function ($) {
         lastShippingMethod = methodId;
         console.log('[YS Checkout] 運送方式:', methodId);
 
-        // 判斷是否為超取（PayUni、PayNow、ECPay 等）
-        // ys_paynow_711, ys_paynow_family, ys_paynow_hilife 為超取
-        // ys_paynow_tcat 為宅配
-        var isCVS = /payuni.*(711|fami|hilife)|ecpay.*cvs|ys_paynow_(711|family|hilife)/i.test(methodId);
+        var isCVS = false;
+
+        // 判斷是否為超取
+        if (cvsShippingMethods.length > 0) {
+            // 使用後台設定的物流清單
+            // methodId 格式可能是 "flat_rate:12" 或 "ys_paynow_711:1"
+            // 需要檢查是否在清單中（包含 rate_id 和 instance_id 的比對）
+            isCVS = cvsShippingMethods.some(function(cvsMethod) {
+                // 精確比對
+                if (methodId === cvsMethod) return true;
+                // 比對 method_id 部分（忽略 instance_id）
+                var methodBase = methodId.split(':')[0];
+                var cvsBase = cvsMethod.split(':')[0];
+                return methodBase === cvsBase && methodId.indexOf(cvsMethod) === 0;
+            });
+            console.log('[YS Checkout] 使用後台設定判斷超取:', isCVS, '清單:', cvsShippingMethods);
+        } else {
+            // 未設定則使用自動偵測（PayUni、PayNow、ECPay 等）
+            // ys_paynow_711, ys_paynow_family, ys_paynow_hilife 為超取
+            // ys_paynow_tcat 為宅配
+            isCVS = /payuni.*(711|fami|hilife)|ecpay.*cvs|ys_paynow_(711|family|hilife)/i.test(methodId);
+            console.log('[YS Checkout] 使用自動偵測判斷超取:', isCVS);
+        }
 
         // 使用 body class 控制（不會被 AJAX 覆蓋）
         if (isCVS) {
