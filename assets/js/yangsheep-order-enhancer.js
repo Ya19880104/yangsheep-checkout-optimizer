@@ -16,6 +16,7 @@
             e.preventDefault();
             var $btn = $(this);
             var orderId = $btn.data('order-id');
+            var logisticsIndex = $btn.data('logistics-index') || 0;
             var $row = $btn.closest('tr'); // The order row
             var $existingPanel = $row.next('.ys-expanded-row');
 
@@ -43,27 +44,30 @@
             $expandedRow.hide().slideDown(200);
 
             // Fetch Details
-            YSOrderEnhancer.loadDetails(orderId, $expandedRow.find('.ys-order-expanded-panel'));
+            YSOrderEnhancer.loadDetails(orderId, $expandedRow.find('.ys-order-expanded-panel'), logisticsIndex);
         },
 
         handlePanelRefresh: function (e) {
             e.preventDefault();
             var $btn = $(this);
             var orderId = $btn.data('order-id');
+            var logisticsIndex = $btn.data('logistics-index') || 0;
             var $panel = $btn.closest('.ys-order-expanded-panel');
 
             $panel.html('<div class="ys-panel-loading">更新中...</div>');
-            YSOrderEnhancer.loadDetails(orderId, $panel);
+            YSOrderEnhancer.loadDetails(orderId, $panel, logisticsIndex);
         },
 
-        loadDetails: function (orderId, $panel) {
+        loadDetails: function (orderId, $panel, logisticsIndex) {
+            logisticsIndex = logisticsIndex || 0;
             $.ajax({
                 url: yangsheep_enhancer_params.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'yangsheep_get_order_logistics',
                     nonce: yangsheep_enhancer_params.nonce,
-                    order_id: orderId
+                    order_id: orderId,
+                    logistics_index: logisticsIndex
                 },
                 success: function (response) {
                     if (response.success) {
@@ -86,7 +90,7 @@
 
                         var html = '<div class="ys-panel-header">' +
                             '<h4 class="ys-panel-title">' + (d.service_name || '物流詳情') + '</h4>' +
-                            '<button type="button" class="ys-panel-refresh" data-order-id="' + orderId + '">🔄 更新貨態</button>' +
+                            '<button type="button" class="ys-panel-refresh" data-order-id="' + orderId + '" data-logistics-index="' + logisticsIndex + '">🔄 更新貨態</button>' +
                             '</div>' +
                             '<div class="ys-status-display">' +
                             '<div class="ys-status-text">' + d.status_text + '</div>' +

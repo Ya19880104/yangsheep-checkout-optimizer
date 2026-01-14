@@ -68,14 +68,14 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             'yangsheep-order-enhancer',
             plugins_url( '../assets/css/yangsheep-order-enhancer.css', __FILE__ ),
             array(),
-            '1.0.1'
+            YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION
         );
 
         wp_enqueue_script(
             'yangsheep-order-enhancer',
             plugins_url( '../assets/js/yangsheep-order-enhancer.js', __FILE__ ),
             array( 'jquery' ),
-            '1.0.1',
+            YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
             true
         );
 
@@ -224,7 +224,8 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         }
 
         // 1. PayNow Detection
-        if ( $order->get_meta( '_ys_logistic_service_id' ) || strpos( $shipping_method_id, 'ys_paynow' ) !== false ) {
+        // 支援兩種 meta key: _ys_paynow_logistic_service_id (新版) 和 _ys_logistic_service_id (舊版/WOOMP)
+        if ( $order->get_meta( '_ys_paynow_logistic_service_id' ) || $order->get_meta( '_ys_logistic_service_id' ) || strpos( $shipping_method_id, 'ys_paynow' ) !== false ) {
             $all_logistics[] = $this->get_paynow_logistics_data( $order, $service_name );
         }
         // 2. PayUni Detection
@@ -335,7 +336,11 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         $store_name = '';
         $flow_type = 'cvs';
 
-        $service_id = $order->get_meta( '_ys_logistic_service_id' );
+        // 支援兩種 meta key: _ys_paynow_logistic_service_id (新版) 和 _ys_logistic_service_id (舊版/WOOMP)
+        $service_id = $order->get_meta( '_ys_paynow_logistic_service_id' );
+        if ( empty( $service_id ) ) {
+            $service_id = $order->get_meta( '_ys_logistic_service_id' );
+        }
 
         if ( in_array( $service_id, array( '06', '36' ) ) || strpos( $service_name, '宅配' ) !== false || strpos( $service_name, '黑貓' ) !== false || strpos( $service_name, '郵寄' ) !== false ) {
             $flow_type = 'home';

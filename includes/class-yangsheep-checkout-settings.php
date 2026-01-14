@@ -114,6 +114,7 @@ class YANGSHEEP_Checkout_Settings {
         'yangsheep_checkout_tw_fields',
         'yangsheep_checkout_order_note',
         'yangsheep_myaccount_visual',
+        'yangsheep_wployalty_enable',
     );
 
     public function settings_init() {
@@ -181,7 +182,10 @@ class YANGSHEEP_Checkout_Settings {
             'yangsheep_status_arrived_bg',
             'yangsheep_status_arrived_text',
             'yangsheep_status_completed_bg',
-            'yangsheep_status_completed_text'
+            'yangsheep_status_completed_text',
+
+            // WPLoyalty Integration
+            'yangsheep_wployalty_enable'
         );
 
         foreach ( $options as $opt ) {
@@ -293,6 +297,11 @@ class YANGSHEEP_Checkout_Settings {
         $this->add_color_field( 'yangsheep_status_arrived_text', __( '已到店 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
         $this->add_color_field( 'yangsheep_status_completed_bg', __( '已完成 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
         $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+
+        // --- Tab 5: 購物金整合 ---
+        add_settings_section( 'ys_loyalty_section', '', array( $this, 'loyalty_section_header' ), 'yangsheep_tab_loyalty' );
+        add_settings_field( 'yangsheep_wployalty_enable', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), array( $this, 'loyalty_enable_callback' ), 'yangsheep_tab_loyalty', 'ys_loyalty_section' );
+        add_settings_field( 'yangsheep_wployalty_info', '', array( $this, 'loyalty_info_callback' ), 'yangsheep_tab_loyalty', 'ys_loyalty_section' );
     }
 
     // Section Headers
@@ -529,93 +538,74 @@ class YANGSHEEP_Checkout_Settings {
     }
 
     /**
-     * 渲染購物金整合頁籤
+     * 購物金整合 Section Header
      */
-    public function render_loyalty_tab() {
-        // 處理表單提交
-        if ( isset( $_POST['yangsheep_wployalty_save'] ) && check_admin_referer( 'yangsheep_wployalty_settings_nonce' ) ) {
-            $settings = array(
-                'enable_checkout_integration' => isset( $_POST['enable_checkout_integration'] ) ? 1 : 0,
-            );
-            YANGSHEEP_WPLoyalty_Integration::save_settings( $settings );
-            echo '<div class="notice notice-success is-dismissible"><p>' . __( '設定已儲存', 'yangsheep-checkout-optimization' ) . '</p></div>';
-        }
-
-        // 取得目前設定
-        $settings = get_option( YANGSHEEP_WPLoyalty_Integration::OPTION_NAME, YANGSHEEP_WPLoyalty_Integration::get_default_settings() );
+    public function loyalty_section_header() {
         $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
+        echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-star-filled"></span> WPLoyalty 整合</h3>';
+
+        if ( ! $is_wployalty_active ) {
+            echo '<div class="notice notice-warning inline" style="margin:15px 0;">';
+            echo '<p><span class="dashicons dashicons-warning" style="color:#dba617;"></span>';
+            echo '<strong>' . __( '未偵測到 WPLoyalty 外掛', 'yangsheep-checkout-optimization' ) . '</strong> - ';
+            echo __( '請先安裝並啟用 WooCommerce Loyalty Rewards (WPLoyalty) 外掛才能使用此功能。', 'yangsheep-checkout-optimization' ) . '</p>';
+            echo '</div>';
+        }
+    }
+
+    /**
+     * 購物金啟用選項 Callback
+     */
+    public function loyalty_enable_callback() {
+        $val = get_option( 'yangsheep_wployalty_enable', 'no' );
+        $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
+
+        echo '<input type="hidden" name="yangsheep_wployalty_enable_submitted" value="1" />';
+        echo '<label class="ys-toggle-switch">';
+        echo '<input type="checkbox" name="yangsheep_wployalty_enable" value="yes" ' . checked( $val, 'yes', false );
+        if ( ! $is_wployalty_active ) {
+            echo ' disabled';
+        }
+        echo ' />';
+        echo '<span class="ys-toggle-slider"></span>';
+        echo '</label>';
+        echo '<span class="ys-toggle-desc">' . __( '啟用後，系統將自動偵測並美化 WPLoyalty 的購物金兌換訊息', 'yangsheep-checkout-optimization' ) . '</span>';
+    }
+
+    /**
+     * 購物金說明區塊 Callback
+     */
+    public function loyalty_info_callback() {
         ?>
-        <div class="ys-section-card">
-            <h3 class="ys-section-title"><span class="dashicons dashicons-star-filled"></span> WPLoyalty (WooCommerce Loyalty Rewards) 整合</h3>
+        <div class="ys-notice-box" style="background:#fff8e5;border-left:4px solid #ffb900;padding:12px 15px;margin:10px 0 20px;border-radius:4px;">
+            <p style="margin:0;"><strong><span class="dashicons dashicons-info" style="color:#ffb900;"></span> <?php _e( '重要設定說明', 'yangsheep-checkout-optimization' ); ?></strong></p>
+            <p style="margin:10px 0 0;">
+                <?php _e( '請至 WPLoyalty 後台設定 > 結帳頁面 > 「兌換訊息 Redeem Message」保持以下原始文字：', 'yangsheep-checkout-optimization' ); ?>
+            </p>
+            <code style="display:block;background:#f5f5f5;padding:10px;margin:10px 0;border-radius:4px;font-size:12px;">You have {wlr_redeem_cart_points} {wlr_points_label} earned choose your rewards {wlr_reward_link}</code>
+            <p style="margin:0;color:#666;font-size:13px;">
+                <?php _e( '系統將會自動偵測並顯示為中文，與結帳頁面視覺整合。', 'yangsheep-checkout-optimization' ); ?>
+            </p>
+        </div>
 
-            <?php if ( ! $is_wployalty_active ) : ?>
-                <div class="notice notice-warning inline" style="margin:15px 0;">
-                    <p><span class="dashicons dashicons-warning" style="color:#dba617;"></span>
-                    <strong><?php _e( '未偵測到 WPLoyalty 外掛', 'yangsheep-checkout-optimization' ); ?></strong> -
-                    <?php _e( '請先安裝並啟用 WooCommerce Loyalty Rewards (WPLoyalty) 外掛才能使用此功能。', 'yangsheep-checkout-optimization' ); ?></p>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="">
-                <?php wp_nonce_field( 'yangsheep_wployalty_settings_nonce' ); ?>
-
-                <table class="form-table ys-form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="enable_checkout_integration"><?php _e( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ); ?></label>
-                        </th>
-                        <td>
-                            <label class="ys-toggle-switch">
-                                <input type="checkbox"
-                                       name="enable_checkout_integration"
-                                       id="enable_checkout_integration"
-                                       value="1"
-                                       <?php checked( ! empty( $settings['enable_checkout_integration'] ) ); ?>
-                                       <?php disabled( ! $is_wployalty_active ); ?> />
-                                <span class="ys-toggle-slider"></span>
-                            </label>
-                            <span class="ys-toggle-desc"><?php _e( '啟用後，系統將自動偵測並美化 WPLoyalty 的購物金兌換訊息', 'yangsheep-checkout-optimization' ); ?></span>
-                        </td>
-                    </tr>
-                </table>
-
-                <div class="ys-notice-box" style="background:#fff8e5;border-left:4px solid #ffb900;padding:12px 15px;margin:20px 0;border-radius:4px;">
-                    <p style="margin:0;"><strong><span class="dashicons dashicons-info" style="color:#ffb900;"></span> <?php _e( '重要設定說明', 'yangsheep-checkout-optimization' ); ?></strong></p>
-                    <p style="margin:10px 0 0;">
-                        <?php _e( '請至 WPLoyalty 後台設定 > 結帳頁面 > 「兌換訊息 Redeem Message」保持以下原始文字：', 'yangsheep-checkout-optimization' ); ?>
-                    </p>
-                    <code style="display:block;background:#f5f5f5;padding:10px;margin:10px 0;border-radius:4px;font-size:12px;">You have {wlr_redeem_cart_points} {wlr_points_label} earned choose your rewards {wlr_reward_link}</code>
-                    <p style="margin:0;color:#666;font-size:13px;">
-                        <?php _e( '系統將會自動偵測並顯示為中文，與結帳頁面視覺整合。', 'yangsheep-checkout-optimization' ); ?>
-                    </p>
-                </div>
-
-                <div class="ys-preview-section" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:20px;margin:20px 0;">
-                    <h4 style="margin:0 0 15px;color:#5a7080;"><span class="dashicons dashicons-visibility"></span> <?php _e( '預覽效果', 'yangsheep-checkout-optimization' ); ?></h4>
-                    <div style="background:#fff;border:2px solid var(--theme-section-border-color, #c5d1d8);border-radius:8px;padding:20px;">
-                        <div style="display:flex;gap:20px;flex-wrap:wrap;">
-                            <!-- 折扣代碼區塊 -->
-                            <div style="flex:1;min-width:200px;">
-                                <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '折扣代碼', 'yangsheep-checkout-optimization' ); ?></h5>
-                                <p style="margin:0 0 10px;font-size:13px;color:#666;"><?php _e( '若您有折扣代碼，請直接輸入代碼折抵。', 'yangsheep-checkout-optimization' ); ?></p>
-                                <input type="text" placeholder="Coupon" style="width:100%;padding:8px 12px;border:1px solid #c5d1d8;border-radius:4px;margin-bottom:10px;" disabled />
-                                <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '使用折扣代碼', 'yangsheep-checkout-optimization' ); ?></button>
-                            </div>
-                            <!-- 購物金區塊 -->
-                            <div style="flex:1;min-width:200px;border-left:1px solid #e0e0e0;padding-left:20px;">
-                                <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '購物金', 'yangsheep-checkout-optimization' ); ?></h5>
-                                <p style="margin:0 0 8px;font-size:13px;color:#666;"><?php _e( '目前有', 'yangsheep-checkout-optimization' ); ?> <strong style="color:var(--theme-button-background-initial-color, #8fa8b8);">500 Points</strong> <?php _e( '可用', 'yangsheep-checkout-optimization' ); ?></p>
-                                <p style="margin:0 0 15px;font-size:12px;color:#718096;"><?php _e( '按下兌換按鈕，於彈出視窗中兌換', 'yangsheep-checkout-optimization' ); ?></p>
-                                <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '點此兌換折扣', 'yangsheep-checkout-optimization' ); ?></button>
-                            </div>
-                        </div>
+        <div class="ys-preview-section" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:20px;margin:20px 0;">
+            <h4 style="margin:0 0 15px;color:#5a7080;"><span class="dashicons dashicons-visibility"></span> <?php _e( '預覽效果', 'yangsheep-checkout-optimization' ); ?></h4>
+            <div style="background:#fff;border:2px solid var(--theme-section-border-color, #c5d1d8);border-radius:8px;padding:20px;">
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '折扣代碼', 'yangsheep-checkout-optimization' ); ?></h5>
+                        <p style="margin:0 0 10px;font-size:13px;color:#666;"><?php _e( '若您有折扣代碼，請直接輸入代碼折抵。', 'yangsheep-checkout-optimization' ); ?></p>
+                        <input type="text" placeholder="Coupon" style="width:100%;padding:8px 12px;border:1px solid #c5d1d8;border-radius:4px;margin-bottom:10px;" disabled />
+                        <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '使用折扣代碼', 'yangsheep-checkout-optimization' ); ?></button>
+                    </div>
+                    <div style="flex:1;min-width:200px;border-left:1px solid #e0e0e0;padding-left:20px;">
+                        <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '購物金', 'yangsheep-checkout-optimization' ); ?></h5>
+                        <p style="margin:0 0 8px;font-size:13px;color:#666;"><?php _e( '目前有', 'yangsheep-checkout-optimization' ); ?> <strong style="color:var(--theme-button-background-initial-color, #8fa8b8);">500 Points</strong> <?php _e( '可用', 'yangsheep-checkout-optimization' ); ?></p>
+                        <p style="margin:0 0 15px;font-size:12px;color:#718096;"><?php _e( '按下兌換按鈕，於彈出視窗中兌換', 'yangsheep-checkout-optimization' ); ?></p>
+                        <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '點此兌換折扣', 'yangsheep-checkout-optimization' ); ?></button>
                     </div>
                 </div>
-
-                <p class="submit">
-                    <input type="submit" name="yangsheep_wployalty_save" class="button button-primary" value="<?php _e( '儲存設定', 'yangsheep-checkout-optimization' ); ?>" />
-                </p>
-            </form>
+            </div>
         </div>
         <?php
     }
@@ -767,12 +757,12 @@ class YANGSHEEP_Checkout_Settings {
                     </div>
                 </div>
 
-                <!-- 購物金整合頁籤（獨立表單，不在 options.php 表單內） -->
                 <div class="ys-tab-content" id="ys-tab-loyalty" style="<?php echo $active_tab !== 'loyalty' ? 'display:none;' : ''; ?>">
-                    <?php $this->render_loyalty_tab(); ?>
+                    <?php do_settings_sections( 'yangsheep_tab_loyalty' ); ?>
+                    </div><!-- close ys-section-card -->
                 </div>
 
-                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo ($active_tab === 'docs' || $active_tab === 'loyalty') ? 'display:none;' : ''; ?>">
+                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo $active_tab === 'docs' ? 'display:none;' : ''; ?>">
                     <?php submit_button( __( '儲存設定', 'yangsheep-checkout-optimization' ), 'primary large', 'submit', false ); ?>
                 </div>
             </form>
@@ -1028,7 +1018,7 @@ class YANGSHEEP_Checkout_Settings {
                 $('.ys-tab-content').hide();
                 $('#ys-tab-' + tab).show();
 
-                if (tab === 'docs' || tab === 'loyalty') {
+                if (tab === 'docs') {
                     $('#ys-submit-button').hide();
                 } else {
                     $('#ys-submit-button').show();

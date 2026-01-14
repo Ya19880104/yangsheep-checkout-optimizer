@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.art
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.3.34
+ * Version:         1.3.35
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.art
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.3.34' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.3.35' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 
@@ -280,157 +280,167 @@ add_action('wp_head',function(){
     echo "--yangsheep-shipping-card-bg-active:{$ship_card_active};";
     echo '}';
 
-    // Order Review 區塊
-    echo ".ct-order-review {";
-    echo "background-color:{$or_bg}!important;";
-    echo "border-radius:{$rad}!important;";
-    echo "border:2px solid {$sec_bd}!important;";
-    echo "padding:20px!important;";
-    echo "margin-bottom:0!important;";
+    // Order Review 區塊（使用頁面前綴提高優先級）
+    echo ".yangsheep-design-checkout-page .ct-order-review {";
+    echo "background-color:{$or_bg};";
+    echo "border-radius:{$rad};";
+    echo "border:2px solid {$sec_bd};";
+    echo "padding:20px;";
+    echo "margin-bottom:0;";
     echo '}';
 
     // 折扣代碼區塊
-    echo ".yangsheep-coupon-block {";
-    echo "background-color:{$cp_bg}!important;";
-    echo "border-radius:{$rad}!important;";
-    echo "border:2px solid {$sec_bd}!important;";
-    echo "padding:20px!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-coupon-block {";
+    echo "background-color:{$cp_bg};";
+    echo "border-radius:{$rad};";
+    echo "border:2px solid {$sec_bd};";
+    echo "padding:20px;";
     echo '}';
 
     // 付款區塊 - 外層容器 (.yangsheep-payment)
-    echo ".yangsheep-payment {";
-    echo "background-color:{$payment_bg}!important;";
-    echo "border-radius:{$rad}!important;";
-    echo "padding:20px!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-payment {";
+    echo "background-color:{$payment_bg};";
+    echo "border-radius:{$rad};";
+    echo "padding:20px;";
     echo '}';
     // 付款區塊 - 內層重設
-    echo ".yangsheep-payment #payment, .yangsheep-payment .woocommerce-checkout-payment {";
-    echo "background:transparent!important;";
-    echo "padding:0!important;margin:0!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-payment #payment,";
+    echo ".yangsheep-design-checkout-page .yangsheep-payment .woocommerce-checkout-payment {";
+    echo "background:transparent;";
+    echo "padding:0;margin:0;";
     echo '}';
 
-    // 付款方式列表 - ul 增加 gap
-    echo ".wc_payment_methods.payment_methods {";
-    echo "display:flex!important;flex-direction:column!important;gap:8px!important;";
-    echo "list-style:none!important;padding:0!important;margin:0!important;";
+    // 付款方式列表 - ul 增加 gap（使用 #payment ID 提高優先級以覆蓋 WooCommerce）
+    echo ".yangsheep-design-checkout-page #payment .wc_payment_methods.payment_methods {";
+    echo "display:flex;flex-direction:column;gap:8px;";
+    echo "list-style:none;padding:0;margin:0;";
     echo '}';
 
     // 付款方式卡片 - li 樣式（類似物流卡片）
-    echo ".wc_payment_methods li.wc_payment_method {";
-    echo "background-color:{$pm_bg}!important;";
-    echo "border:2px solid {$pm_border}!important;";
-    echo "border-radius:{$rad}!important;";
-    echo "padding:12px 15px!important;margin:0!important;";
-    echo "transition:all 0.2s ease!important;";
+    // 使用 !important 確保覆蓋 WooCommerce 和佈景主題樣式
+    echo ".yangsheep-design-checkout-page #payment ul.payment_methods>li.wc_payment_method {";
+    echo "background-color:{$pm_bg} !important;";
+    echo "border:2px solid {$pm_border} !important;";
+    echo "border-radius:{$rad} !important;";
+    echo "padding:12px 15px !important;margin:0 !important;";
+    echo "transition:all 0.2s ease;";
     echo '}';
 
-    // 付款方式卡片 - 選中狀態
-    echo ".wc_payment_methods li.wc_payment_method:has(input:checked) {";
-    echo "background-color:{$pm_bg_active}!important;";
-    echo "border-color:{$pm_border_active}!important;";
+    // 付款方式卡片 - 選中狀態（使用 JS 加上的 .ys-payment-selected class）
+    echo ".yangsheep-design-checkout-page #payment ul.payment_methods>li.wc_payment_method.ys-payment-selected {";
+    echo "background-color:{$pm_bg_active} !important;";
+    echo "border-color:{$pm_border_active} !important;";
     echo '}';
 
     // 付款方式描述區域
-    echo ".wc_payment_methods .payment_box {";
-    echo "background-color:{$pm_desc_bg}!important;";
-    echo "border-radius:6px!important;";
-    echo "padding:12px!important;margin-top:10px!important;";
-    echo "border:none!important;";
+    echo ".yangsheep-design-checkout-page #payment .wc_payment_methods .payment_box {";
+    echo "background-color:{$pm_desc_bg} !important;";
+    echo "border-radius:6px !important;";
+    echo "padding:12px !important;margin-top:10px !important;";
+    echo "border:none !important;";
     echo '}';
-    echo ".wc_payment_methods .payment_box::before {display:none!important;}";
+    echo ".yangsheep-design-checkout-page #payment .wc_payment_methods .payment_box::before {display:none !important;}";
 
     // 商品明細區塊
-    echo ".yangsheep-order-items-container, .yangsheep-review-wrapper {";
-    echo "background-color:{$order_items_bg}!important;";
-    echo "border-radius:{$rad}!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-order-items-container,";
+    echo ".yangsheep-design-checkout-page .yangsheep-review-wrapper {";
+    echo "background-color:{$order_items_bg};";
+    echo "border-radius:{$rad};";
     echo '}';
 
     // 物流卡片內層背景色（外層 .yangsheep-shipping-card 保持透明）
-    echo ".yangsheep-shipping-card-inner {";
-    echo "background-color:{$ship_card_bg}!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-shipping-card-inner {";
+    echo "background-color:{$ship_card_bg};";
     echo '}';
-    echo ".yangsheep-shipping-card.selected .yangsheep-shipping-card-inner, .yangsheep-shipping-card.active .yangsheep-shipping-card-inner {";
-    echo "background-color:{$ship_card_active}!important;";
+    echo ".yangsheep-design-checkout-page .yangsheep-shipping-card.selected .yangsheep-shipping-card-inner,";
+    echo ".yangsheep-design-checkout-page .yangsheep-shipping-card.active .yangsheep-shipping-card-inner {";
+    echo "background-color:{$ship_card_active};";
     echo '}';
 
     // 統一結帳頁面按鈕樣式
-    echo '.woocommerce-checkout button.button, .woocommerce-checkout input[type="submit"], ';
-    echo '.woocommerce-checkout .button, .yangsheep-coupon-button .button, #place_order {';
-    echo "background-color:{$btn_bg}!important;";
-    echo "color:{$btn_txt}!important;";
-    echo "border-radius:{$rad}!important;";
-    echo 'border:none!important;transition:all 0.2s ease!important;}';
+    echo '.yangsheep-design-checkout-page button.button,';
+    echo '.yangsheep-design-checkout-page input[type="submit"],';
+    echo '.yangsheep-design-checkout-page .button,';
+    echo '.yangsheep-design-checkout-page .yangsheep-coupon-button .button,';
+    echo '.yangsheep-design-checkout-page #place_order {';
+    echo "background-color:{$btn_bg};";
+    echo "color:{$btn_txt};";
+    echo "border-radius:{$rad};";
+    echo 'border:none;transition:all 0.2s ease;}';
 
-    echo '.woocommerce-checkout button.button:hover, .woocommerce-checkout input[type="submit"]:hover, ';
-    echo '.woocommerce-checkout .button:hover, .yangsheep-coupon-button .button:hover, #place_order:hover {';
-    echo "background-color:{$btn_hover_bg}!important;";
-    echo "color:{$btn_hover_txt}!important;";
+    echo '.yangsheep-design-checkout-page button.button:hover,';
+    echo '.yangsheep-design-checkout-page input[type="submit"]:hover,';
+    echo '.yangsheep-design-checkout-page .button:hover,';
+    echo '.yangsheep-design-checkout-page .yangsheep-coupon-button .button:hover,';
+    echo '.yangsheep-design-checkout-page #place_order:hover {';
+    echo "background-color:{$btn_hover_bg};";
+    echo "color:{$btn_hover_txt};";
     echo '}';
 
     // Checkbox 容器 - 簡潔樣式（無外框、無背景）
-    echo '.yangsheep-order-notes-toggle,';
-    echo '.yangsheep-same-as-billing {';
-    echo 'display:flex!important;align-items:center!important;gap:10px!important;';
-    echo 'cursor:pointer!important;padding:8px 0!important;margin-bottom:5px!important;}';
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle,';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing {';
+    echo 'display:flex;align-items:center;gap:10px;';
+    echo 'cursor:pointer;padding:8px 0;margin-bottom:5px;}';
 
     // 內層 label 隱藏
-    echo '.yangsheep-order-notes-toggle label,';
-    echo '.yangsheep-same-as-billing label {';
-    echo 'display:none!important;}';
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle label,';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing label {';
+    echo 'display:none;}';
 
     // 自訂 checkbox 樣式 - 與運送方式卡片一致 (22x22px)
-    echo '.yangsheep-order-notes-toggle input[type=\"checkbox\"],';
-    echo '.yangsheep-same-as-billing input[type=\"checkbox\"] {';
-    echo 'appearance:none!important;-webkit-appearance:none!important;';
-    echo 'width:22px!important;height:22px!important;min-width:22px!important;';
-    echo 'border:2px solid var(--theme-form-field-border-initial-color, #d0d0d0)!important;border-radius:4px!important;';
-    echo 'background:#fff!important;cursor:pointer!important;';
-    echo 'position:relative!important;transition:all 0.2s ease!important;';
-    echo 'margin:0!important;flex-shrink:0!important;}';
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"],';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"] {';
+    echo 'appearance:none;-webkit-appearance:none;';
+    echo 'width:22px;height:22px;min-width:22px;';
+    echo 'border:2px solid var(--theme-form-field-border-initial-color, #d0d0d0);border-radius:4px;';
+    echo 'background:#fff;cursor:pointer;';
+    echo 'position:relative;transition:all 0.2s ease;';
+    echo 'margin:0;flex-shrink:0;}';
 
-    echo '.yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked,';
-    echo '.yangsheep-same-as-billing input[type=\"checkbox\"]:checked {';
-    echo "background:{$btn_bg}!important;border-color:{$btn_bg}!important;}";
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked,';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"]:checked {';
+    echo "background:{$btn_bg};border-color:{$btn_bg};}";
 
     // Checkbox 打勾圖示 - 調整位置配合 22px（與運送方式卡片一致）
-    echo '.yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked::after,';
-    echo '.yangsheep-same-as-billing input[type=\"checkbox\"]:checked::after {';
-    echo 'content:\"\"!important;position:absolute!important;';
-    echo 'left:6px!important;top:3px!important;width:6px!important;height:11px!important;';
-    echo 'border:solid #fff!important;border-width:0 2px 2px 0!important;';
-    echo 'transform:rotate(45deg)!important;}';
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked::after,';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"]:checked::after {';
+    echo 'content:\"\";position:absolute;';
+    echo 'left:6px;top:3px;width:6px;height:11px;';
+    echo 'border:solid #fff;border-width:0 2px 2px 0;';
+    echo 'transform:rotate(45deg);}';
 
     // Checkbox 文字樣式 - 與 checkbox 垂直置中
-    echo '.yangsheep-order-notes-toggle > span,';
-    echo '.yangsheep-same-as-billing > span {';
-    echo 'font-size:14px!important;color:#333!important;line-height:22px!important;';
-    echo 'cursor:pointer!important;}';
+    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle > span,';
+    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing > span {';
+    echo 'font-size:14px;color:#333;line-height:22px;';
+    echo 'cursor:pointer;}';
 
-    // 台灣化欄位：隱藏 address_2
-    echo '.woocommerce-shipping-fields .hidden,';
-    echo '.woocommerce-shipping-fields #shipping_address_2_field.hidden,';
-    echo '#shipping_address_2_field.hidden {display:none!important;}';
+    // 台灣化欄位：隱藏 address_2（需要 !important 覆蓋 WooCommerce 內建樣式）
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields .hidden,';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields #shipping_address_2_field.hidden,';
+    echo '.yangsheep-design-checkout-page #shipping_address_2_field.hidden {display:none !important;}';
 
-    // 台灣布局：姓名電話 2 欄、郵遞區號縣市區 3 欄、地址 1 欄（電腦版 999px 以上）
-    // 使用 6 欄 Grid（可被 2 和 3 整除）
-    echo '@media (min-width:999px) {';
-    echo '.woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) {';
-    echo 'grid-template-columns: repeat(6, 1fr)!important;gap:15px!important;grid-auto-rows:min-content!important;}';
+    // 台灣布局：姓名電話 2 欄、郵遞區號縣市區 3 欄、地址 1 欄（電腦版 1000px 以上）
+    // 使用 6 欄 Grid（可被 2 和 3 整除），加 !important 確保覆蓋靜態 CSS
+    echo '@media (min-width:1000px) {';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) {';
+    echo 'grid-template-columns: repeat(6, 1fr) !important;gap:15px !important;grid-auto-rows:min-content !important;}';
     // 姓名、電話各佔 3 格（= 50%）
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_first_name_field,';
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_last_name_field,';
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_phone_field {';
-    echo 'grid-column: span 3!important;}';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) #shipping_first_name_field,';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) #shipping_last_name_field,';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) #shipping_phone_field {';
+    echo 'grid-column: span 3 !important;width:auto !important;}';
     // 郵遞區號、縣市、鄉鎮市區各佔 2 格（= 33.33%）
-    echo '.woocommerce-shipping-fields__field-wrapper .yangsheep-tw-third {';
-    echo 'grid-column: span 2!important;}';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) .yangsheep-tw-third {';
+    echo 'grid-column: span 2 !important;}';
     // 地址全寬
-    echo '.woocommerce-shipping-fields__field-wrapper .yangsheep-tw-full,';
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_address_1_field {';
-    echo 'grid-column: 1 / -1!important;}';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) .yangsheep-tw-full,';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper:has(.yangsheep-tw-third) #shipping_address_1_field {';
+    echo 'grid-column: 1 / -1 !important;}';
     // 國家欄位：被移到上方區塊，在這裡隱藏避免佔空間
-    echo '.woocommerce-shipping-fields__field-wrapper #shipping_country_field {';
-    echo 'display:none!important;}';
+    echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields__field-wrapper #shipping_country_field {';
+    echo 'display:none !important;}';
     echo '}';
 
     echo '</style>';

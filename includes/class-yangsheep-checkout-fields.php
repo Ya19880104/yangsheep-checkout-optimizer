@@ -142,8 +142,9 @@ class YANGSHEEP_Checkout_Fields {
                     return true;
                 }
 
-                // YS PayNow 超取
-                if ( preg_match( '/ys_paynow_(711|family|hilife)/i', $method_id ) ) {
+                // YS PayNow 超取 (ys_paynow_shipping_711*, ys_paynow_shipping_family*, ys_paynow_shipping_hilife)
+                // 排除宅配: ys_paynow_shipping_tcat_*
+                if ( strpos( $method_id, 'ys_paynow_shipping_' ) === 0 && strpos( $method_id, 'tcat' ) === false ) {
                     return true;
                 }
             }

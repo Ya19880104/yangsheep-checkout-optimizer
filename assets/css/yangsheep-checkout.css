@@ -279,10 +279,12 @@ ul#shipping_method li {
     display: none !important;
 }
 
+/* 註解：已改用 Grid 佈局，不再需要 width 設定
 .yangsheep-wide50,
 #shipping_phone_field {
     width: 48.5%;
 }
+*/
 
 /* 註解：避免干擾外掛的欄位控制，改用更安全的方式
 .yangsheep-wide100 {
@@ -1276,10 +1278,11 @@ a.woocommerce-remove-coupon {
 
     /* ===== 收件人姓名電話強制並排（一般模式）===== */
     /* 確保姓名和電話欄位在 Grid 中保持並排 */
-    #shipping_last_name_field,
-    #shipping_first_name_field,
-    #shipping_phone_field {
-        grid-column: span 1 !important;
+    /* 註解：台灣模式（6欄 Grid）由動態 CSS 控制，這裡只處理一般模式 */
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_last_name_field,
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_first_name_field,
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_phone_field {
+        grid-column: span 1;
     }
 }
 
@@ -1307,11 +1310,11 @@ a.woocommerce-remove-coupon {
         grid-column: 1 / -1;
     }
 
-    /* 收件人姓名電話強制並排 */
-    #shipping_last_name_field,
-    #shipping_first_name_field,
-    #shipping_phone_field {
-        grid-column: span 1 !important;
+    /* 收件人姓名電話強制並排（一般模式，非台灣模式） */
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_last_name_field,
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_first_name_field,
+    .woocommerce-shipping-fields__field-wrapper:not(:has(.yangsheep-tw-third)) #shipping_phone_field {
+        grid-column: span 1;
     }
 }
 

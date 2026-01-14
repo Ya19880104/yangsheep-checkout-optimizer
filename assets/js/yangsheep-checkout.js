@@ -1,5 +1,5 @@
 // assets/js/yangsheep-checkout.js
-// 版本: 2.4.0 - 移除 PayNow 支援，專注 PayUni
+// 版本: 2.5.0 - 修正付款方式選中狀態判斷
 // 動態控制地址欄位顯示
 jQuery(function ($) {
     'use strict';
@@ -16,6 +16,42 @@ jQuery(function ($) {
     if ($("#coupons_list").length && $(".yangsheep-smart-coupon").length) {
         $("#coupons_list").detach().appendTo('.yangsheep-smart-coupon');
     }
+
+    // ===== 1.5 付款方式選中狀態 =====
+    // 使用 class 取代 CSS :has() 選擇器，確保跨瀏覽器相容性
+    function updatePaymentMethodSelection() {
+        var $methods = $('.wc_payment_methods li.wc_payment_method');
+
+        // 如果沒有付款方式，跳過
+        if (!$methods.length) {
+            return;
+        }
+
+        // 先移除所有選中狀態
+        $methods.removeClass('ys-payment-selected');
+
+        // 找到真正被選中的 radio
+        var $checkedInput = $('.wc_payment_methods input[type="radio"][name="payment_method"]:checked');
+
+        if ($checkedInput.length) {
+            // 只對真正選中的項目加上 class
+            $checkedInput.closest('li.wc_payment_method').addClass('ys-payment-selected');
+            console.log('[YS Checkout] 付款方式選中:', $checkedInput.val());
+        }
+    }
+
+    // 初始化時延遲執行（確保 DOM 完全載入）
+    setTimeout(updatePaymentMethodSelection, 200);
+
+    // 監聽付款方式切換
+    $(document.body).on('change', '.wc_payment_methods input[type="radio"][name="payment_method"]', function() {
+        updatePaymentMethodSelection();
+    });
+
+    // WooCommerce 結帳更新後重新執行
+    $(document.body).on('updated_checkout payment_method_selected', function() {
+        setTimeout(updatePaymentMethodSelection, 100);
+    });
 
     // ===== 2. 同訂購人姓名電話複製 =====
     function syncShippingFromBilling() {
@@ -394,9 +430,13 @@ jQuery(function ($) {
             console.log('[YS Checkout] 使用後台設定判斷超取:', isCVS, '清單:', cvsShippingMethods);
         } else {
             // 未設定則使用自動偵測（PayUni、PayNow、ECPay 等）
-            // ys_paynow_711, ys_paynow_family, ys_paynow_hilife 為超取
-            // ys_paynow_tcat 為宅配
-            isCVS = /payuni.*(711|fami|hilife)|ecpay.*cvs|ys_paynow_(711|family|hilife)/i.test(methodId);
+            // ys_paynow_shipping_711*, ys_paynow_shipping_family*, ys_paynow_shipping_hilife 為超取
+            // ys_paynow_shipping_tcat_* 為宅配（需排除）
+            isCVS = /payuni.*(711|fami|hilife)|ecpay.*cvs|ys_paynow_shipping_(711|family|hilife)/i.test(methodId);
+            // 排除黑貓宅配
+            if (/ys_paynow_shipping_tcat/i.test(methodId)) {
+                isCVS = false;
+            }
             console.log('[YS Checkout] 使用自動偵測判斷超取:', isCVS);
         }
 

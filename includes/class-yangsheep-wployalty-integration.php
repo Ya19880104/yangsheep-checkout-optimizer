@@ -57,6 +57,13 @@ class YANGSHEEP_WPLoyalty_Integration {
      * @return bool
      */
     public static function is_enabled() {
+        // 優先使用新的選項名稱（與 Settings API 整合）
+        $enabled = get_option( 'yangsheep_wployalty_enable', 'no' );
+        if ( $enabled === 'yes' ) {
+            return true;
+        }
+
+        // 向下相容：檢查舊的設定格式
         $settings = get_option( self::OPTION_NAME, array() );
         return ! empty( $settings['enable_checkout_integration'] );
     }
