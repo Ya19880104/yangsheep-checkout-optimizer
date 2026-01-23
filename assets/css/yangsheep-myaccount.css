@@ -2,13 +2,15 @@
 .woocommerce-MyAccount-navigation {
     float: none !important;
     width: 100% !important;
-    background: #f5f5f5;
+    background: var(--nav-btn-bg, #f5f5f5);
     margin-bottom: 20px;
+    border-radius: 8px;
+    overflow: hidden;
 }
 .woocommerce-MyAccount-navigation ul {
     display: flex !important;
     flex-wrap: wrap !important;
-    background: #eee;
+    background: var(--nav-btn-bg, #eee);
     margin: 0;
     padding: 0;
 }
@@ -28,6 +30,16 @@
     height: 55px !important;
     box-sizing: border-box;
     text-align: center;
+    color: var(--nav-btn-txt, #333);
+    background: transparent;
+    transition: all 0.2s ease;
+}
+.woocommerce-MyAccount-navigation ul li a:hover {
+    background: var(--nav-btn-hover, rgba(0,0,0,0.05));
+}
+.woocommerce-MyAccount-navigation ul li.is-active a,
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--active a {
+    background: var(--nav-btn-active, rgba(0,0,0,0.1));
 }
 /* PC 微調 */
 @media (min-width: 768px) {
@@ -67,6 +79,10 @@
 /* 右上連結 */
 .ct-account-user-box a {
     font-size: 16px;
+    color: var(--myacc-link, #0073aa);
+}
+.ct-account-user-box a:hover {
+    color: var(--myacc-link-h, #005177);
 }
 /* 訂單按鈕 */
 td.woocommerce-orders-table__cell-order-actions {
