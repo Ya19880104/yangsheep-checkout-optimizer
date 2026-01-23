@@ -1,0 +1,14 @@
+{
+    "name": "yangsheep/checkout-optimizer",
+    "description": "YangSheep Checkout Optimizer for WooCommerce",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "YangSheep\\CheckoutOptimizer\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    }
+}
