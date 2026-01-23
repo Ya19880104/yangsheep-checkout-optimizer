@@ -1,26 +1,27 @@
 /* === MyAccount 導航與按鈕樣式 === */
-.woocommerce-MyAccount-navigation {
+/* 提高選擇器特異性以覆蓋 WooCommerce 主題 */
+.woocommerce-account .woocommerce-MyAccount-navigation {
     float: none !important;
     width: 100% !important;
-    background: var(--nav-btn-bg, #f5f5f5);
+    background: var(--nav-btn-bg, #f5f5f5) !important;
     margin-bottom: 20px;
     border-radius: 8px;
     overflow: hidden;
 }
-.woocommerce-MyAccount-navigation ul {
+.woocommerce-account .woocommerce-MyAccount-navigation ul {
     display: flex !important;
     flex-wrap: wrap !important;
-    background: var(--nav-btn-bg, #eee);
+    background: var(--nav-btn-bg, #eee) !important;
     margin: 0;
     padding: 0;
 }
-.woocommerce-MyAccount-navigation ul li {
+.woocommerce-account .woocommerce-MyAccount-navigation ul li {
     list-style: none;
     flex: 1 1 0;
     max-width: none;
 }
-.woocommerce-MyAccount-navigation ul li a {
-    display: flex;
+.woocommerce-account .woocommerce-MyAccount-navigation ul li a {
+    display: flex !important;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -30,20 +31,23 @@
     height: 55px !important;
     box-sizing: border-box;
     text-align: center;
-    color: var(--nav-btn-txt, #333);
-    background: transparent;
+    color: var(--nav-btn-txt, #333) !important;
+    background: transparent !important;
     transition: all 0.2s ease;
 }
-.woocommerce-MyAccount-navigation ul li a:hover {
-    background: var(--nav-btn-hover, rgba(0,0,0,0.05));
+.woocommerce-account .woocommerce-MyAccount-navigation ul li a:hover {
+    background: var(--nav-btn-hover, rgba(0,0,0,0.05)) !important;
+    color: var(--nav-btn-txt, #333) !important;
 }
-.woocommerce-MyAccount-navigation ul li.is-active a,
-.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--active a {
-    background: var(--nav-btn-active, rgba(0,0,0,0.1));
+.woocommerce-account .woocommerce-MyAccount-navigation ul li.is-active a,
+.woocommerce-account .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--active a,
+.woocommerce-account .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--dashboard.is-active a {
+    background: var(--nav-btn-active, rgba(0,0,0,0.1)) !important;
+    color: var(--nav-btn-txt, #333) !important;
 }
 /* PC 微調 */
 @media (min-width: 768px) {
-    .woocommerce-MyAccount-navigation ul li a {
+    .woocommerce-account .woocommerce-MyAccount-navigation ul li a {
         padding: 0 5px !important;
         height: 60px !important;
         font-weight: 500;
@@ -51,67 +55,67 @@
 }
 /* 999px 以下縮文字 */
 @media (max-width: 999px) {
-    .woocommerce-MyAccount-navigation ul li a {
+    .woocommerce-account .woocommerce-MyAccount-navigation ul li a {
         font-size: 14px !important;
     }
 }
 /* 750px 以下垂直 */
 @media (max-width: 750px) {
-    .woocommerce-MyAccount-navigation ul {
+    .woocommerce-account .woocommerce-MyAccount-navigation ul {
         flex-direction: column !important;
     }
-    .woocommerce-MyAccount-navigation ul li a {
+    .woocommerce-account .woocommerce-MyAccount-navigation ul li a {
         justify-content: flex-start !important;
         font-size: 16px !important;
     }
 }
 /* 全寬 ≥ 690px，避免 Blocksy 干擾 */
 @media (min-width: 690px) {
-    .ct-woo-account {
+    .woocommerce-account .ct-woo-account {
         display: flex !important;
         flex-direction: column;
     }
 }
 /* 內容區 */
-.woocommerce-MyAccount-content {
+.woocommerce-account .woocommerce-MyAccount-content {
     padding: 20px 0 0;
 }
 /* 右上連結 */
-.ct-account-user-box a {
+.woocommerce-account .ct-account-user-box a {
     font-size: 16px;
-    color: var(--myacc-link, #0073aa);
+    color: var(--myacc-link, #0073aa) !important;
 }
-.ct-account-user-box a:hover {
-    color: var(--myacc-link-h, #005177);
+.woocommerce-account .ct-account-user-box a:hover {
+    color: var(--myacc-link-h, #005177) !important;
 }
 /* 訂單按鈕 */
-td.woocommerce-orders-table__cell-order-actions {
+.woocommerce-account td.woocommerce-orders-table__cell-order-actions {
     display: flex !important;
     flex-wrap: wrap;
     gap: 5px;
     align-items: center;
 }
-td.woocommerce-orders-table__cell-order-actions a {
+.woocommerce-account td.woocommerce-orders-table__cell-order-actions a {
     padding: 5px !important;
     margin: 5px 0 !important;
     background: none;
 }
 /* 條碼按鈕 */
-.paynow_payment_details td a {
+.woocommerce-account .paynow_payment_details td a {
     background: #950a0a;
     padding: 10px;
     border-radius: 5px;
     color: #fff !important;
 }
-.paynow_payment_details td a:hover {
+.woocommerce-account .paynow_payment_details td a:hover {
     background: #da6262;
 }
 /* 容器最小高度 */
-.ct-container-full {
+.woocommerce-account .ct-container-full {
     min-height: 500px;
 }
 /* 歡迎文字 */
-.ct-account-welcome {
+.woocommerce-account .ct-account-welcome {
     font-size: 18px;
     font-weight: 600;
 }

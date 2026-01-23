@@ -115,9 +115,9 @@ class YSSettingsRepository {
 
         $table_name    = $this->get_table_name();
         $serialized    = maybe_serialize( $value );
-        $existing      = $this->get_raw( $key );
+        $key_exists    = $this->key_exists_in_db( $key );
 
-        if ( false !== $existing ) {
+        if ( $key_exists ) {
             // 更新現有設定
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             $result = $wpdb->update(
@@ -292,6 +292,33 @@ class YSSettingsRepository {
     }
 
     /**
+     * 檢查資料庫中是否存在指定的 key（直接查詢，不使用快取）
+     *
+     * @param string $key 設定 key
+     * @return bool
+     */
+    private function key_exists_in_db( string $key ): bool {
+        global $wpdb;
+
+        if ( ! $this->table_exists() ) {
+            return false;
+        }
+
+        $table_name = $this->get_table_name();
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                "SELECT COUNT(*) FROM {$table_name} WHERE setting_key = %s",
+                $key
+            )
+        );
+
+        return (int) $count > 0;
+    }
+
+    /**
      * 取得原始資料庫值（不經過快取）
      *
      * @param string $key 設定 key
@@ -307,19 +334,21 @@ class YSSettingsRepository {
         $table_name = $this->get_table_name();
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $value = $wpdb->get_var(
+        $row = $wpdb->get_row(
             $wpdb->prepare(
                 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 "SELECT setting_value FROM {$table_name} WHERE setting_key = %s",
                 $key
-            )
+            ),
+            ARRAY_A
         );
 
-        if ( null === $value ) {
+        // 使用 get_row 來區分「找不到」和「值為 NULL」的情況
+        if ( null === $row ) {
             return false;
         }
 
-        return maybe_unserialize( $value );
+        return maybe_unserialize( $row['setting_value'] );
     }
 
     /**

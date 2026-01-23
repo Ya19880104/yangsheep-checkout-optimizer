@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.art
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.4.0
+ * Version:         1.4.1
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.art
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.0' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.1' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -75,7 +75,8 @@ add_action( 'init', function(){
 
 // 前端 CSS/JS
 add_action( 'wp_enqueue_scripts', function(){
-    if ( is_checkout() || is_account_page() ) {
+    // 結帳頁面專用 CSS/JS
+    if ( is_checkout() ) {
         wp_enqueue_style( 'yangsheep-checkout-optimization', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-checkout.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
         wp_enqueue_script( 'jquery-twzipcode', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/jquery.twzipcode.min.js', [ 'jquery' ], '1.7.12', true );
         wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
@@ -85,20 +86,21 @@ add_action( 'wp_enqueue_scripts', function(){
         wp_localize_script( 'yangsheep-checkout-custom', 'yangsheep_checkout_params', array(
             'cvs_shipping_methods' => is_array( $cvs_methods ) ? $cvs_methods : array(),
         ) );
+
+        // 物流卡片 CSS/JS（僅結帳頁主表單，非端點頁）
+        if ( ! is_wc_endpoint_url() ) {
+            wp_enqueue_style( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-shipping-cards.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+            wp_enqueue_script( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-shipping-cards.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+
+            // 側邊欄 CSS/JS
+            wp_enqueue_style( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-sidebar.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+            wp_enqueue_script( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-sidebar.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+
+            // 第三方外掛相容 CSS
+            wp_enqueue_style( 'yangsheep-compatibility', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-compatibility.css', [ 'yangsheep-shipping-cards' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+        }
     }
-    // 物流卡片 CSS/JS（僅結帳頁）
-    if ( is_checkout() && ! is_wc_endpoint_url() ) {
-        wp_enqueue_style( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-shipping-cards.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-        wp_enqueue_script( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-shipping-cards.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
 
-        // 側邊欄 CSS/JS
-        wp_enqueue_style( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-sidebar.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-        wp_enqueue_script( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-sidebar.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
-
-        // 第三方外掛相容 CSS
-        wp_enqueue_style( 'yangsheep-compatibility', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-compatibility.css', [ 'yangsheep-shipping-cards' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-
-    }
     // 我的帳號頁面及訂單明細（根據設定決定是否載入視覺樣式）
     if ( is_account_page() ) {
         // 只有啟用「我的帳號視覺」時才載入樣式

@@ -1236,36 +1236,35 @@ add_action( 'wp_head', function() {
         return;
     }
 
-    $myaccount_visual_enabled = get_option( 'yangsheep_myaccount_visual', 'no' ) === 'yes';
-    $order_enhancement_enabled = get_option( 'yangsheep_enable_order_enhancement', 'no' ) === 'yes';
+    $myaccount_visual_enabled = YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) === 'yes';
+    $order_enhancement_enabled = YSSettingsManager::get( 'yangsheep_enable_order_enhancement', 'no' ) === 'yes';
 
     if ( ! $myaccount_visual_enabled && ! $order_enhancement_enabled ) {
         return;
     }
 
-    $defaults = YANGSHEEP_Checkout_Settings::get_default_colors();
     $vars = array();
 
     if ( $myaccount_visual_enabled ) {
-        $vars['--nav-btn-bg']       = get_option( 'yangsheep_myaccount_button_bg_color',      $defaults['yangsheep_myaccount_button_bg_color'] );
-        $vars['--nav-btn-txt']      = get_option( 'yangsheep_myaccount_button_text_color',    $defaults['yangsheep_myaccount_button_text_color'] );
-        $vars['--nav-btn-hover']    = get_option( 'yangsheep_nav_button_hover_color',         $defaults['yangsheep_nav_button_hover_color'] );
-        $vars['--nav-btn-active']   = get_option( 'yangsheep_nav_button_active_color',        $defaults['yangsheep_nav_button_active_color'] );
-        $vars['--myacc-link']       = get_option( 'yangsheep_myaccount_link_color',           $defaults['yangsheep_myaccount_link_color'] );
-        $vars['--myacc-link-h']     = get_option( 'yangsheep_myaccount_link_hover_color',     $defaults['yangsheep_myaccount_link_hover_color'] );
+        $vars['--nav-btn-bg']       = YSSettingsManager::get( 'yangsheep_myaccount_button_bg_color' );
+        $vars['--nav-btn-txt']      = YSSettingsManager::get( 'yangsheep_myaccount_button_text_color' );
+        $vars['--nav-btn-hover']    = YSSettingsManager::get( 'yangsheep_nav_button_hover_color' );
+        $vars['--nav-btn-active']   = YSSettingsManager::get( 'yangsheep_nav_button_active_color' );
+        $vars['--myacc-link']       = YSSettingsManager::get( 'yangsheep_myaccount_link_color' );
+        $vars['--myacc-link-h']     = YSSettingsManager::get( 'yangsheep_myaccount_link_hover_color' );
     }
 
     if ( $order_enhancement_enabled ) {
-        $vars['--ys-status-pending-bg']     = get_option( 'yangsheep_status_pending_bg',     $defaults['yangsheep_status_pending_bg'] );
-        $vars['--ys-status-pending-text']   = get_option( 'yangsheep_status_pending_text',   $defaults['yangsheep_status_pending_text'] );
-        $vars['--ys-status-preparing-bg']   = get_option( 'yangsheep_status_preparing_bg',   $defaults['yangsheep_status_preparing_bg'] );
-        $vars['--ys-status-preparing-text'] = get_option( 'yangsheep_status_preparing_text', $defaults['yangsheep_status_preparing_text'] );
-        $vars['--ys-status-shipping-bg']    = get_option( 'yangsheep_status_shipping_bg',    $defaults['yangsheep_status_shipping_bg'] );
-        $vars['--ys-status-shipping-text']  = get_option( 'yangsheep_status_shipping_text',  $defaults['yangsheep_status_shipping_text'] );
-        $vars['--ys-status-arrived-bg']     = get_option( 'yangsheep_status_arrived_bg',     $defaults['yangsheep_status_arrived_bg'] );
-        $vars['--ys-status-arrived-text']   = get_option( 'yangsheep_status_arrived_text',   $defaults['yangsheep_status_arrived_text'] );
-        $vars['--ys-status-completed-bg']   = get_option( 'yangsheep_status_completed_bg',   $defaults['yangsheep_status_completed_bg'] );
-        $vars['--ys-status-completed-text'] = get_option( 'yangsheep_status_completed_text', $defaults['yangsheep_status_completed_text'] );
+        $vars['--ys-status-pending-bg']     = YSSettingsManager::get( 'yangsheep_status_pending_bg' );
+        $vars['--ys-status-pending-text']   = YSSettingsManager::get( 'yangsheep_status_pending_text' );
+        $vars['--ys-status-preparing-bg']   = YSSettingsManager::get( 'yangsheep_status_preparing_bg' );
+        $vars['--ys-status-preparing-text'] = YSSettingsManager::get( 'yangsheep_status_preparing_text' );
+        $vars['--ys-status-shipping-bg']    = YSSettingsManager::get( 'yangsheep_status_shipping_bg' );
+        $vars['--ys-status-shipping-text']  = YSSettingsManager::get( 'yangsheep_status_shipping_text' );
+        $vars['--ys-status-arrived-bg']     = YSSettingsManager::get( 'yangsheep_status_arrived_bg' );
+        $vars['--ys-status-arrived-text']   = YSSettingsManager::get( 'yangsheep_status_arrived_text' );
+        $vars['--ys-status-completed-bg']   = YSSettingsManager::get( 'yangsheep_status_completed_bg' );
+        $vars['--ys-status-completed-text'] = YSSettingsManager::get( 'yangsheep_status_completed_text' );
     }
 
     if ( ! empty( $vars ) ) {
@@ -1279,4 +1278,4 @@ add_action( 'wp_head', function() {
             .ct-account-user-box a:hover { color: var(--myacc-link-h)!important; }
         </style>";
     }
-});
+}, 99 );

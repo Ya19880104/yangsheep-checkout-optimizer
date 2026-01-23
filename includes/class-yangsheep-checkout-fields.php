@@ -1,7 +1,7 @@
 <?php
 /**
  * 結帳欄位設置類別
- * 
+ *
  * 處理結帳欄位的自訂設定，包括：
  * - WooCommerce 運送設定檢查
  * - First Name 關閉選項
@@ -13,6 +13,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 
 class YANGSHEEP_Checkout_Fields {
 
@@ -103,7 +105,7 @@ class YANGSHEEP_Checkout_Fields {
         }
 
         // 取得後台設定的超取物流清單
-        $cvs_methods = get_option( 'yangsheep_cvs_shipping_methods', array() );
+        $cvs_methods = YSSettingsManager::get( 'yangsheep_cvs_shipping_methods', array() );
         $use_manual_settings = ! empty( $cvs_methods ) && is_array( $cvs_methods );
 
         foreach ( $shipping_methods as $method ) {
@@ -166,7 +168,7 @@ class YANGSHEEP_Checkout_Fields {
     public function customize_checkout_fields( $fields ) {
         // 關閉 Last Name，保留 First Name 作為「姓名」
         // 使用新的 option 名稱: yangsheep_checkout_close_lname
-        if ( get_option( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
             // 隱藏 billing last name
             if ( isset( $fields['billing']['billing_last_name'] ) ) {
                 unset( $fields['billing']['billing_last_name'] );
@@ -190,11 +192,11 @@ class YANGSHEEP_Checkout_Fields {
 
         // 台灣化欄位
         // 使用新的 option 名稱: yangsheep_checkout_tw_fields
-        if ( get_option( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes' ) {
             // 帳單只保留姓名、電話、電子郵件（優先使用 first_name）
             $billing_keep = array( 'billing_first_name', 'billing_phone', 'billing_email' );
             // 如果沒有停用 last_name，也保留它
-            if ( get_option( 'yangsheep_checkout_close_lname', 'no' ) !== 'yes' ) {
+            if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) !== 'yes' ) {
                 $billing_keep[] = 'billing_last_name';
             }
             foreach ( $fields['billing'] as $key => $field ) {
@@ -311,11 +313,22 @@ class YANGSHEEP_Checkout_Fields {
 
     /**
      * 自訂地址欄位（woocommerce_default_address_fields）
-     * 這會影響所有地址欄位的基礎設定
+     * 這會影響所有地址欄位的基礎設定（包括結帳頁和我的帳號頁）
      */
     public function customize_address_fields( $fields ) {
-        // 只在啟用台灣化欄位時調整
-        if ( get_option( 'yangsheep_checkout_tw_fields', 'no' ) !== 'yes' ) {
+        // 關閉 Last Name（保留 First Name 作為「姓名」）
+        if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
+            if ( isset( $fields['last_name'] ) ) {
+                unset( $fields['last_name'] );
+            }
+            if ( isset( $fields['first_name'] ) ) {
+                $fields['first_name']['label'] = __( '姓名', 'yangsheep-checkout-optimization' );
+                $fields['first_name']['class'] = array( 'form-row-wide' );
+            }
+        }
+
+        // 只在啟用台灣化欄位時調整地址欄位
+        if ( YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) !== 'yes' ) {
             return $fields;
         }
 
@@ -335,15 +348,19 @@ class YANGSHEEP_Checkout_Fields {
             }
             if ( isset( $fields['city'] ) ) {
                 $fields['city']['priority'] = 60;
+                $fields['city']['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
             }
             if ( isset( $fields['address_1'] ) ) {
                 $fields['address_1']['priority'] = 70;
+                $fields['address_1']['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
             }
-            // 隱藏 address_2
+            // 移除 address_2（台灣不需要）
             if ( isset( $fields['address_2'] ) ) {
-                $fields['address_2']['required'] = false;
-                $fields['address_2']['hidden'] = true;
-                $fields['address_2']['class'] = array( 'hidden' );
+                unset( $fields['address_2'] );
+            }
+            // 移除公司欄位
+            if ( isset( $fields['company'] ) ) {
+                unset( $fields['company'] );
             }
         }
 
@@ -392,7 +409,7 @@ class YANGSHEEP_Checkout_Fields {
         
         // 如果關閉 Last Name（保留 First Name 作為「姓名」）
         // 使用新的 option 名稱: yangsheep_checkout_close_lname
-        if ( get_option( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
             // 隱藏 last_name
             if ( isset( $fields['billing']['fields']['billing_last_name'] ) ) {
                 unset( $fields['billing']['fields']['billing_last_name'] );
