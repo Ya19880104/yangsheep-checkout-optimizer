@@ -3,6 +3,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
+
 class YANGSHEEP_Checkout_Settings {
 
     private static $instance = null;
@@ -84,6 +87,8 @@ class YANGSHEEP_Checkout_Settings {
         add_action( 'admin_init', array( $this, 'settings_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
         add_action( 'wp_ajax_yangsheep_reset_colors', array( $this, 'ajax_reset_colors' ) );
+        add_action( 'wp_ajax_yangsheep_migrate_settings', array( $this, 'ajax_migrate_settings' ) );
+        add_action( 'wp_ajax_yangsheep_cleanup_options', array( $this, 'ajax_cleanup_options' ) );
     }
 
     public function add_admin_menu() {
@@ -531,10 +536,42 @@ class YANGSHEEP_Checkout_Settings {
         }
 
         foreach ( self::$default_colors as $opt => $default ) {
-            update_option( $opt, $default );
+            YSSettingsManager::set( $opt, $default );
         }
 
         wp_send_json_success( '已恢復預設配色' );
+    }
+
+    // AJAX: 遷移設定到自訂資料表
+    public function ajax_migrate_settings() {
+        check_ajax_referer( 'yangsheep_migrate_settings', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( '權限不足' );
+        }
+
+        $migrator = YSSettingsMigrator::instance();
+        $result = $migrator->migrate();
+
+        if ( $result['success'] ) {
+            wp_send_json_success( sprintf( '遷移完成！已遷移 %d 個設定。', $result['migrated'] ) );
+        } else {
+            wp_send_json_error( '遷移失敗：' . implode( ', ', $result['errors'] ) );
+        }
+    }
+
+    // AJAX: 清理 wp_options 中的舊設定
+    public function ajax_cleanup_options() {
+        check_ajax_referer( 'yangsheep_cleanup_options', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( '權限不足' );
+        }
+
+        $migrator = YSSettingsMigrator::instance();
+        $deleted = $migrator->cleanup_wp_options();
+
+        wp_send_json_success( sprintf( '已清理 %d 個舊設定。', $deleted ) );
     }
 
     /**
@@ -610,6 +647,121 @@ class YANGSHEEP_Checkout_Settings {
         <?php
     }
 
+    /**
+     * 渲染資料庫管理分頁
+     */
+    public function render_database_management_tab() {
+        $migrator = YSSettingsMigrator::instance();
+        $status = $migrator->get_status();
+        ?>
+        <div class="ys-section-card">
+            <h3 class="ys-section-title"><span class="dashicons dashicons-database"></span> 設定儲存狀態</h3>
+
+            <table class="widefat" style="margin-bottom:20px;">
+                <tbody>
+                    <tr>
+                        <td style="width:200px;"><strong>自訂資料表</strong></td>
+                        <td>
+                            <?php if ( $status['table_exists'] ) : ?>
+                                <span class="ys-status-badge ys-status-success"><span class="dashicons dashicons-yes"></span> 已建立</span>
+                                <code style="margin-left:10px;"><?php echo esc_html( $status['table_name'] ); ?></code>
+                            <?php else : ?>
+                                <span class="ys-status-badge ys-status-warning"><span class="dashicons dashicons-warning"></span> 未建立</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Schema 版本</strong></td>
+                        <td><?php echo esc_html( $status['installed_schema'] ); ?> / <?php echo esc_html( $status['schema_version'] ); ?></td>
+                    </tr>
+                    <tr>
+                        <td><strong>自訂表中的設定數</strong></td>
+                        <td><?php echo esc_html( $status['settings_in_table'] ); ?> 個</td>
+                    </tr>
+                    <tr>
+                        <td><strong>wp_options 中的設定數</strong></td>
+                        <td><?php echo esc_html( $status['settings_in_options'] ); ?> 個</td>
+                    </tr>
+                    <tr>
+                        <td><strong>總設定項目</strong></td>
+                        <td><?php echo esc_html( $status['total_setting_keys'] ); ?> 個</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="ys-db-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
+                <?php if ( $status['migration_required'] || $status['settings_in_table'] < $status['settings_in_options'] ) : ?>
+                    <button type="button" id="ys-migrate-settings" class="button button-primary">
+                        <span class="dashicons dashicons-database-import"></span> 遷移設定到自訂資料表
+                    </button>
+                <?php endif; ?>
+
+                <?php if ( $status['settings_in_options'] > 0 && $status['settings_in_table'] > 0 ) : ?>
+                    <button type="button" id="ys-cleanup-options" class="button">
+                        <span class="dashicons dashicons-trash"></span> 清理 wp_options 舊設定
+                    </button>
+                <?php endif; ?>
+            </div>
+
+            <div id="ys-db-message" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="ys-section-card">
+            <h3 class="ys-section-title"><span class="dashicons dashicons-info"></span> 說明</h3>
+            <p>本外掛使用自訂資料表 <code><?php echo esc_html( $status['table_name'] ); ?></code> 儲存設定，減少對 <code>wp_options</code> 的佔用。</p>
+            <ul style="margin-left:20px;">
+                <li><strong>遷移設定</strong>：將 wp_options 中的設定複製到自訂資料表</li>
+                <li><strong>清理舊設定</strong>：刪除 wp_options 中的舊設定（遷移完成後才可執行）</li>
+                <li><strong>向後相容</strong>：如果自訂資料表不存在，系統會自動使用 wp_options</li>
+            </ul>
+        </div>
+
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            $('#ys-migrate-settings').on('click', function() {
+                var $btn = $(this);
+                $btn.prop('disabled', true).text('遷移中...');
+
+                $.post(ajaxurl, {
+                    action: 'yangsheep_migrate_settings',
+                    nonce: '<?php echo wp_create_nonce( 'yangsheep_migrate_settings' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        $('#ys-db-message').html('<div class="notice notice-success inline"><p>' + response.data + '</p></div>');
+                        setTimeout(function() { location.reload(); }, 1500);
+                    } else {
+                        $('#ys-db-message').html('<div class="notice notice-error inline"><p>' + response.data + '</p></div>');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-database-import"></span> 遷移設定到自訂資料表');
+                    }
+                });
+            });
+
+            $('#ys-cleanup-options').on('click', function() {
+                if (!confirm('確定要刪除 wp_options 中的舊設定嗎？此操作無法復原。')) {
+                    return;
+                }
+
+                var $btn = $(this);
+                $btn.prop('disabled', true).text('清理中...');
+
+                $.post(ajaxurl, {
+                    action: 'yangsheep_cleanup_options',
+                    nonce: '<?php echo wp_create_nonce( 'yangsheep_cleanup_options' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        $('#ys-db-message').html('<div class="notice notice-success inline"><p>' + response.data + '</p></div>');
+                        setTimeout(function() { location.reload(); }, 1500);
+                    } else {
+                        $('#ys-db-message').html('<div class="notice notice-error inline"><p>' + response.data + '</p></div>');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash"></span> 清理 wp_options 舊設定');
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
+    }
+
     public function settings_page() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
@@ -652,6 +804,9 @@ class YANGSHEEP_Checkout_Settings {
                 </a>
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'docs' ? 'nav-tab-active' : ''; ?>" data-tab="docs">
                     <span class="dashicons dashicons-media-document"></span> <?php _e( '說明文件', 'yangsheep-checkout-optimization' ); ?>
+                </a>
+                <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'database' ? 'nav-tab-active' : ''; ?>" data-tab="database">
+                    <span class="dashicons dashicons-database"></span> <?php _e( '資料庫管理', 'yangsheep-checkout-optimization' ); ?>
                 </a>
             </nav>
 
@@ -762,7 +917,11 @@ class YANGSHEEP_Checkout_Settings {
                     </div><!-- close ys-section-card -->
                 </div>
 
-                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo $active_tab === 'docs' ? 'display:none;' : ''; ?>">
+                <div class="ys-tab-content" id="ys-tab-database" style="<?php echo $active_tab !== 'database' ? 'display:none;' : ''; ?>">
+                    <?php $this->render_database_management_tab(); ?>
+                </div>
+
+                <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo ( $active_tab === 'docs' || $active_tab === 'database' ) ? 'display:none;' : ''; ?>">
                     <?php submit_button( __( '儲存設定', 'yangsheep-checkout-optimization' ), 'primary large', 'submit', false ); ?>
                 </div>
             </form>
@@ -1018,7 +1177,7 @@ class YANGSHEEP_Checkout_Settings {
                 $('.ys-tab-content').hide();
                 $('#ys-tab-' + tab).show();
 
-                if (tab === 'docs') {
+                if (tab === 'docs' || tab === 'database') {
                     $('#ys-submit-button').hide();
                 } else {
                     $('#ys-submit-button').show();
