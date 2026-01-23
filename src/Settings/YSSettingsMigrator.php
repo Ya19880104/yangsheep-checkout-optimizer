@@ -21,7 +21,7 @@ class YSSettingsMigrator {
      *
      * @var string
      */
-    const MIGRATION_VERSION_KEY = 'yangsheep_settings_migration_version';
+    const MIGRATION_VERSION_KEY = 'ys_checkout_settings_migration_version';
 
     /**
      * 當前遷移版本

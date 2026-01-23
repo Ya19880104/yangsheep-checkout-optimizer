@@ -28,14 +28,14 @@ class YSSettingsTableMaker {
      *
      * @var string
      */
-    protected $table_name = 'yangsheep_settings';
+    protected $table_name = 'ys_checkout_settings';
 
     /**
      * Schema 版本 option key
      *
      * @var string
      */
-    const SCHEMA_VERSION_OPTION = 'yangsheep_settings_schema_version';
+    const SCHEMA_VERSION_OPTION = 'ys_checkout_settings_schema_version';
 
     /**
      * 單例實例
