@@ -206,7 +206,10 @@ class YANGSHEEP_Checkout_Settings {
                 register_setting( 'yangsheep_checkout_optimization_group', $opt );
             }
 
-            // 攔截設定儲存，寫入自訂資料表而非 wp_options
+            // 讓 WordPress 認為選項已存在，避免調用 add_option
+            add_filter( "default_option_{$opt}", array( $this, 'fake_existing_option' ), 10, 3 );
+
+            // 攔截設定儲存，寫入自訂資料表並阻止 wp_options 寫入
             add_filter( "pre_update_option_{$opt}", array( $this, 'intercept_option_save' ), 10, 3 );
         }
 
@@ -418,6 +421,21 @@ class YANGSHEEP_Checkout_Settings {
     }
 
     /**
+     * 讓 WordPress 認為選項已存在
+     * 這樣 update_option 不會調用 add_option
+     *
+     * @param mixed  $default 預設值
+     * @param string $option  選項名稱
+     * @param bool   $passed_default 是否傳入了預設值
+     * @return mixed
+     */
+    public function fake_existing_option( $default, $option, $passed_default ) {
+        // 返回空字串而不是 false，讓 WordPress 認為選項已存在
+        // 這會使 update_option 執行更新邏輯而不是調用 add_option
+        return '';
+    }
+
+    /**
      * 攔截設定儲存，寫入自訂資料表並阻止寫入 wp_options
      *
      * @param mixed  $value     新值
@@ -434,9 +452,8 @@ class YANGSHEEP_Checkout_Settings {
         // 寫入自訂資料表
         YSSettingsManager::set( $option, $value );
 
-        // 返回舊值，阻止寫入 wp_options
-        // 但如果舊值不存在（首次儲存），返回 false 讓它不更新
-        return $old_value !== false ? $old_value : $value;
+        // 返回舊值，讓 WordPress 認為值沒有變化，跳過 wp_options 更新
+        return $old_value;
     }
 
     public function shipping_setting_check_callback() {

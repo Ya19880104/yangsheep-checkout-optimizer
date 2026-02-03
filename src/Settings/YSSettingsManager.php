@@ -251,6 +251,7 @@ class YSSettingsManager {
 
     /**
      * 設定值（靜態方法）
+     * 注意：此方法只寫入自訂資料表，不寫入 wp_options
      *
      * @param string $key   設定 key
      * @param mixed  $value 設定值
@@ -259,12 +260,12 @@ class YSSettingsManager {
     public static function set( string $key, $value ): bool {
         $instance = self::instance();
 
-        // 如果自訂資料表可用，同時更新兩邊
+        // 只寫入自訂資料表
         if ( $instance->should_use_custom_table() ) {
-            $instance->repository->set( $key, $value );
+            return $instance->repository->set( $key, $value );
         }
 
-        // 總是更新 wp_options（保持向後相容）
+        // 如果自訂資料表不可用，才寫入 wp_options（fallback）
         return update_option( $key, $value );
     }
 
