@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name:     YANGSHEEP 結帳強化
- * Plugin URI:      https://yangsheep.art
+ * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
  * Version:         1.4.1
  * Author:          羊羊數位科技有限公司
- * Author URI:      https://yangsheep.art
+ * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
  * Domain Path:     /languages
  */
