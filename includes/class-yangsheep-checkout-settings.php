@@ -430,8 +430,12 @@ class YANGSHEEP_Checkout_Settings {
      * @return mixed
      */
     public function fake_existing_option( $default, $option, $passed_default ) {
-        // 返回空字串而不是 false，讓 WordPress 認為選項已存在
-        // 這會使 update_option 執行更新邏輯而不是調用 add_option
+        // 只在後台設定儲存時生效
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        if ( ! is_admin() || empty( $_POST['option_page'] ) || $_POST['option_page'] !== 'yangsheep_checkout_optimization_group' ) {
+            return $default; // 前台或非設定頁面時返回原始預設值
+        }
+        // 後台儲存時返回空字串，讓 WordPress 認為選項已存在
         return '';
     }
 
