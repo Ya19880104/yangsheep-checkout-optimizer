@@ -7,6 +7,50 @@
 
 ---
 
+## [1.4.3] - 2026-02-04
+
+### 修復
+- **設定儲存不再重複寫入 wp_options**
+  - 新增 `pre_update_option` 攔截器，阻止 WordPress Settings API 寫入 wp_options
+  - 設定現在只會存入自訂資料表 `wp_ys_checkout_settings`
+- **統一所有設定存取使用 YSSettingsManager**
+  - `class-yangsheep-checkout-order-enhancer.php` - 改用 YSSettingsManager
+  - `class-yangsheep-wployalty-integration.php` - 改用 YSSettingsManager
+  - `templates/checkout/form-login.php` - 改用 YSSettingsManager
+  - `templates/checkout/form-shipping.php` - 改用 YSSettingsManager
+
+---
+
+## [1.4.2] - 2026-02-04
+
+### 修復
+- **我的帳號模板覆寫條件**
+  - 只在啟用「我的帳號視覺」設定時才覆寫 myaccount 模板
+  - 停用時使用 WooCommerce 原始模板
+
+---
+
+## [1.4.1] - 2026-01-20
+
+### 新增
+- **設定系統重構**
+  - 新增自訂資料表 `wp_ys_checkout_settings` 儲存設定
+  - 新增 `YSSettingsTableMaker` - 資料表建立類別
+  - 新增 `YSSettingsRepository` - CRUD 操作 + 快取
+  - 新增 `YSSettingsManager` - 統一設定存取介面
+  - 新增 `YSSettingsMigrator` - wp_options 資料遷移
+- **後台遷移管理 UI**
+  - 顯示遷移狀態（wp_options 設定數量、自訂資料表設定數量）
+  - 一鍵遷移按鈕
+  - 清理舊 wp_options 設定按鈕
+
+### 修復
+- **我的帳號頁面顏色設定**
+  - 修正 CSS 變數引用問題
+  - 增加選擇器權重確保樣式生效
+
+---
+
 ## [1.3.34] - 2026-01-12
 
 ### 新增
