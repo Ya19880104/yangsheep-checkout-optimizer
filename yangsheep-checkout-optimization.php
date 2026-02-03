@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.4.1
+ * Version:         1.4.2
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.1' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.2' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -115,6 +115,14 @@ add_action( 'wp_enqueue_scripts', function(){
 add_filter( 'woocommerce_locate_template', function( $template, $template_name, $template_path ){
     // 插件模板根目錄
     $plugin_path = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'templates/';
+
+    // myaccount 模板：只在啟用「我的帳號視覺」時才覆寫
+    if ( strpos( $template_name, 'myaccount/' ) === 0 ) {
+        if ( YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) !== 'yes' ) {
+            return $template; // 未啟用時使用原始模板
+        }
+    }
+
     // 若插件有該檔案，直接使用
     if ( file_exists( $plugin_path . $template_name ) ) {
         return $plugin_path . $template_name;
