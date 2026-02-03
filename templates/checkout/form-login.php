@@ -1,7 +1,8 @@
 <?php
 defined('ABSPATH') || exit;
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 if ( is_user_logged_in() || 'no' === get_option('woocommerce_enable_checkout_login_reminder') ) return;
-$login_welcome_text = get_option('yangsheep_checkout_login_welcome_text', '');
+$login_welcome_text = YSSettingsManager::get('yangsheep_checkout_login_welcome_text', '');
 ?>
 <div class="yangsheep-login">
     <h3 class="yangsheep-h3-title"><?php esc_html_e('登入會員','yangsheep-checkout-optimization'); ?></h3>

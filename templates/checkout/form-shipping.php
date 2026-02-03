@@ -1,5 +1,6 @@
 <?php
 defined('ABSPATH') || exit;
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 ?>
 <div class="woocommerce-shipping-fields">
     <?php if ( WC()->cart->needs_shipping_address() ): ?>
@@ -38,7 +39,7 @@ defined('ABSPATH') || exit;
 $order_fields = $checkout->get_checkout_fields('order');
 
 // 檢查外掛的「訂單備註開關」設定
-$order_notes_optional = get_option( 'yangsheep_checkout_order_note', 'no' ) === 'yes';
+$order_notes_optional = YSSettingsManager::get( 'yangsheep_checkout_order_note', 'no' ) === 'yes';
 
 // 檢查 WooCommerce 原生設定
 $wc_order_notes_enabled = apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) );

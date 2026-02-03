@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
+
 /**
  * Class YANGSHEEP_Checkout_Order_Enhancer
  *
@@ -21,7 +23,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
 
     private function __construct() {
         // Only initialize if enabled
-        if ( get_option( 'yangsheep_enable_order_enhancement', 'no' ) !== 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_enable_order_enhancement', 'no' ) !== 'yes' ) {
             return;
         }
 
@@ -35,7 +37,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         add_action( 'wp_ajax_nopriv_yangsheep_get_order_logistics', array( $this, 'ajax_get_logistics_details' ) );
 
         // Admin (Manual Tracking) - Default enabled to ensure visibility
-        if ( get_option( 'yangsheep_enable_manual_tracking', 'yes' ) === 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_enable_manual_tracking', 'yes' ) === 'yes' ) {
             add_action( 'add_meta_boxes', array( $this, 'add_manual_tracking_metabox' ) );
             // HPOS 相容: 同時 hook 傳統 save_post 和 HPOS woocommerce_process_shop_order_meta
             add_action( 'save_post_shop_order', array( $this, 'save_manual_tracking_data' ) );
@@ -234,7 +236,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         }
 
         // 3. Manual Tracking Entries - 追加多筆手動物流
-        if ( get_option( 'yangsheep_enable_manual_tracking', 'yes' ) === 'yes' ) {
+        if ( YSSettingsManager::get( 'yangsheep_enable_manual_tracking', 'yes' ) === 'yes' ) {
             $manual_entries = $order->get_meta( '_yangsheep_manual_tracking_entries' );
 
             if ( ! empty( $manual_entries ) && is_array( $manual_entries ) ) {

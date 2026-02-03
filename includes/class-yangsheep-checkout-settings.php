@@ -205,6 +205,9 @@ class YANGSHEEP_Checkout_Settings {
             } else {
                 register_setting( 'yangsheep_checkout_optimization_group', $opt );
             }
+
+            // 攔截設定儲存，寫入自訂資料表而非 wp_options
+            add_filter( "pre_update_option_{$opt}", array( $this, 'intercept_option_save' ), 10, 3 );
         }
 
         add_action( 'pre_update_option', array( $this, 'handle_checkbox_save' ), 10, 3 );
@@ -414,6 +417,28 @@ class YANGSHEEP_Checkout_Settings {
         return $value;
     }
 
+    /**
+     * 攔截設定儲存，寫入自訂資料表並阻止寫入 wp_options
+     *
+     * @param mixed  $value     新值
+     * @param string $option    選項名稱
+     * @param mixed  $old_value 舊值
+     * @return mixed 返回舊值以阻止 wp_options 更新
+     */
+    public function intercept_option_save( $value, $option, $old_value ) {
+        // 只處理 yangsheep_ 開頭的設定
+        if ( strpos( $option, 'yangsheep_' ) !== 0 ) {
+            return $value;
+        }
+
+        // 寫入自訂資料表
+        YSSettingsManager::set( $option, $value );
+
+        // 返回舊值，阻止寫入 wp_options
+        // 但如果舊值不存在（首次儲存），返回 false 讓它不更新
+        return $old_value !== false ? $old_value : $value;
+    }
+
     public function shipping_setting_check_callback() {
         $shipping_dest = get_option( 'woocommerce_ship_to_destination' );
         $url = admin_url( 'admin.php?page=wc-settings&tab=shipping&section=options' );
@@ -431,7 +456,7 @@ class YANGSHEEP_Checkout_Settings {
     }
 
     public function login_welcome_text_callback() {
-        $val = get_option( 'yangsheep_checkout_login_welcome_text', '' );
+        $val = YSSettingsManager::get( 'yangsheep_checkout_login_welcome_text', '' );
         echo '<textarea name="yangsheep_checkout_login_welcome_text" class="large-text" rows="3" placeholder="輸入歡迎文字...">' . esc_textarea( $val ) . '</textarea>';
     }
 
@@ -439,7 +464,7 @@ class YANGSHEEP_Checkout_Settings {
      * 超取物流方式多選 callback
      */
     public function cvs_shipping_methods_callback() {
-        $saved_methods = get_option( 'yangsheep_cvs_shipping_methods', array() );
+        $saved_methods = YSSettingsManager::get( 'yangsheep_cvs_shipping_methods', array() );
         if ( ! is_array( $saved_methods ) ) {
             $saved_methods = array();
         }
@@ -594,7 +619,7 @@ class YANGSHEEP_Checkout_Settings {
      * 購物金啟用選項 Callback
      */
     public function loyalty_enable_callback() {
-        $val = get_option( 'yangsheep_wployalty_enable', 'no' );
+        $val = YSSettingsManager::get( 'yangsheep_wployalty_enable', 'no' );
         $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
 
         echo '<input type="hidden" name="yangsheep_wployalty_enable_submitted" value="1" />';
