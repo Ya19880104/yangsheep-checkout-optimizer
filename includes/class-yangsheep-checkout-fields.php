@@ -505,7 +505,8 @@ class YANGSHEEP_Checkout_Fields {
             }
             if ( isset( $address[ $first_name_key ] ) ) {
                 $address[ $first_name_key ]['label'] = __( '姓名', 'yangsheep-checkout-optimization' );
-                $address[ $first_name_key ]['class'] = array( 'form-row-first' );
+                // 當 last_name 被隱藏時，first_name 應該是全寬
+                $address[ $first_name_key ]['class'] = array( 'form-row-wide' );
             }
         }
 
@@ -514,6 +515,34 @@ class YANGSHEEP_Checkout_Fields {
             return $address;
         }
 
+        // 帳單地址：只保留姓名、電話、電子郵件（與結帳頁面一致）
+        if ( 'billing' === $load_address ) {
+            // 需要移除的欄位：公司、國家、郵遞區號、縣市、鄉鎮市區、地址1、地址2
+            $fields_to_remove = array(
+                'billing_company',
+                'billing_country',
+                'billing_postcode',
+                'billing_state',
+                'billing_city',
+                'billing_address_1',
+                'billing_address_2',
+            );
+
+            foreach ( $fields_to_remove as $field_key ) {
+                if ( isset( $address[ $field_key ] ) ) {
+                    unset( $address[ $field_key ] );
+                }
+            }
+
+            // 確保電話欄位是全寬
+            if ( isset( $address['billing_phone'] ) ) {
+                $address['billing_phone']['class'] = array( 'form-row-wide' );
+            }
+
+            return $address;
+        }
+
+        // 收件人地址：隱藏公司、地址2，保留其他欄位（需要填寫收件地址）
         // 隱藏公司欄位
         $company_key = $load_address . '_company';
         if ( isset( $address[ $company_key ] ) ) {
@@ -524,6 +553,12 @@ class YANGSHEEP_Checkout_Fields {
         $address_2_key = $load_address . '_address_2';
         if ( isset( $address[ $address_2_key ] ) ) {
             unset( $address[ $address_2_key ] );
+        }
+
+        // 收件人電話設為全寬
+        $phone_key = $load_address . '_phone';
+        if ( isset( $address[ $phone_key ] ) ) {
+            $address[ $phone_key ]['class'] = array( 'form-row-wide' );
         }
 
         // 修改欄位標籤為台灣格式
