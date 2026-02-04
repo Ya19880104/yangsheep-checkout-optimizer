@@ -282,11 +282,11 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 ## 金流/物流整合服務
 
-我們提供 **PayUni 統一金** 與 **Shopline** 金流整合服務：
+我們提供 **PayUni 統一金** 與 **Shopline** 金流特約申辦：
 
 - 刷卡手續費最低 **2% 起**
-- 專業 WooCommerce 金流串接
-- 完整技術支援
+- 提供 WooCommerce 金流串接模組
+- 技術支援
 
 歡迎聯繫洽詢：https://yangsheep.com.tw
 
