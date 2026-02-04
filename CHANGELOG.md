@@ -7,6 +7,34 @@
 
 ---
 
+## [1.4.7] - 2026-02-04
+
+### 重構
+- **完全自訂設定儲存機制**
+  - 移除 `register_setting()` 的使用，不再依賴 WordPress Settings API 的自動儲存
+  - 新增 `handle_settings_save()` 方法處理表單提交
+  - 表單改為提交到當前頁面而非 `options.php`
+  - 使用自訂的 nonce 驗證（`ys_save_settings`）
+
+### 修復
+- **設定只儲存到自訂資料表**
+  - 設定現在完全不會寫入 `wp_options`
+  - 直接使用 `YSSettingsManager::set()` 儲存到 `wp_ys_checkout_settings` 資料表
+  - 修復結帳頁面樣式設定儲存無效的問題
+
+---
+
+## [1.4.6] - 2026-02-04
+
+### 修復
+- **Fatal Error 修復 - pre_update_option 參數順序**
+  - 修正 `intercept_option_save()` 方法參數順序
+  - WordPress `pre_update_option_{$option}` filter 參數順序為 `($value, $old_value, $option)`
+  - 原本錯誤為 `($value, $option, $old_value)` 導致陣列設定儲存時發生 Fatal Error
+  - 增加 `is_string($option)` 安全檢查
+
+---
+
 ## [1.4.3] - 2026-02-04
 
 ### 修復

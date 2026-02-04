@@ -84,11 +84,78 @@ class YANGSHEEP_Checkout_Settings {
 
     private function __construct() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
+        add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先於 settings_init
         add_action( 'admin_init', array( $this, 'settings_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
         add_action( 'wp_ajax_yangsheep_reset_colors', array( $this, 'ajax_reset_colors' ) );
         add_action( 'wp_ajax_yangsheep_migrate_settings', array( $this, 'ajax_migrate_settings' ) );
         add_action( 'wp_ajax_yangsheep_cleanup_options', array( $this, 'ajax_cleanup_options' ) );
+    }
+
+    /**
+     * 自訂設定儲存處理器
+     * 完全繞過 WordPress Settings API 的 wp_options 儲存機制
+     */
+    public function handle_settings_save() {
+        // 只處理本外掛的設定表單
+        if ( empty( $_POST['ys_settings_nonce'] ) ) {
+            return;
+        }
+
+        // 驗證 nonce
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ys_settings_nonce'] ) ), 'ys_save_settings' ) ) {
+            wp_die( __( '安全驗證失敗', 'yangsheep-checkout-optimization' ) );
+        }
+
+        // 檢查權限
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( '權限不足', 'yangsheep-checkout-optimization' ) );
+        }
+
+        // 取得所有要儲存的設定 keys
+        $all_keys = YSSettingsManager::ALL_SETTING_KEYS;
+
+        // 儲存每個設定
+        foreach ( $all_keys as $key ) {
+            // Checkbox 處理：未勾選時不會出現在 POST 中
+            if ( in_array( $key, $this->checkbox_options, true ) ) {
+                $value = isset( $_POST[ $key ] ) ? 'yes' : 'no';
+                YSSettingsManager::set( $key, $value );
+                continue;
+            }
+
+            // 陣列設定（如 CVS 物流方式）
+            if ( $key === 'yangsheep_cvs_shipping_methods' ) {
+                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                $raw_value = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : array();
+                $value = $this->sanitize_cvs_shipping_methods( $raw_value );
+                YSSettingsManager::set( $key, $value );
+                continue;
+            }
+
+            // 一般文字設定
+            if ( isset( $_POST[ $key ] ) ) {
+                $value = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+                YSSettingsManager::set( $key, $value );
+            }
+        }
+
+        // 重新整理快取
+        YSSettingsManager::refresh();
+
+        // 取得當前 tab
+        $active_tab = isset( $_POST['active_tab'] ) ? sanitize_text_field( wp_unslash( $_POST['active_tab'] ) ) : 'general';
+
+        // 重定向回設定頁面（帶成功訊息）
+        wp_safe_redirect( add_query_arg(
+            array(
+                'page'    => 'yangsheep_checkout_optimization',
+                'tab'     => $active_tab,
+                'updated' => 'true',
+            ),
+            admin_url( 'admin.php' )
+        ) );
+        exit;
     }
 
     public function add_admin_menu() {
@@ -193,27 +260,8 @@ class YANGSHEEP_Checkout_Settings {
             'yangsheep_wployalty_enable'
         );
 
-        foreach ( $options as $opt ) {
-            if ( in_array( $opt, $this->checkbox_options ) ) {
-                register_setting( 'yangsheep_checkout_optimization_group', $opt, array(
-                    'sanitize_callback' => array( $this, 'sanitize_checkbox' ),
-                ) );
-            } elseif ( $opt === 'yangsheep_cvs_shipping_methods' ) {
-                register_setting( 'yangsheep_checkout_optimization_group', $opt, array(
-                    'sanitize_callback' => array( $this, 'sanitize_cvs_shipping_methods' ),
-                ) );
-            } else {
-                register_setting( 'yangsheep_checkout_optimization_group', $opt );
-            }
-
-            // 讓 WordPress 認為選項已存在，避免調用 add_option
-            add_filter( "default_option_{$opt}", array( $this, 'fake_existing_option' ), 10, 3 );
-
-            // 攔截設定儲存，寫入自訂資料表並阻止 wp_options 寫入
-            add_filter( "pre_update_option_{$opt}", array( $this, 'intercept_option_save' ), 10, 3 );
-        }
-
-        add_action( 'pre_update_option', array( $this, 'handle_checkbox_save' ), 10, 3 );
+        // 注意：不再使用 register_setting()，因為我們使用自訂的 handle_settings_save() 處理儲存
+        // 這樣可以完全繞過 WordPress Settings API 的 wp_options 儲存機制
 
         // --- Tab 1: 一般設定 (邏輯功能) ---
         add_settings_section( 'ys_general_logic_section', '', array( $this, 'general_section_header' ), 'yangsheep_tab_general' );
@@ -357,7 +405,7 @@ class YANGSHEEP_Checkout_Settings {
             $opt_name,
             $label,
             function() use ( $opt_name, $default ) {
-                $val = get_option( $opt_name, $default );
+                $val = YSSettingsManager::get( $opt_name, $default );
                 echo '<input type="text" name="'.esc_attr($opt_name).'" value="'.esc_attr($val).'" class="yangsheep-color-picker" data-default-color="'.esc_attr($default).'" />';
             },
             $page,
@@ -371,7 +419,7 @@ class YANGSHEEP_Checkout_Settings {
             $opt_name,
             $label,
             function() use ( $opt_name, $placeholder ) {
-                $val = get_option( $opt_name, '' );
+                $val = YSSettingsManager::get( $opt_name, '' );
                 echo '<input type="text" name="'.esc_attr($opt_name).'" value="'.esc_attr($val).'" placeholder="'.esc_attr($placeholder).'" class="regular-text" />';
             },
             $page,
@@ -385,7 +433,7 @@ class YANGSHEEP_Checkout_Settings {
             $opt_name,
             $label,
             function() use ( $opt_name, $desc ) {
-                $val = get_option( $opt_name, 'no' );
+                $val = YSSettingsManager::get( $opt_name, 'no' );
                 echo '<input type="hidden" name="'.esc_attr($opt_name).'_submitted" value="1" />';
                 echo '<label class="ys-toggle-switch">';
                 echo '<input type="checkbox" name="'.esc_attr($opt_name).'" value="yes" '.checked( $val, 'yes', false ).' />';
@@ -442,14 +490,15 @@ class YANGSHEEP_Checkout_Settings {
     /**
      * 攔截設定儲存，寫入自訂資料表並阻止寫入 wp_options
      *
+     * WordPress pre_update_option_{$option} filter 參數順序：
      * @param mixed  $value     新值
-     * @param string $option    選項名稱
      * @param mixed  $old_value 舊值
+     * @param string $option    選項名稱
      * @return mixed 返回舊值以阻止 wp_options 更新
      */
-    public function intercept_option_save( $value, $option, $old_value ) {
+    public function intercept_option_save( $value, $old_value, $option ) {
         // 只處理 yangsheep_ 開頭的設定
-        if ( strpos( $option, 'yangsheep_' ) !== 0 ) {
+        if ( ! is_string( $option ) || strpos( $option, 'yangsheep_' ) !== 0 ) {
             return $value;
         }
 
@@ -814,10 +863,17 @@ class YANGSHEEP_Checkout_Settings {
         }
 
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'general';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $updated = isset( $_GET['updated'] ) && 'true' === $_GET['updated'];
         ?>
         <div class="wrap">
             <h1 class="wp-heading-inline" style="display:none;"><?php echo esc_html( get_admin_page_title() ); ?></h1>
             <?php // WordPress 會把通知插入到 .wrap > h1 之後，這裡用隱藏的 h1 接收通知 ?>
+            <?php if ( $updated ) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php esc_html_e( '設定已儲存', 'yangsheep-checkout-optimization' ); ?></p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="ys-settings-wrap">
@@ -856,8 +912,9 @@ class YANGSHEEP_Checkout_Settings {
                 </a>
             </nav>
 
-            <form action="options.php" method="post" class="ys-settings-form">
-                <?php settings_fields( 'yangsheep_checkout_optimization_group' ); ?>
+            <form action="<?php echo esc_url( admin_url( 'admin.php?page=yangsheep_checkout_optimization' ) ); ?>" method="post" class="ys-settings-form">
+                <?php wp_nonce_field( 'ys_save_settings', 'ys_settings_nonce' ); ?>
+                <input type="hidden" name="active_tab" id="ys_active_tab" value="<?php echo esc_attr( $active_tab ); ?>" />
 
                 <div class="ys-tab-content" id="ys-tab-general" style="<?php echo $active_tab !== 'general' ? 'display:none;' : ''; ?>">
                     <?php do_settings_sections( 'yangsheep_tab_general' ); ?>
@@ -1222,6 +1279,9 @@ class YANGSHEEP_Checkout_Settings {
 
                 $('.ys-tab-content').hide();
                 $('#ys-tab-' + tab).show();
+
+                // 更新 hidden field，以便表單提交時保留當前 tab
+                $('#ys_active_tab').val(tab);
 
                 if (tab === 'docs' || tab === 'database') {
                     $('#ys-submit-button').hide();
