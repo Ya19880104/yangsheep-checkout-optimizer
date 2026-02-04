@@ -7,6 +7,69 @@
 
 ---
 
+## [1.4.10] - 2026-02-04
+
+### 修復
+- **我的帳號地址編輯頁面欄位隱藏**
+  - 新增 `woocommerce_address_to_edit` filter（`filter_address_to_edit` 方法）
+  - 這是 WooCommerce 前台地址編輯頁面的最終過濾器
+  - 確保公司、地址2 欄位在前台我的帳號頁面正確隱藏
+  - 同時處理「關閉 Last Name」和「台灣化欄位」的設定
+
+### 技術變更
+- `class-yangsheep-checkout-fields.php` 新增 `filter_address_to_edit()` 方法
+- Hook: `woocommerce_address_to_edit` (priority: 20)
+
+---
+
+## [1.4.9] - 2026-02-04
+
+### 修復
+- **帳單地址 TWzipcode 初始值問題**
+  - 新增 WooCommerce 台灣 state code 對應表（TPE → 臺北市 等）
+  - `convertStateCode()` 方法自動轉換 WooCommerce state code 為中文名稱
+  - `trySetSelectValue()` 方法支援「台」和「臺」的雙向轉換
+  - 解決帳單地址下拉選單無法正確顯示已儲存縣市的問題
+
+- **帳單地址欄位隱藏邏輯改進**
+  - `customize_address_fields()` 改為不論國家，啟用台灣化欄位即隱藏公司、地址2
+  - 新增 billing/shipping 地址類型偵測，正確取得對應國家
+  - 欄位標籤修改（鄉鎮市區、詳細地址）移至欄位隱藏邏輯外，確保正確套用
+
+- **我的帳號地址編輯頁面欄位寬度**
+  - 新增 CSS 樣式確保 `form-row-first` 和 `form-row-last` 正確並排
+  - 姓名（48%）+ 電話（48%）正確顯示在同一行
+  - 手機版自動切換為全寬顯示
+
+### 技術變更
+- `yangsheep-myaccount-address.js` 更新至 v1.1.0
+- `yangsheep-myaccount.css` 新增地址編輯頁面欄位樣式
+
+---
+
+## [1.4.8] - 2026-02-04
+
+### 新增
+- **我的帳號地址編輯頁面 TWzipcode 支援**
+  - 新增 `yangsheep-myaccount-address.js` 模組
+  - 啟用「台灣化欄位」時，地址編輯頁面自動載入 TWzipcode
+  - 支援 billing 和 shipping 地址的縣市/鄉鎮市區下拉選單
+  - 自動偵測並設定已儲存的地址值
+
+- **我的帳號帳單地址欄位統一隱藏**
+  - 啟用「台灣化欄位」時，我的帳號頁面也隱藏公司、地址2 欄位
+  - 修改欄位標籤為台灣格式（鄉鎮市區、詳細地址）
+  - 與結帳頁面欄位設定保持一致
+
+### 修復
+- **設定欄位讀取改用 YSSettingsManager**
+  - `add_color_field()` 改用 `YSSettingsManager::get()`
+  - `add_text_field()` 改用 `YSSettingsManager::get()`
+  - `add_checkbox_field()` 改用 `YSSettingsManager::get()`
+  - 修復設定儲存後刷新頁面值不正確的問題
+
+---
+
 ## [1.4.7] - 2026-02-04
 
 ### 重構

@@ -366,6 +366,23 @@ class YANGSHEEP_Checkout_Settings {
     // Section Headers
     public function general_section_header() {
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-admin-settings"></span> 功能設定</h3>';
+
+        // 偵測 PayNow 物流模組是否啟用
+        if ( class_exists( 'YangSheep\PayNow\Shipping\YSPaynowShipping' ) ) {
+            $paynow_column_enabled = get_option( 'ys_paynow_shipping_show_order_column', 'yes' ) === 'yes';
+            $order_enhancement_enabled = YSSettingsManager::get( 'yangsheep_enable_order_enhancement', 'no' ) === 'yes';
+
+            if ( $paynow_column_enabled ) {
+                echo '<div class="notice notice-info inline" style="margin: 10px 0; padding: 10px 12px;">';
+                echo '<p><strong>' . esc_html__( '已偵測到 YS PayNow 物流模組', 'yangsheep-checkout-optimization' ) . '</strong></p>';
+                if ( $order_enhancement_enabled ) {
+                    echo '<p>' . esc_html__( '您已啟用「訂單配送狀態強化」，PayNow 物流模組的訂單欄位顯示功能將自動停用，由本外掛統一處理。', 'yangsheep-checkout-optimization' ) . '</p>';
+                } else {
+                    echo '<p>' . esc_html__( '若啟用「訂單配送狀態強化」，PayNow 物流模組的訂單欄位顯示功能將自動停用，由本外掛統一處理物流狀態顯示。', 'yangsheep-checkout-optimization' ) . '</p>';
+                }
+                echo '</div>';
+            }
+        }
     }
     public function checkout_fields_section_header() {
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-forms"></span> 結帳欄位設置</h3>';

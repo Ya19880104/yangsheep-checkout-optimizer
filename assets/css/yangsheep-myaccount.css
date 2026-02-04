@@ -119,3 +119,38 @@
     font-size: 18px;
     font-weight: 600;
 }
+
+/* === 地址編輯頁面欄位樣式 === */
+/* 姓名與電話並排 */
+.woocommerce-account .woocommerce-address-fields .form-row-first,
+.woocommerce-account .woocommerce-address-fields .form-row-last {
+    width: 48% !important;
+    float: left !important;
+    clear: none !important;
+}
+.woocommerce-account .woocommerce-address-fields .form-row-first {
+    margin-right: 4% !important;
+}
+.woocommerce-account .woocommerce-address-fields .form-row-last {
+    margin-right: 0 !important;
+}
+.woocommerce-account .woocommerce-address-fields .form-row-wide {
+    width: 100% !important;
+    float: none !important;
+    clear: both !important;
+}
+/* 清除浮動 */
+.woocommerce-account .woocommerce-address-fields::after {
+    content: '';
+    display: table;
+    clear: both;
+}
+/* 手機版：全寬顯示 */
+@media (max-width: 480px) {
+    .woocommerce-account .woocommerce-address-fields .form-row-first,
+    .woocommerce-account .woocommerce-address-fields .form-row-last {
+        width: 100% !important;
+        float: none !important;
+        margin-right: 0 !important;
+    }
+}

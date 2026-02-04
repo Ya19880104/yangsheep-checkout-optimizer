@@ -36,8 +36,11 @@ class YANGSHEEP_Checkout_Fields {
         // Shipping Phone
         add_filter( 'woocommerce_shipping_fields', array( $this, 'add_shipping_phone' ), 20 );
 
-        // 我的帳號欄位
+        // 我的帳號欄位（後台用戶編輯頁面）
         add_filter( 'woocommerce_customer_meta_fields', array( $this, 'add_customer_meta_fields' ), 20 );
+
+        // 我的帳號地址編輯頁面（前台）- 最終過濾要編輯的地址欄位
+        add_filter( 'woocommerce_address_to_edit', array( $this, 'filter_address_to_edit' ), 20, 2 );
 
         // 超取時修改必填欄位（在 checkout_fields 過濾器中處理，確保 AJAX 更新時也生效）
         add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
@@ -332,8 +335,37 @@ class YANGSHEEP_Checkout_Fields {
             return $fields;
         }
 
-        // 檢測國家
-        $country = WC()->customer ? WC()->customer->get_shipping_country() : '';
+        // 啟用台灣化欄位時，移除公司和地址2（不管國家）
+        // 這會影響所有地址（結帳頁、我的帳號頁）
+        if ( isset( $fields['address_2'] ) ) {
+            unset( $fields['address_2'] );
+        }
+        if ( isset( $fields['company'] ) ) {
+            unset( $fields['company'] );
+        }
+
+        // 修改欄位標籤為台灣格式
+        if ( isset( $fields['city'] ) ) {
+            $fields['city']['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
+        }
+        if ( isset( $fields['address_1'] ) ) {
+            $fields['address_1']['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
+        }
+
+        // 檢測國家（用於調整欄位順序）
+        $country = '';
+        if ( WC()->customer ) {
+            // 嘗試取得當前編輯的地址類型
+            if ( is_wc_endpoint_url( 'edit-address' ) ) {
+                global $wp;
+                $address_type = isset( $wp->query_vars['edit-address'] ) ? $wp->query_vars['edit-address'] : 'billing';
+                $country = $address_type === 'shipping'
+                    ? WC()->customer->get_shipping_country()
+                    : WC()->customer->get_billing_country();
+            } else {
+                $country = WC()->customer->get_shipping_country();
+            }
+        }
         if ( empty( $country ) ) {
             $country = WC()->countries->get_base_country();
         }
@@ -348,19 +380,9 @@ class YANGSHEEP_Checkout_Fields {
             }
             if ( isset( $fields['city'] ) ) {
                 $fields['city']['priority'] = 60;
-                $fields['city']['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
             }
             if ( isset( $fields['address_1'] ) ) {
                 $fields['address_1']['priority'] = 70;
-                $fields['address_1']['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
-            }
-            // 移除 address_2（台灣不需要）
-            if ( isset( $fields['address_2'] ) ) {
-                unset( $fields['address_2'] );
-            }
-            // 移除公司欄位
-            if ( isset( $fields['company'] ) ) {
-                unset( $fields['company'] );
             }
         }
 
@@ -397,6 +419,7 @@ class YANGSHEEP_Checkout_Fields {
 
     /**
      * 加入客戶 Meta 欄位（我的帳號）
+     * 同時處理台灣化欄位設定（隱藏公司、地址2等）
      */
     public function add_customer_meta_fields( $fields ) {
         // 加入 shipping_phone 到客戶資料
@@ -406,9 +429,8 @@ class YANGSHEEP_Checkout_Fields {
                 'description' => '',
             );
         }
-        
+
         // 如果關閉 Last Name（保留 First Name 作為「姓名」）
-        // 使用新的 option 名稱: yangsheep_checkout_close_lname
         if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
             // 隱藏 last_name
             if ( isset( $fields['billing']['fields']['billing_last_name'] ) ) {
@@ -425,8 +447,97 @@ class YANGSHEEP_Checkout_Fields {
                 $fields['shipping']['fields']['shipping_first_name']['label'] = __( '收件人姓名', 'yangsheep-checkout-optimization' );
             }
         }
-        
+
+        // 台灣化欄位：隱藏公司、地址2 等欄位（與結帳頁面一致）
+        if ( YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes' ) {
+            // 帳單地址：隱藏公司、地址2
+            if ( isset( $fields['billing']['fields']['billing_company'] ) ) {
+                unset( $fields['billing']['fields']['billing_company'] );
+            }
+            if ( isset( $fields['billing']['fields']['billing_address_2'] ) ) {
+                unset( $fields['billing']['fields']['billing_address_2'] );
+            }
+
+            // 收件地址：隱藏公司、地址2
+            if ( isset( $fields['shipping']['fields']['shipping_company'] ) ) {
+                unset( $fields['shipping']['fields']['shipping_company'] );
+            }
+            if ( isset( $fields['shipping']['fields']['shipping_address_2'] ) ) {
+                unset( $fields['shipping']['fields']['shipping_address_2'] );
+            }
+
+            // 修改欄位標籤為台灣格式
+            if ( isset( $fields['billing']['fields']['billing_city'] ) ) {
+                $fields['billing']['fields']['billing_city']['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
+            }
+            if ( isset( $fields['billing']['fields']['billing_address_1'] ) ) {
+                $fields['billing']['fields']['billing_address_1']['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
+            }
+            if ( isset( $fields['shipping']['fields']['shipping_city'] ) ) {
+                $fields['shipping']['fields']['shipping_city']['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
+            }
+            if ( isset( $fields['shipping']['fields']['shipping_address_1'] ) ) {
+                $fields['shipping']['fields']['shipping_address_1']['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
+            }
+        }
+
         return $fields;
+    }
+
+    /**
+     * 過濾我的帳號地址編輯頁面的欄位
+     * 這是 WooCommerce 前台地址編輯頁面的最終過濾器
+     *
+     * @internal
+     *
+     * @param array  $address      地址欄位陣列
+     * @param string $load_address 地址類型 (billing 或 shipping)
+     * @return array 過濾後的地址欄位
+     */
+    public function filter_address_to_edit( $address, $load_address ) {
+        // 關閉 Last Name（保留 First Name 作為「姓名」）
+        if ( YSSettingsManager::get( 'yangsheep_checkout_close_lname', 'no' ) === 'yes' ) {
+            $last_name_key = $load_address . '_last_name';
+            $first_name_key = $load_address . '_first_name';
+
+            if ( isset( $address[ $last_name_key ] ) ) {
+                unset( $address[ $last_name_key ] );
+            }
+            if ( isset( $address[ $first_name_key ] ) ) {
+                $address[ $first_name_key ]['label'] = __( '姓名', 'yangsheep-checkout-optimization' );
+                $address[ $first_name_key ]['class'] = array( 'form-row-first' );
+            }
+        }
+
+        // 只在啟用台灣化欄位時處理
+        if ( YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) !== 'yes' ) {
+            return $address;
+        }
+
+        // 隱藏公司欄位
+        $company_key = $load_address . '_company';
+        if ( isset( $address[ $company_key ] ) ) {
+            unset( $address[ $company_key ] );
+        }
+
+        // 隱藏地址2欄位
+        $address_2_key = $load_address . '_address_2';
+        if ( isset( $address[ $address_2_key ] ) ) {
+            unset( $address[ $address_2_key ] );
+        }
+
+        // 修改欄位標籤為台灣格式
+        $city_key = $load_address . '_city';
+        if ( isset( $address[ $city_key ] ) ) {
+            $address[ $city_key ]['label'] = __( '鄉鎮市區', 'yangsheep-checkout-optimization' );
+        }
+
+        $address_1_key = $load_address . '_address_1';
+        if ( isset( $address[ $address_1_key ] ) ) {
+            $address[ $address_1_key ]['label'] = __( '詳細地址', 'yangsheep-checkout-optimization' );
+        }
+
+        return $address;
     }
 
     /**

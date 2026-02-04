@@ -1,10 +1,14 @@
 // assets/js/yangsheep-checkout.js
-// 版本: 2.5.0 - 修正付款方式選中狀態判斷
+// 版本: 2.6.0 - 重構台灣地址模組，統一處理縣市郵遞區號下拉
 // 動態控制地址欄位顯示
 jQuery(function ($) {
     'use strict';
 
-    console.log('[YS Checkout] v2.1.0 初始化');
+    console.log('[YS Checkout] v2.6.0 初始化');
+
+    var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
+        ? yangsheep_checkout_params.nonce
+        : '';
 
     // ===== 1. DOM 初始化移動 =====
     if ($("#order_country_heading").length && $("#shipping_country_field").length) {
@@ -171,132 +175,329 @@ jQuery(function ($) {
         $('.woocommerce-additional-fields__field-wrapper').hide();
     }
 
-    // ===== 7. 台灣地址 Twzipcode =====
-    // 只處理 twzipcode 初始化，不干擾其他欄位顯示
-    var postcodeTimer = null;
-    var twzipcodeInitialized = false;
+    // ===== 7. 台灣地址 Twzipcode 模組 =====
+    /**
+     * YS Taiwan Address Module
+     * 統一處理台灣縣市、鄉鎮市區、郵遞區號下拉選單
+     *
+     * 功能：
+     * 1. 將 WooCommerce 原生輸入欄位轉換為 twzipcode 下拉選單
+     * 2. 自動驗證並同步初始值（縣市、鄉鎮市區、郵遞區號）
+     * 3. 處理無效值時自動重置為「請選擇」
+     *
+     * @version 2.6.0
+     */
+    var YSTaiwanAddress = {
+        // 設定
+        config: {
+            debug: true,
+            updateDelay: 300,
+            initDelay: 100,
+            cityLoadDelay: 150
+        },
 
-    function initTwzipcode() {
-        if (typeof $.fn.twzipcode !== 'function') return;
+        // 狀態
+        state: {
+            initialized: false,
+            postcodeTimer: null
+        },
 
-        var country = $('#shipping_country').val();
-        if (country !== 'TW') {
-            destroyTwzipcode();
-            return;
-        }
+        // 選擇器
+        selectors: {
+            stateSelect: 'select[name="shipping_state_tw"]',
+            citySelect: 'select[name="shipping_city_tw"]',
+            postcodeInput: 'input[name="shipping_postcode_tw"]',
+            stateHidden: '#shipping_state',
+            cityHidden: '#shipping_city',
+            postcodeHidden: '#shipping_postcode',
+            countrySelect: '#shipping_country',
+            elementClass: 'yangsheep-twzipcode-element'
+        },
 
-        // 使用 flag 和 class 來檢查是否已初始化
-        if (twzipcodeInitialized && $('.yangsheep-twzipcode-element').length > 0) return;
+        /**
+         * 日誌輸出
+         */
+        log: function() {
+            if (this.config.debug) {
+                var args = Array.prototype.slice.call(arguments);
+                args.unshift('[YS Address]');
+                console.log.apply(console, args);
+            }
+        },
 
-        console.log('[YS Checkout] 初始化 twzipcode');
+        /**
+         * 檢查值是否為 select 的有效選項
+         */
+        isValidOption: function($select, value) {
+            if (!value || !$select.length) return false;
+            return $select.find('option').filter(function() {
+                return $(this).val() === value;
+            }).length > 0;
+        },
 
-        var initState = $('#shipping_state').val() || '';
-        var initCity = $('#shipping_city').val() || '';
-        var initZipcode = $('#shipping_postcode').val() || '';
+        /**
+         * 取得目前的 twzipcode 元素
+         */
+        getElements: function() {
+            return {
+                $state: $(this.selectors.stateSelect),
+                $city: $(this.selectors.citySelect),
+                $postcode: $(this.selectors.postcodeInput),
+                $stateHidden: $(this.selectors.stateHidden),
+                $cityHidden: $(this.selectors.cityHidden),
+                $postcodeHidden: $(this.selectors.postcodeHidden)
+            };
+        },
 
-        // 建立暫時容器（會在初始化完成後移除）
-        var $cont = $('<div id="shipping-zipcode-fields-temp"></div>').appendTo('body').hide();
+        /**
+         * 同步 twzipcode 值到隱藏欄位
+         */
+        syncToHidden: function() {
+            var els = this.getElements();
+            var state = els.$state.val() || '';
+            var city = els.$city.val() || '';
+            var postcode = els.$postcode.val() || '';
 
-        function syncInputs() {
-            // 使用移動後的 select 元素來同步
-            var county = $('select[name="shipping_state_tw"]').val() || '';
-            var district = $('select[name="shipping_city_tw"]').val() || '';
-            var zipcode = $('input[name="shipping_postcode_tw"]').val() || '';
+            els.$stateHidden.val(state);
+            els.$cityHidden.val(city);
+            els.$postcodeHidden.val(postcode);
 
-            $('#shipping_state').val(county);
-            $('#shipping_city').val(district);
-            $('#shipping_postcode').val(zipcode);
-        }
+            this.log('同步到隱藏欄位:', { state: state, city: city, postcode: postcode });
+        },
 
-        function onDistrictSelect() {
-            syncInputs();
-            clearTimeout(postcodeTimer);
-            postcodeTimer = setTimeout(function () {
-                $(document.body).trigger('update_checkout');
-            }, 300);
-        }
+        /**
+         * 清空所有欄位值
+         */
+        clearAll: function() {
+            var els = this.getElements();
+            els.$state.val('');
+            els.$city.val('');
+            els.$postcode.val('');
+            els.$stateHidden.val('');
+            els.$cityHidden.val('');
+            els.$postcodeHidden.val('');
+            this.log('已清空所有欄位');
+        },
 
-        $cont.twzipcode({
-            countyName: 'shipping_state_tw',
-            districtName: 'shipping_city_tw',
-            zipcodeName: 'shipping_postcode_tw',
-            readonly: true,
-            detect: false,
-            onCountySelect: syncInputs,
-            onDistrictSelect: onDistrictSelect
-        });
+        /**
+         * 驗證並設定初始值
+         * @param {string} initState - 初始縣市值
+         * @param {string} initCity - 初始鄉鎮市區值
+         * @param {string} initPostcode - 初始郵遞區號值
+         */
+        validateAndSetInitialValues: function(initState, initCity, initPostcode) {
+            var self = this;
+            var els = this.getElements();
 
-        $cont.find('select, input').addClass('yangsheep-twzipcode-element');
+            this.log('驗證初始值:', { state: initState, city: initCity, postcode: initPostcode });
 
-        // 只隱藏原生的 state/city/postcode 欄位內容
-        $('#shipping_state_field .woocommerce-input-wrapper').hide();
-        $('#shipping_city_field .woocommerce-input-wrapper').hide();
-        $('#shipping_postcode_field .woocommerce-input-wrapper').hide();
+            // 1. 驗證並設定縣市
+            if (initState && this.isValidOption(els.$state, initState)) {
+                els.$state.val(initState).trigger('change');
+                this.log('縣市有效，已設定:', initState);
+            } else {
+                // 縣市無效，全部重置
+                els.$state.val('').trigger('change');
+                this.clearAll();
+                if (initState) {
+                    this.log('縣市無效，已重置:', initState);
+                }
+                return; // 縣市無效就不用繼續了
+            }
 
-        // 移動 twzipcode 元素到各自的 field 內
-        $('#shipping_state_field').append($cont.find('select[name="shipping_state_tw"]'));
-        $('#shipping_city_field').append($cont.find('select[name="shipping_city_tw"]'));
-        $('#shipping_postcode_field').append($cont.find('input[name="shipping_postcode_tw"]').addClass('input-text'));
-
-        // 設定初始值（在元素移動後）
-        if (initState || initCity || initZipcode) {
-            $('select[name="shipping_state_tw"]').val(initState).trigger('change');
+            // 2. 延遲驗證鄉鎮市區（等待縣市 change 觸發區選項載入）
             setTimeout(function() {
-                $('select[name="shipping_city_tw"]').val(initCity).trigger('change');
-                $('input[name="shipping_postcode_tw"]').val(initZipcode);
-            }, 100);
+                if (initCity && self.isValidOption(els.$city, initCity)) {
+                    els.$city.val(initCity).trigger('change');
+                    self.log('鄉鎮市區有效，已設定:', initCity);
+
+                    // 3. 驗證郵遞區號（再延遲一下確保 twzipcode 更新完成）
+                    setTimeout(function() {
+                        var currentPostcode = els.$postcode.val();
+                        // 如果 twzipcode 自動填入的郵遞區號與初始值不同，以 twzipcode 為準
+                        if (currentPostcode && currentPostcode !== initPostcode) {
+                            self.log('郵遞區號已由 twzipcode 自動更新:', currentPostcode);
+                        } else if (!currentPostcode) {
+                            self.log('郵遞區號為空，可能需要檢查');
+                        }
+                        self.syncToHidden();
+                    }, 50);
+                } else {
+                    // 鄉鎮市區無效，清空區和郵遞區號
+                    els.$city.val('').trigger('change');
+                    els.$cityHidden.val('');
+                    els.$postcodeHidden.val('');
+                    if (initCity) {
+                        self.log('鄉鎮市區無效，已重置:', initCity);
+                    }
+                }
+            }, self.config.cityLoadDelay);
+        },
+
+        /**
+         * 區選擇時的處理
+         */
+        onDistrictSelect: function() {
+            var self = this;
+            this.syncToHidden();
+
+            clearTimeout(this.state.postcodeTimer);
+            this.state.postcodeTimer = setTimeout(function() {
+                $(document.body).trigger('update_checkout');
+            }, this.config.updateDelay);
+        },
+
+        /**
+         * 初始化 twzipcode
+         */
+        init: function() {
+            var self = this;
+
+            // 檢查 twzipcode 函式庫
+            if (typeof $.fn.twzipcode !== 'function') {
+                this.log('twzipcode 函式庫未載入');
+                return;
+            }
+
+            // 檢查國家
+            var country = $(this.selectors.countrySelect).val();
+            if (country !== 'TW') {
+                this.destroy();
+                return;
+            }
+
+            // 已初始化且元素存在則跳過
+            if (this.state.initialized && $('.' + this.selectors.elementClass).length > 0) {
+                return;
+            }
+
+            this.log('開始初始化');
+
+            // 取得初始值（在建立 twzipcode 之前）
+            var initState = $(this.selectors.stateHidden).val() || '';
+            var initCity = $(this.selectors.cityHidden).val() || '';
+            var initPostcode = $(this.selectors.postcodeHidden).val() || '';
+
+            // 建立暫時容器
+            var $cont = $('<div id="shipping-zipcode-fields-temp"></div>').appendTo('body').hide();
+
+            // 初始化 twzipcode
+            $cont.twzipcode({
+                countyName: 'shipping_state_tw',
+                districtName: 'shipping_city_tw',
+                zipcodeName: 'shipping_postcode_tw',
+                readonly: true,
+                detect: false,
+                onCountySelect: function() { self.syncToHidden(); },
+                onDistrictSelect: function() { self.onDistrictSelect(); }
+            });
+
+            // 標記元素
+            $cont.find('select, input').addClass(this.selectors.elementClass);
+
+            // 隱藏原生欄位
+            $('#shipping_state_field .woocommerce-input-wrapper').hide();
+            $('#shipping_city_field .woocommerce-input-wrapper').hide();
+            $('#shipping_postcode_field .woocommerce-input-wrapper').hide();
+
+            // 移動元素到對應位置
+            $('#shipping_state_field').append($cont.find(this.selectors.stateSelect));
+            $('#shipping_city_field').append($cont.find(this.selectors.citySelect));
+            $('#shipping_postcode_field').append($cont.find(this.selectors.postcodeInput).addClass('input-text'));
+
+            // 移除暫時容器
+            $cont.remove();
+
+            this.state.initialized = true;
+            this.log('twzipcode 元素已建立');
+
+            // 驗證並設定初始值
+            setTimeout(function() {
+                self.validateAndSetInitialValues(initState, initCity, initPostcode);
+            }, self.config.initDelay);
+        },
+
+        /**
+         * 銷毀 twzipcode
+         */
+        destroy: function() {
+            if (!this.state.initialized && $('.' + this.selectors.elementClass).length === 0) {
+                return;
+            }
+
+            this.log('銷毀 twzipcode');
+
+            $('.' + this.selectors.elementClass).remove();
+            $('#shipping-zipcode-fields-temp').remove();
+
+            $('#shipping_state_field .woocommerce-input-wrapper').show();
+            $('#shipping_city_field .woocommerce-input-wrapper').show();
+            $('#shipping_postcode_field .woocommerce-input-wrapper').show();
+
+            this.state.initialized = false;
+        },
+
+        /**
+         * 檢查並重新初始化（用於 AJAX 更新後）
+         */
+        checkAndReinit: function() {
+            var country = $(this.selectors.countrySelect).val();
+            if (country === 'TW' && $('.' + this.selectors.elementClass).length === 0) {
+                this.state.initialized = false;
+                var self = this;
+                setTimeout(function() { self.init(); }, 150);
+            }
+        },
+
+        /**
+         * 綁定事件
+         */
+        bindEvents: function() {
+            var self = this;
+
+            // 國家變更
+            $(document.body).on('change', this.selectors.countrySelect, function() {
+                var country = $(this).val();
+                self.log('國家變更:', country);
+
+                if (country === 'TW') {
+                    setTimeout(function() { self.init(); }, 100);
+                } else {
+                    self.destroy();
+                }
+            });
+
+            // WooCommerce 結帳更新
+            $(document.body).on('updated_checkout', function() {
+                self.log('updated_checkout 事件');
+                self.checkAndReinit();
+            });
+        },
+
+        /**
+         * 啟動模組
+         */
+        start: function() {
+            var self = this;
+            this.bindEvents();
+
+            // 初次執行
+            setTimeout(function() {
+                var country = $(self.selectors.countrySelect).val();
+                if (country === 'TW') {
+                    self.init();
+                }
+            }, 300);
+
+            this.log('模組啟動完成');
         }
+    };
 
-        // 移除暫時容器
-        $cont.remove();
+    // 啟動台灣地址模組
+    YSTaiwanAddress.start();
 
-        twzipcodeInitialized = true;
-    }
-
-    function destroyTwzipcode() {
-        if (!twzipcodeInitialized && $('.yangsheep-twzipcode-element').length === 0) return;
-
-        console.log('[YS Checkout] 銷毀 twzipcode');
-
-        $('.yangsheep-twzipcode-element').remove();
-        $('#shipping-zipcode-fields-temp').remove();
-
-        $('#shipping_state_field .woocommerce-input-wrapper').show();
-        $('#shipping_city_field .woocommerce-input-wrapper').show();
-        $('#shipping_postcode_field .woocommerce-input-wrapper').show();
-
-        twzipcodeInitialized = false;
-    }
-
-    $(document.body).on('change', '#shipping_country', function () {
-        var country = $(this).val();
-        console.log('[YS Checkout] 國家變更:', country);
-
-        if (country === 'TW') {
-            setTimeout(initTwzipcode, 100);
-        } else {
-            destroyTwzipcode();
-        }
-    });
-
-    // updated_checkout 時重新初始化 twzipcode（因為 WC 可能重置 DOM）
-    $(document.body).on('updated_checkout', function () {
-        console.log('[YS Checkout] updated_checkout');
-        var country = $('#shipping_country').val();
-        // 檢查 twzipcode 元素是否存在，若不存在則重新初始化
-        if (country === 'TW' && $('.yangsheep-twzipcode-element').length === 0) {
-            twzipcodeInitialized = false;
-            setTimeout(initTwzipcode, 150);
-        }
-    });
-
-    // 初次執行
-    setTimeout(function () {
-        var country = $('#shipping_country').val();
-        if (country === 'TW') {
-            initTwzipcode();
-        }
-    }, 300);
+    // 暴露到全域供除錯使用
+    window.YSTaiwanAddress = YSTaiwanAddress;
 
     // ===== 8. 商品數量控制 =====
     var qtyUpdateTimer = null;
@@ -311,7 +512,8 @@ jQuery(function ($) {
             data: {
                 action: 'yangsheep_update_cart_qty',
                 cart_item_key: cartKey,
-                quantity: quantity
+                quantity: quantity,
+                nonce: ysCheckoutNonce
             },
             success: function (response) {
                 if (response.success) {
@@ -329,7 +531,8 @@ jQuery(function ($) {
             type: 'POST',
             data: {
                 action: 'yangsheep_remove_cart_item',
-                cart_item_key: cartKey
+                cart_item_key: cartKey,
+                nonce: ysCheckoutNonce
             },
             success: function (response) {
                 if (response.success) {

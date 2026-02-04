@@ -344,6 +344,12 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             $service_id = $order->get_meta( '_ys_logistic_service_id' );
         }
 
+        // 使用 PayNow 物流服務名稱對照（優先）
+        $paynow_service_name = $this->get_paynow_service_name( $service_id );
+        if ( ! empty( $paynow_service_name ) ) {
+            $service_name = $paynow_service_name;
+        }
+
         if ( in_array( $service_id, array( '06', '36' ) ) || strpos( $service_name, '宅配' ) !== false || strpos( $service_name, '黑貓' ) !== false || strpos( $service_name, '郵寄' ) !== false ) {
             $flow_type = 'home';
             $store_name = '';
@@ -380,6 +386,30 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             'update_time'     => $update_time,
             'flow_type'       => $flow_type
         );
+    }
+
+    /**
+     * 取得 PayNow 物流服務名稱
+     *
+     * @param string $service_id 物流服務代碼。
+     * @return string 物流服務名稱，若無對應則返回空字串。
+     */
+    private function get_paynow_service_name( $service_id ) {
+        $names = array(
+            '01' => '7-11 交貨便 (C2C)',
+            '02' => '全家店到店 (C2C)',
+            '03' => '萊爾富店到店',
+            '04' => '7-11 大宗 (B2C)',
+            '05' => '全家大宗 (B2C)',
+            '06' => '黑貓宅配 (06)',
+            '11' => '7-11 冷凍 (B2C)',
+            '12' => '全家冷凍 (B2C)',
+            '21' => '7-11 冷凍 (C2C)',
+            '23' => '全家冷凍 (C2C)',
+            '36' => '黑貓宅配 (36)',
+        );
+
+        return isset( $names[ $service_id ] ) ? $names[ $service_id ] : '';
     }
 
     private function calculate_step( $status, $flow_type ) {

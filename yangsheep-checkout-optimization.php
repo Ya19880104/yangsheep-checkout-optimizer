@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.4.7
+ * Version:         1.4.10
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.7' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.10' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -20,6 +20,13 @@ define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
 // 定義常數供其他類別使用
 define( 'YANGSHEEP_CHECKOUT_URL', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL );
 define( 'YANGSHEEP_CHECKOUT_VERSION', YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+
+// WooCommerce 未啟用提示
+function yangsheep_checkout_optimizer_wc_missing_notice() {
+    echo '<div class="notice notice-error"><p>';
+    echo esc_html__( 'YANGSHEEP 結帳強化外掛需要 WooCommerce 才能運作。請先安裝並啟用 WooCommerce。', 'yangsheep-checkout-optimization' );
+    echo '</p></div>';
+}
 
 // 載入 Composer autoload（如果存在）
 $autoload_file = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php';
@@ -52,6 +59,11 @@ function yangsheep_checkout_optimizer_activate() {
 
 // 載入核心
 add_action( 'plugins_loaded', function(){
+    if ( ! class_exists( 'WooCommerce' ) ) {
+        add_action( 'admin_notices', 'yangsheep_checkout_optimizer_wc_missing_notice' );
+        return;
+    }
+
     // WPLoyalty 整合類別需要在設定類別之前載入（因為設定頁面會引用它）
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-wployalty-integration.php';
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-settings.php';
@@ -65,6 +77,10 @@ add_action( 'plugins_loaded', function(){
 
 // 啟動設定與自訂器
 add_action( 'init', function(){
+    if ( ! class_exists( 'WooCommerce' ) ) {
+        return;
+    }
+
     YANGSHEEP_Checkout_Settings::get_instance();
     YANGSHEEP_Checkout_Customizer::get_instance();
     YANGSHEEP_Shipping_Cards::get_instance();
@@ -75,16 +91,21 @@ add_action( 'init', function(){
 
 // 前端 CSS/JS
 add_action( 'wp_enqueue_scripts', function(){
+    if ( ! function_exists( 'is_checkout' ) ) {
+        return;
+    }
+
     // 結帳頁面專用 CSS/JS
     if ( is_checkout() ) {
         wp_enqueue_style( 'yangsheep-checkout-optimization', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-checkout.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
         wp_enqueue_script( 'jquery-twzipcode', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/jquery.twzipcode.min.js', [ 'jquery' ], '1.7.12', true );
-        wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+        wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode', 'wc-checkout' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
 
         // 傳遞超取物流方式清單到前端
         $cvs_methods = YSSettingsManager::get( 'yangsheep_cvs_shipping_methods', array() );
         wp_localize_script( 'yangsheep-checkout-custom', 'yangsheep_checkout_params', array(
             'cvs_shipping_methods' => is_array( $cvs_methods ) ? $cvs_methods : array(),
+            'nonce'                => wp_create_nonce( 'yangsheep_checkout_nonce' ),
         ) );
 
         // 物流卡片 CSS/JS（僅結帳頁主表單，非端點頁）
@@ -102,11 +123,17 @@ add_action( 'wp_enqueue_scripts', function(){
     }
 
     // 我的帳號頁面及訂單明細（根據設定決定是否載入視覺樣式）
-    if ( is_account_page() ) {
+    if ( function_exists( 'is_account_page' ) && is_account_page() ) {
         // 只有啟用「我的帳號視覺」時才載入樣式
         if ( YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) === 'yes' ) {
             wp_enqueue_style( 'yangsheep-myaccount',  YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-myaccount.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
             wp_enqueue_style( 'yangsheep-order',      YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-order.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+        }
+
+        // 地址編輯頁面載入 TWzipcode（台灣化欄位啟用時）
+        if ( is_wc_endpoint_url( 'edit-address' ) && YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes' ) {
+            wp_enqueue_script( 'jquery-twzipcode', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/jquery.twzipcode.min.js', [ 'jquery' ], '1.7.12', true );
+            wp_enqueue_script( 'yangsheep-myaccount-address', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-myaccount-address.js', [ 'jquery', 'jquery-twzipcode' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
         }
     }
 });
@@ -149,17 +176,35 @@ function yangsheep_checkout_coupon_form_custom(){
        . '</div><div class="clear"></div></div>';
 }
 // Ajax 優惠券
-add_action( 'wp_footer', function(){ if(is_checkout()&&!is_wc_endpoint_url()){ ?>
-<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';$('input[name=coupon_code]').on('input',function(){cc=$(this).val();});$('button[name=apply_coupon]').click(function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$('input[name=coupon_code]').val('');$('form.checkout').before(r);});});});</script>
-<?php }} );
+add_action( 'wp_footer', function(){
+    if ( ! function_exists( 'is_checkout' ) ) {
+        return;
+    }
+    if ( is_checkout() && ! is_wc_endpoint_url() ) { ?>
+<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';$('input[name=coupon_code]').on('input',function(){cc=$(this).val();});$('button[name=apply_coupon]').click(function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$('input[name=coupon_code]').val('');$('form.checkout').before(r);});});});</script>
+<?php } } );
 add_action('wp_ajax_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
 add_action('wp_ajax_nopriv_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
-function yangsheep_apply_checkout_coupon_ajax(){ if(!empty($_POST['coupon_code']))WC()->cart->add_discount(wc_format_coupon_code(wp_unslash($_POST['coupon_code'])));else wc_add_notice(WC_Coupon::get_generic_coupon_error(WC_Coupon::E_WC_COUPON_PLEASE_ENTER),'error');wc_print_notices();wp_die(); }
+function yangsheep_apply_checkout_coupon_ajax(){
+    check_ajax_referer( 'yangsheep_checkout_nonce', 'nonce' );
+    if ( ! WC()->cart ) {
+        wp_send_json_error( array( 'message' => 'Cart not available' ) );
+    }
+    if ( ! empty( $_POST['coupon_code'] ) ) {
+        $coupon_code = wc_format_coupon_code( wp_unslash( $_POST['coupon_code'] ) );
+        WC()->cart->apply_coupon( $coupon_code );
+    } else {
+        wc_add_notice( WC_Coupon::get_generic_coupon_error( WC_Coupon::E_WC_COUPON_PLEASE_ENTER ), 'error' );
+    }
+    wc_print_notices();
+    wp_die();
+}
 
 // AJAX: 更新購物車數量
 add_action('wp_ajax_yangsheep_update_cart_qty', 'yangsheep_update_cart_qty_ajax');
 add_action('wp_ajax_nopriv_yangsheep_update_cart_qty', 'yangsheep_update_cart_qty_ajax');
 function yangsheep_update_cart_qty_ajax() {
+    check_ajax_referer( 'yangsheep_checkout_nonce', 'nonce' );
     $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field($_POST['cart_item_key']) : '';
     $quantity = isset($_POST['quantity']) ? absint($_POST['quantity']) : 0;
     
@@ -175,6 +220,7 @@ function yangsheep_update_cart_qty_ajax() {
 add_action('wp_ajax_yangsheep_remove_cart_item', 'yangsheep_remove_cart_item_ajax');
 add_action('wp_ajax_nopriv_yangsheep_remove_cart_item', 'yangsheep_remove_cart_item_ajax');
 function yangsheep_remove_cart_item_ajax() {
+    check_ajax_referer( 'yangsheep_checkout_nonce', 'nonce' );
     $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field($_POST['cart_item_key']) : '';
     
     if ($cart_item_key) {
