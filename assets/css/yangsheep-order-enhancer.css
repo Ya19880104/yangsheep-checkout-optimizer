@@ -28,52 +28,60 @@
     white-space: nowrap;
 }
 
-/* Status Colors - 莫蘭迪淡藍灰配色（與 YS PayNow Shipping 一致） */
+/* Status Colors - 莫蘭迪淡藍灰配色
+ * 有設定頁面支援的狀態使用 CSS 變數 var(--ys-status-*-bg/text)
+ * 無設定頁面的狀態使用固定值
+ */
 
-/* 待建立 - 灰色 */
+/* 待建立 - 灰色（有設定） */
 .ys-status-pending {
-    background: #f0f4f7;
-    color: #7a8b95;
+    background: var(--ys-status-pending-bg, #f0f4f7);
+    color: var(--ys-status-pending-text, #7a8b95);
 }
 
-/* 等待寄件 / 準備中 - 淡藍 */
-.ys-status-preparing,
+/* 準備中 - 淡藍（有設定） */
+.ys-status-preparing {
+    background: var(--ys-status-preparing-bg, #e8eff5);
+    color: var(--ys-status-preparing-text, #6b8a9a);
+}
+
+/* 等待寄件 - 淡藍（固定） */
 .ys-status-waiting {
     background: #e8eff5;
     color: #6b8a9a;
 }
 
-/* 已建立 - 藍色 */
+/* 已建立 - 藍色（固定） */
 .ys-status-created {
     background: #e1f0ff;
     color: #0073aa;
 }
 
-/* 配送中 - 橘黃 */
+/* 配送中 - 橘黃（有設定） */
 .ys-status-shipping {
-    background: #fef6e8;
-    color: #b8860b;
+    background: var(--ys-status-shipping-bg, #fef6e8);
+    color: var(--ys-status-shipping-text, #b8860b);
 }
 
-/* 到店待取 - 紫色 */
+/* 到店待取 - 紫色（有設定） */
 .ys-status-arrived {
-    background: #f3e5f5;
-    color: #7b1fa2;
+    background: var(--ys-status-arrived-bg, #f3e5f5);
+    color: var(--ys-status-arrived-text, #7b1fa2);
 }
 
-/* 已完成 - 灰藍 */
+/* 已完成 - 莫蘭迪藍（有設定） */
 .ys-status-completed {
-    background: #e8eff5;
-    color: #6b8a9a;
+    background: var(--ys-status-completed-bg, #e8eff5);
+    color: var(--ys-status-completed-text, #6b8a9a);
 }
 
-/* 已取消/退貨 - 紅色 */
+/* 已取消/退貨 - 紅色（固定） */
 .ys-status-cancelled {
     background: #ffebee;
     color: #c62828;
 }
 
-/* 預設 - 灰色 */
+/* 預設 - 灰色（固定） */
 .ys-status-default {
     background: #f0f4f7;
     color: #7a8b95;

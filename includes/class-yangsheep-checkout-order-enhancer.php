@@ -928,14 +928,14 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             line-height: 1.4;
             white-space: nowrap;
         }
-        .ys-status-pending { background: #f0f4f7; color: #7a8b95; }   /* 待建立 - 灰 */
-        .ys-status-waiting { background: #e8eff5; color: #6b8a9a; }   /* 等待寄件 - 淡藍 */
-        .ys-status-created { background: #e1f0ff; color: #0073aa; }   /* 已建立 - 藍 */
-        .ys-status-shipping { background: #fef6e8; color: #b8860b; }  /* 配送中 - 橘黃 */
-        .ys-status-arrived { background: #f3e5f5; color: #7b1fa2; }   /* 到店待取 - 紫 */
-        .ys-status-completed { background: #e8f5e9; color: #2e7d32; } /* 已完成 - 深綠 */
-        .ys-status-cancelled { background: #ffebee; color: #c62828; } /* 已取消/退貨 - 紅 */
-        .ys-status-default { background: #f0f4f7; color: #7a8b95; }   /* 預設 - 灰 */
+        .ys-status-pending { background: var(--ys-status-pending-bg, #f0f4f7); color: var(--ys-status-pending-text, #7a8b95); }
+        .ys-status-waiting { background: #e8eff5; color: #6b8a9a; }
+        .ys-status-created { background: #e1f0ff; color: #0073aa; }
+        .ys-status-shipping { background: var(--ys-status-shipping-bg, #fef6e8); color: var(--ys-status-shipping-text, #b8860b); }
+        .ys-status-arrived { background: var(--ys-status-arrived-bg, #f3e5f5); color: var(--ys-status-arrived-text, #7b1fa2); }
+        .ys-status-completed { background: var(--ys-status-completed-bg, #e8eff5); color: var(--ys-status-completed-text, #6b8a9a); }
+        .ys-status-cancelled { background: #ffebee; color: #c62828; }
+        .ys-status-default { background: #f0f4f7; color: #7a8b95; }
         </style>';
     }
 
