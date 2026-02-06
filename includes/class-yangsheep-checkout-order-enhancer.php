@@ -170,7 +170,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
      * Get Status Class
      */
     private function get_status_class( $status ) {
-        if ( strpos( $status, '運送' ) !== false || strpos( $status, '出貨' ) !== false ) return 'ys-status-shipping';
+        if ( strpos( $status, '運送' ) !== false || strpos( $status, '出貨' ) !== false || strpos( $status, '集貨' ) !== false || strpos( $status, '暫置' ) !== false || strpos( $status, '轉運' ) !== false || strpos( $status, '配送' ) !== false || strpos( $status, '理貨' ) !== false ) return 'ys-status-shipping';
         if ( strpos( $status, '到店' ) !== false || strpos( $status, '取貨' ) !== false || strpos( $status, '配達' ) !== false ) return 'ys-status-arrived';
         if ( strpos( $status, '完成' ) !== false ) return 'ys-status-completed';
         if ( strpos( $status, '準備' ) !== false ) return 'ys-status-preparing';
@@ -323,6 +323,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             'provider'        => 'payuni',
             'service_name'    => $service_name,
             'tracking_number' => $tracking_number,
+            'tracking_label'  => __( '託運單號', 'yangsheep-checkout-optimization' ),
             'status_text'     => $status_text,
             'current_step'    => $this->calculate_step( $status_text, $flow_type ),
             'store_name'      => $store_name,
@@ -344,8 +345,11 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             $service_id = $order->get_meta( '_ys_logistic_service_id' );
         }
 
-        // 使用 PayNow 物流服務名稱對照（優先）
-        $paynow_service_name = $this->get_paynow_service_name( $service_id );
+        // 取得溫層類型（黑貓宅配用）
+        $delivery_type = $order->get_meta( '_ys_paynow_delivery_type' );
+
+        // 使用 PayNow 物流服務名稱對照（優先），包含溫層資訊
+        $paynow_service_name = $this->get_paynow_service_name( $service_id, $delivery_type );
         if ( ! empty( $paynow_service_name ) ) {
             $service_name = $paynow_service_name;
         }
@@ -358,7 +362,11 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             $store_name = $order->get_meta( '_ys_paynow_store_name' );
         }
 
-        $tracking_number = $order->get_meta( '_ys_paynow_logistic_number' );
+        // 優先使用託運單號 (PaymentNo = 物流商實際追蹤號碼)
+        $tracking_number = $order->get_meta( '_ys_paynow_payment_no' );
+        if ( empty( $tracking_number ) ) {
+            $tracking_number = $order->get_meta( '_ys_paynow_logistic_number' );
+        }
         $raw_status = $order->get_meta( '_ys_paynow_delivery_status' );
 
         $is_printed = $order->get_meta( '_ys_paynow_label_printed' ) === 'yes' || $order->get_meta( '_ys_label_printed' ) === 'yes';
@@ -380,6 +388,7 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             'provider'        => 'paynow',
             'service_name'    => $service_name,
             'tracking_number' => $tracking_number,
+            'tracking_label'  => __( '託運單號', 'yangsheep-checkout-optimization' ),
             'status_text'     => $status_text,
             'current_step'    => $this->calculate_step( $status_text, $flow_type ),
             'store_name'      => $store_name,
@@ -391,31 +400,52 @@ class YANGSHEEP_Checkout_Order_Enhancer {
     /**
      * 取得 PayNow 物流服務名稱
      *
-     * @param string $service_id 物流服務代碼。
+     * @param string $service_id    物流服務代碼。
+     * @param string $delivery_type 配送溫層（0001:常溫, 0002:冷藏, 0003:冷凍）。
      * @return string 物流服務名稱，若無對應則返回空字串。
      */
-    private function get_paynow_service_name( $service_id ) {
+    private function get_paynow_service_name( $service_id, $delivery_type = '' ) {
         $names = array(
             '01' => '7-11 交貨便 (C2C)',
             '02' => '全家店到店 (C2C)',
             '03' => '萊爾富店到店',
             '04' => '7-11 大宗 (B2C)',
             '05' => '全家大宗 (B2C)',
-            '06' => '黑貓宅配 (06)',
             '11' => '7-11 冷凍 (B2C)',
             '12' => '全家冷凍 (B2C)',
             '21' => '7-11 冷凍 (C2C)',
             '23' => '全家冷凍 (C2C)',
-            '36' => '黑貓宅配 (36)',
         );
 
+        // 黑貓宅配根據溫層顯示
+        if ( '06' === $service_id || '36' === $service_id ) {
+            $temp_name = $this->get_delivery_type_name( $delivery_type );
+            return '黑貓宅配 (' . $temp_name . ')';
+        }
+
         return isset( $names[ $service_id ] ) ? $names[ $service_id ] : '';
+    }
+
+    /**
+     * 取得配送溫層名稱
+     *
+     * @param string $delivery_type 配送類型代碼。
+     * @return string 溫層名稱。
+     */
+    private function get_delivery_type_name( $delivery_type ) {
+        $types = array(
+            '0001' => '常溫',
+            '0002' => '冷藏',
+            '0003' => '冷凍',
+        );
+
+        return isset( $types[ $delivery_type ] ) ? $types[ $delivery_type ] : '常溫';
     }
 
     private function calculate_step( $status, $flow_type ) {
         if ( mb_strpos( $status, '完成' ) !== false || mb_strpos( $status, '取貨' ) !== false || mb_strpos( $status, '已取' ) !== false ) return 4;
         if ( mb_strpos( $status, '到店' ) !== false || mb_strpos( $status, '待取' ) !== false || mb_strpos( $status, '配達' ) !== false ) return 3;
-        if ( mb_strpos( $status, '運送' ) !== false || mb_strpos( $status, '出貨' ) !== false || mb_strpos( $status, '離店' ) !== false || mb_strpos( $status, '等待' ) !== false || mb_strpos( $status, '準備' ) !== false ) return 2;
+        if ( mb_strpos( $status, '運送' ) !== false || mb_strpos( $status, '出貨' ) !== false || mb_strpos( $status, '離店' ) !== false || mb_strpos( $status, '等待' ) !== false || mb_strpos( $status, '準備' ) !== false || mb_strpos( $status, '集貨' ) !== false || mb_strpos( $status, '暫置' ) !== false || mb_strpos( $status, '轉運' ) !== false || mb_strpos( $status, '配送' ) !== false || mb_strpos( $status, '理貨' ) !== false ) return 2;
         return 1;
     }
 

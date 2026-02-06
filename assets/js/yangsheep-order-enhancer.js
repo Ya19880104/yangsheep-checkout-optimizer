@@ -86,7 +86,8 @@
                             detailHtml += '<div class="detail-item"><div class="detail-label">取貨門市</div><div class="detail-value">' + d.store_name + '</div></div>';
                         }
 
-                        detailHtml += '<div class="detail-item"><div class="detail-label">物流單號</div><div class="detail-value">' + (d.tracking_number || '-') + '</div></div>';
+                        var trackingLabel = d.tracking_label || '物流單號';
+                        detailHtml += '<div class="detail-item"><div class="detail-label">' + trackingLabel + '</div><div class="detail-value">' + (d.tracking_number || '-') + '</div></div>';
 
                         var html = '<div class="ys-panel-header">' +
                             '<h4 class="ys-panel-title">' + (d.service_name || '物流詳情') + '</h4>' +

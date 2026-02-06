@@ -7,6 +7,25 @@
 
 ---
 
+## [1.4.11] - 2026-02-06
+
+### 改進
+- **物流單號改為託運單號顯示**
+  - PayNow 物流：優先讀取 `_ys_paynow_payment_no`（託運單號），無值時降回 `_ys_paynow_logistic_number`
+  - PayUni 物流：新增 `tracking_label => '託運單號'`
+  - 手動配送：保持原本「物流單號」標籤
+  - JS 端使用動態 `tracking_label` 渲染，預設降回「物流單號」
+
+- **物流進度條狀態關鍵字擴充**
+  - `calculate_step()` 新增轉運、理貨、暫置、離店等運送中關鍵字
+  - `get_status_class()` 同步新增相同關鍵字判斷
+
+### 技術變更
+- `class-yangsheep-checkout-order-enhancer.php` - PayNow / PayUni 回傳資料新增 `tracking_label` 欄位
+- `yangsheep-order-enhancer.js` - 物流單號標籤改為 `d.tracking_label || '物流單號'` 動態渲染
+
+---
+
 ## [1.4.10] - 2026-02-04
 
 ### 修復
@@ -564,5 +583,5 @@
 
 ---
 
-**最後更新**: 2026-01-11
+**最後更新**: 2026-02-06
 **目前狀態**: 穩定版本，持續維護中
