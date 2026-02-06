@@ -170,9 +170,10 @@ class YANGSHEEP_Checkout_Order_Enhancer {
      * Get Status Class
      */
     private function get_status_class( $status ) {
+        // 「完成」優先判斷 — 「商品配送完成」「取件完成」都屬於已完成
+        if ( strpos( $status, '完成' ) !== false ) return 'ys-status-completed';
         if ( strpos( $status, '運送' ) !== false || strpos( $status, '出貨' ) !== false || strpos( $status, '集貨' ) !== false || strpos( $status, '暫置' ) !== false || strpos( $status, '轉運' ) !== false || strpos( $status, '配送' ) !== false || strpos( $status, '理貨' ) !== false ) return 'ys-status-shipping';
         if ( strpos( $status, '到店' ) !== false || strpos( $status, '取貨' ) !== false || strpos( $status, '配達' ) !== false ) return 'ys-status-arrived';
-        if ( strpos( $status, '完成' ) !== false ) return 'ys-status-completed';
         if ( strpos( $status, '準備' ) !== false ) return 'ys-status-preparing';
         return 'ys-status-default';
     }
