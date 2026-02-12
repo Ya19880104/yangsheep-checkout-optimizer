@@ -7,6 +7,25 @@
 
 ---
 
+## [1.4.13] - 2026-02-12
+
+### 修復
+- **建立帳號密碼欄位顯示/隱藏**
+  - 新增初始狀態檢查：頁面載入時根據 `#createaccount` checkbox 狀態同步密碼欄位顯隱
+  - 新增 `updated_checkout` 事件監聽，WooCommerce AJAX 更新後重新同步
+- **密碼欄位 Grid 全寬修正**
+  - 移除被 `.form-row { width: auto !important }` 覆蓋的過時 `width: 100%` 規則
+  - 電腦版和平板版 Grid 區塊新增 `.yangsheep-create-account` 內部元素全寬規則
+- **國家選擇區塊動態隱藏**
+  - 新增 `toggleCountryBlock()`：當 `#shipping_country_field` 不存在時隱藏 `.yangsheep-checkout-country`
+  - `updated_checkout` 後延遲 100ms 檢查，確保 DOM 移動完成
+
+### 技術變更
+- `yangsheep-checkout.js` v2.7.0 - 新增帳號欄位初始狀態檢查、國家區塊動態顯隱
+- `yangsheep-checkout.css` - Grid 佈局下建立帳號區塊全寬規則重構
+
+---
+
 ## [1.4.11] - 2026-02-06
 
 ### 改進

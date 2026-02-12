@@ -1,5 +1,5 @@
 // assets/js/yangsheep-checkout.js
-// 版本: 2.6.0 - 重構台灣地址模組，統一處理縣市郵遞區號下拉
+// 版本: 2.7.0 - 修正建立帳號密碼欄位顯隱、國家區塊動態隱藏
 // 動態控制地址欄位顯示
 jQuery(function ($) {
     'use strict';
@@ -20,6 +20,25 @@ jQuery(function ($) {
     if ($("#coupons_list").length && $(".yangsheep-smart-coupon").length) {
         $("#coupons_list").detach().appendTo('.yangsheep-smart-coupon');
     }
+
+    // ===== 1.1 國家選擇區塊：無國家欄位時隱藏 =====
+    function toggleCountryBlock() {
+        var $countryBlock = $('.yangsheep-checkout-country');
+        if (!$countryBlock.length) return;
+        // 檢查區塊內是否有 shipping_country_field（已被移入或原本存在）
+        if (!$countryBlock.find('#shipping_country_field').length && !$('#shipping_country_field').length) {
+            $countryBlock.hide();
+        } else {
+            $countryBlock.show();
+        }
+    }
+    toggleCountryBlock();
+
+    // WooCommerce AJAX 更新後重新檢查
+    $(document.body).on('updated_checkout', function () {
+        // DOM 移動可能在 updated_checkout 後執行，延遲檢查
+        setTimeout(toggleCountryBlock, 100);
+    });
 
     // ===== 1.5 付款方式選中狀態 =====
     // 使用 class 取代 CSS :has() 選擇器，確保跨瀏覽器相容性
@@ -158,6 +177,18 @@ jQuery(function ($) {
             $('.yangsheep-account-fields').slideDown(200);
         } else {
             $('.yangsheep-account-fields').slideUp(200);
+        }
+    });
+
+    // 初始狀態：根據 checkbox 決定密碼欄位顯隱
+    if ($('#createaccount').length && !$('#createaccount').is(':checked')) {
+        $('.yangsheep-account-fields').hide();
+    }
+
+    // WooCommerce AJAX 更新後重新同步狀態
+    $(document.body).on('updated_checkout', function () {
+        if ($('#createaccount').length && !$('#createaccount').is(':checked')) {
+            $('.yangsheep-account-fields').hide();
         }
     });
 

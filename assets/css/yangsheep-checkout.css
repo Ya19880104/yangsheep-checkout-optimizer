@@ -700,7 +700,6 @@ a.woocommerce-remove-coupon {
 
     /*購買時註冊欄位 */
     .yangsheep-account-fields {
-        width: 100% !important;
         margin-top: 15px;
     }
 
@@ -711,10 +710,6 @@ a.woocommerce-remove-coupon {
         padding: 10px 15px;
         background: rgba(0, 0, 0, 0.03);
         border-radius: 4px;
-    }
-
-    .woocommerce-billing-fields__field-wrapper #account_password_field {
-        width: 100% !important;
     }
 }
 
@@ -744,11 +739,7 @@ a.woocommerce-remove-coupon {
         padding: 20px 15px !important;
     }
 
-    /*購買時註冊欄位 */
-    .woocommerce-billing-fields__field-wrapper #account_username_field,
-    .woocommerce-billing-fields__field-wrapper #account_password_field {
-        width: 100% !important;
-    }
+    /* 購買時註冊欄位：已由 Grid 全寬控制 */
 }
 
 /* RWD: 平板以上 (>=768px) - 折扣代碼 & 購物金左右並排 */
@@ -1270,6 +1261,14 @@ a.woocommerce-remove-coupon {
         grid-column: 1 / -1;
     }
 
+    /* 建立帳號內部元素全寬（覆蓋 form-row width:auto） */
+    .yangsheep-create-account .create-account,
+    .yangsheep-create-account .yangsheep-account-fields,
+    .yangsheep-create-account #account_password_field,
+    .yangsheep-create-account #account_username_field {
+        width: 100% !important;
+    }
+
     /* 同訂購人 Checkbox 全寬 */
     .woocommerce-shipping-fields__field-wrapper .yangsheep-copy-billing,
     #yangsheep_copy_billing_field {
@@ -1308,6 +1307,14 @@ a.woocommerce-remove-coupon {
     .woocommerce-billing-fields__field-wrapper .create-account,
     #createaccount_field {
         grid-column: 1 / -1;
+    }
+
+    /* 建立帳號內部元素全寬 */
+    .yangsheep-create-account .create-account,
+    .yangsheep-create-account .yangsheep-account-fields,
+    .yangsheep-create-account #account_password_field,
+    .yangsheep-create-account #account_username_field {
+        width: 100% !important;
     }
 
     /* 收件人姓名電話強制並排（一般模式，非台灣模式） */
