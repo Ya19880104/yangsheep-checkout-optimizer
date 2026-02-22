@@ -165,6 +165,7 @@ add_action( 'yangsheep_payment', 'woocommerce_checkout_payment', 20 );
 remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_login_form', 10 );
 add_action( 'yangsheep_loginform', 'woocommerce_checkout_login_form', 10 );
 remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form', 10 );
+remove_action( 'woocommerce_before_checkout_form', 'woocommerce_output_all_notices', 10 );
 add_action( 'yangsheep_coupon', 'yangsheep_checkout_coupon_form_custom' );
 function yangsheep_checkout_coupon_form_custom(){
     echo '<div class="yangsheep_checkout_coupon coupon-form">'
@@ -181,7 +182,7 @@ add_action( 'wp_footer', function(){
         return;
     }
     if ( is_checkout() && ! is_wc_endpoint_url() ) { ?>
-<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';$('input[name=coupon_code]').on('input',function(){cc=$(this).val();});$('button[name=apply_coupon]').click(function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$('input[name=coupon_code]').val('');$('form.checkout').before(r);});});});</script>
+<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';$('input[name=coupon_code]').on('input',function(){cc=$(this).val();});$('button[name=apply_coupon]').click(function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$('input[name=coupon_code]').val('');$('.woocommerce-notices-wrapper').html(r);});});});</script>
 <?php } } );
 add_action('wp_ajax_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
 add_action('wp_ajax_nopriv_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');

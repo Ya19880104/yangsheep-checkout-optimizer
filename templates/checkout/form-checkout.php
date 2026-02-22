@@ -36,6 +36,9 @@ $checkout_url=apply_filters('woocommerce_get_checkout_url',wc_get_checkout_url()
     <!-- 表單區域 -->
     <form name="checkout" method="post" class="checkout woocommerce-checkout yangsheep-form-column" action="<?php echo esc_url($checkout_url);?>" enctype="multipart/form-data">
 
+      <!-- 1.5. 通知訊息 -->
+      <div class="woocommerce-notices-wrapper"><?php wc_print_notices(); ?></div>
+
       <!-- 2. 商品明細 -->
       <div class="yangsheep-review-wrapper">
         <div class="yangsheep-order-review">
