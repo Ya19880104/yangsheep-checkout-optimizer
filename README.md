@@ -101,7 +101,11 @@ yangsheep-checkout-optimizer/
 │   ├── class-yangsheep-checkout-fields.php         # 結帳欄位設置
 │   ├── class-yangsheep-shipping-cards.php          # 物流卡片類別
 │   ├── class-yangsheep-checkout-order-enhancer.php # 訂單強化類別
-│   └── class-yangsheep-third-party-shipping-compat.php # 第三方物流相容性
+│   ├── class-yangsheep-third-party-shipping-compat.php # 第三方物流相容性
+│   ├── class-ys-settings-manager.php             # 設定管理門面
+│   ├── class-ys-settings-repository.php          # 設定 CRUD 操作
+│   ├── class-ys-settings-table-maker.php         # 設定資料表建立
+│   └── class-ys-settings-migrator.php            # 設定資料遷移
 ├── templates/
 │   └── checkout/
 │       ├── form-checkout.php              # 結帳表單佈局

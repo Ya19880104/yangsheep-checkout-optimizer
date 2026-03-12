@@ -34,10 +34,10 @@ if ( file_exists( $autoload_file ) ) {
     require_once $autoload_file;
 } else {
     // 手動載入設定類別（當 vendor 不存在時）
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/Settings/YSSettingsTableMaker.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/Settings/YSSettingsRepository.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/Settings/YSSettingsManager.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/Settings/YSSettingsMigrator.php';
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-table-maker.php';
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-repository.php';
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-manager.php';
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-migrator.php';
 }
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
