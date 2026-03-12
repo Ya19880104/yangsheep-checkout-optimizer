@@ -152,7 +152,7 @@ class YSCheckoutSettings {
         // 重定向回設定頁面（帶成功訊息）
         wp_safe_redirect( add_query_arg(
             array(
-                'page'    => 'yangsheep_checkout_optimization',
+                'page'    => 'ys-checkout-optimizer',
                 'tab'     => $active_tab,
                 'updated' => 'true',
             ),
@@ -162,19 +162,48 @@ class YSCheckoutSettings {
     }
 
     public function add_admin_menu() {
-        add_menu_page(
+        global $menu;
+
+        // 檢查「電商工具箱」頂層選單是否已存在
+        $toolbox_exists = false;
+        if ( is_array( $menu ) ) {
+            foreach ( $menu as $item ) {
+                if ( isset( $item[2] ) && 'ys-toolbox' === $item[2] ) {
+                    $toolbox_exists = true;
+                    break;
+                }
+            }
+        }
+
+        // 只建立一次頂層選單
+        if ( ! $toolbox_exists ) {
+            add_menu_page(
+                __( '電商工具箱', 'yangsheep-checkout-optimization' ),
+                __( '電商工具箱', 'yangsheep-checkout-optimization' ),
+                'manage_options',
+                'ys-toolbox',
+                '__return_null',
+                'dashicons-store',
+                56
+            );
+
+            // 移除 WordPress 自動產生的重複子選單
+            remove_submenu_page( 'ys-toolbox', 'ys-toolbox' );
+        }
+
+        // 註冊子選單
+        add_submenu_page(
+            'ys-toolbox',
             __( '結帳強化設定', 'yangsheep-checkout-optimization' ),
             __( '結帳強化',      'yangsheep-checkout-optimization' ),
             'manage_options',
-            'yangsheep_checkout_optimization',
-            array( $this, 'settings_page' ),
-            'dashicons-cart',
-            60
+            'ys-checkout-optimizer',
+            array( $this, 'settings_page' )
         );
     }
 
     public function enqueue_admin_scripts( $hook ) {
-        if ( 'toplevel_page_yangsheep_checkout_optimization' !== $hook ) {
+        if ( false === strpos( $hook, 'ys-toolbox' ) && false === strpos( $hook, 'ys-checkout-optimizer' ) ) {
             return;
         }
         wp_enqueue_style( 'wp-color-picker' );
@@ -900,7 +929,7 @@ class YSCheckoutSettings {
 
         <div class="ys-settings-wrap">
             <div class="ys-settings-header">
-                <h2><span class="dashicons dashicons-cart"></span> <?php echo esc_html( get_admin_page_title() ); ?></h2>
+                <h2><span class="dashicons dashicons-store"></span> <?php echo esc_html( get_admin_page_title() ); ?></h2>
                 <p class="ys-settings-desc">強化 WooCommerce 結帳流程與訂單管理體驗</p>
             </div>
 
@@ -934,7 +963,7 @@ class YSCheckoutSettings {
                 </a>
             </nav>
 
-            <form action="<?php echo esc_url( admin_url( 'admin.php?page=yangsheep_checkout_optimization' ) ); ?>" method="post" class="ys-settings-form">
+            <form action="<?php echo esc_url( admin_url( 'admin.php?page=ys-checkout-optimizer' ) ); ?>" method="post" class="ys-settings-form">
                 <?php wp_nonce_field( 'ys_save_settings', 'ys_settings_nonce' ); ?>
                 <input type="hidden" name="active_tab" id="ys_active_tab" value="<?php echo esc_attr( $active_tab ); ?>" />
 

@@ -21,7 +21,7 @@ class YSCheckoutCustomizer {
     }
 
     public function enqueue_color_picker( $hook_suffix ) {
-        if ( $hook_suffix === 'toplevel_page_yangsheep_checkout_optimization' ) {
+        if ( false !== strpos( $hook_suffix, 'ys-toolbox' ) || false !== strpos( $hook_suffix, 'ys-checkout-optimizer' ) ) {
             wp_enqueue_style( 'wp-color-picker' );
             wp_enqueue_script( 'wp-color-picker' );
             wp_enqueue_script(
