@@ -2,8 +2,6 @@
 
 ## 未來功能待辦
 
-- [ ] **物流卡片顏色後台設定** - 將 Radio 指示器、邊框、選中背景色可於後台獨立設定
-- [ ] **側邊欄背景色後台設定** - 結帳金額、購物車內容區塊的背景色可於後台設定（CSS 變數：`--yangsheep-sidebar-bg`）
 - [ ] **Radio 選中顏色獨立設定** - 與邊框 active 顏色獨立設置
 
 ## 開發原則
@@ -77,7 +75,7 @@
 
 | WooCommerce 原始模板 | 外掛覆寫版本 | 原始版本 |
 |---------------------|-------------|---------|
-| checkout/form-checkout.php | 自訂 | 3.5.0 |
+| checkout/form-checkout.php | 自訂 (v1.4.14) | 3.5.0 |
 | checkout/form-billing.php | 自訂 | - |
 | checkout/form-shipping.php | 自訂 | - |
 | checkout/payment.php | 自訂 | - |
