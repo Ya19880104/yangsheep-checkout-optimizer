@@ -5,7 +5,7 @@
  * 顯示卡片式物流選項，取代原本訂單表格中的物流區塊
  * 
  * @package YangSheep\CheckoutOptimizer
- * @version 1.4.14
+ * @version 1.4.15
  * @since 2026-01-07
  */
 

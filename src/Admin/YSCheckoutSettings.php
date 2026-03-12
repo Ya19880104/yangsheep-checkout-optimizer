@@ -841,11 +841,12 @@ class YSCheckoutSettings {
                     action: 'yangsheep_migrate_settings',
                     nonce: '<?php echo wp_create_nonce( 'yangsheep_migrate_settings' ); ?>'
                 }, function(response) {
+                    var msg = $('<p>').text(response.data || '');
                     if (response.success) {
-                        $('#ys-db-message').html('<div class="notice notice-success inline"><p>' + response.data + '</p></div>');
+                        $('#ys-db-message').empty().append($('<div class="notice notice-success inline">').append(msg));
                         setTimeout(function() { location.reload(); }, 1500);
                     } else {
-                        $('#ys-db-message').html('<div class="notice notice-error inline"><p>' + response.data + '</p></div>');
+                        $('#ys-db-message').empty().append($('<div class="notice notice-error inline">').append(msg));
                         $btn.prop('disabled', false).html('<span class="dashicons dashicons-database-import"></span> 遷移設定到自訂資料表');
                     }
                 });
@@ -863,11 +864,12 @@ class YSCheckoutSettings {
                     action: 'yangsheep_cleanup_options',
                     nonce: '<?php echo wp_create_nonce( 'yangsheep_cleanup_options' ); ?>'
                 }, function(response) {
+                    var msg = $('<p>').text(response.data || '');
                     if (response.success) {
-                        $('#ys-db-message').html('<div class="notice notice-success inline"><p>' + response.data + '</p></div>');
+                        $('#ys-db-message').empty().append($('<div class="notice notice-success inline">').append(msg));
                         setTimeout(function() { location.reload(); }, 1500);
                     } else {
-                        $('#ys-db-message').html('<div class="notice notice-error inline"><p>' + response.data + '</p></div>');
+                        $('#ys-db-message').empty().append($('<div class="notice notice-error inline">').append(msg));
                         $btn.prop('disabled', false).html('<span class="dashicons dashicons-trash"></span> 清理 wp_options 舊設定');
                     }
                 });
