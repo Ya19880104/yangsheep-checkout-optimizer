@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.4.15
-**最後更新**：2026-03-12
+**當前版本**：1.4.16
+**最後更新**：2026-03-13
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -230,6 +230,18 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.4.16 (2026-03-13)
+
+#### 重構
+- **後台設定改為「電商工具箱」子選單** - 遵循 YS 外掛開發準則第 4 節
+  - 頂層選單 `ys-toolbox`（電商工具箱，位置 56，緊跟 WooCommerce）
+  - 子選單 slug 改為 `ys-checkout-optimizer`
+  - 自動偵測頂層選單避免重複建立
+
+#### 修復
+- **後台 AJAX 訊息 XSS 防護** - `.html()` 改為 jQuery DOM 建構 + `.text()`
+- **模板版本標記同步** - `shipping-cards.php` @version 更新
 
 ### v1.4.15 (2026-03-12)
 
