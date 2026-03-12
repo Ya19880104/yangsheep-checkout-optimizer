@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.4.14
+ * Version:         1.4.15
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.14' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.15' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -28,21 +28,35 @@ function yangsheep_checkout_optimizer_wc_missing_notice() {
     echo '</p></div>';
 }
 
-// 載入 Composer autoload（如果存在）
-$autoload_file = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php';
-if ( file_exists( $autoload_file ) ) {
-    require_once $autoload_file;
-} else {
-    // 手動載入設定類別（當 vendor 不存在時）
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-table-maker.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-repository.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-manager.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-ys-settings-migrator.php';
-}
+// PSR-4 自動載入器
+spl_autoload_register( function ( $class ) {
+    $prefix = 'YangSheep\\CheckoutOptimizer\\';
+    $base_dir = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/';
+
+    $len = strlen( $prefix );
+    if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+        return;
+    }
+
+    $relative_class = substr( $class, $len );
+    $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+    if ( file_exists( $file ) ) {
+        require_once $file;
+    }
+} );
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsTableMaker;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
+use YangSheep\CheckoutOptimizer\Admin\YSCheckoutSettings;
+use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutCustomizer;
+use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutFields;
+use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutSidebar;
+use YangSheep\CheckoutOptimizer\Checkout\YSShippingCards;
+use YangSheep\CheckoutOptimizer\Order\YSOrderEnhancer;
+use YangSheep\CheckoutOptimizer\Compat\YSThirdPartyShippingCompat;
+use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 
 // 外掛啟用時建立資料表
 register_activation_hook( __FILE__, 'yangsheep_checkout_optimizer_activate' );
@@ -57,22 +71,12 @@ function yangsheep_checkout_optimizer_activate() {
     }
 }
 
-// 載入核心
+// 載入核心（PSR-4 自動載入，不需要手動 require）
 add_action( 'plugins_loaded', function(){
     if ( ! class_exists( 'WooCommerce' ) ) {
         add_action( 'admin_notices', 'yangsheep_checkout_optimizer_wc_missing_notice' );
         return;
     }
-
-    // WPLoyalty 整合類別需要在設定類別之前載入（因為設定頁面會引用它）
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-wployalty-integration.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-settings.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-customizer.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-shipping-cards.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-sidebar.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-fields.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-checkout-order-enhancer.php';
-    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'includes/class-yangsheep-third-party-shipping-compat.php';
 });
 
 // 啟動設定與自訂器
@@ -81,12 +85,14 @@ add_action( 'init', function(){
         return;
     }
 
-    YANGSHEEP_Checkout_Settings::get_instance();
-    YANGSHEEP_Checkout_Customizer::get_instance();
-    YANGSHEEP_Shipping_Cards::get_instance();
-    YANGSHEEP_Checkout_Sidebar::get_instance();
-    YANGSHEEP_Checkout_Order_Enhancer::get_instance();
-    YANGSHEEP_Third_Party_Shipping_Compat::get_instance();
+    YSCheckoutSettings::get_instance();
+    YSCheckoutCustomizer::get_instance();
+    YSCheckoutFields::get_instance();
+    YSShippingCards::get_instance();
+    YSCheckoutSidebar::get_instance();
+    YSOrderEnhancer::get_instance();
+    YSThirdPartyShippingCompat::get_instance();
+    YSWPLoyaltyIntegration::get_instance();
 });
 
 // 前端 CSS/JS
@@ -206,14 +212,20 @@ add_action('wp_ajax_yangsheep_update_cart_qty', 'yangsheep_update_cart_qty_ajax'
 add_action('wp_ajax_nopriv_yangsheep_update_cart_qty', 'yangsheep_update_cart_qty_ajax');
 function yangsheep_update_cart_qty_ajax() {
     check_ajax_referer( 'yangsheep_checkout_nonce', 'nonce' );
+    if ( ! WC()->cart ) {
+        wp_send_json_error( array( 'message' => '購物車不可用' ) );
+    }
     $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field($_POST['cart_item_key']) : '';
     $quantity = isset($_POST['quantity']) ? absint($_POST['quantity']) : 0;
-    
-    if ($cart_item_key && $quantity > 0) {
-        WC()->cart->set_quantity($cart_item_key, $quantity, true);
-        wp_send_json_success(array('message' => '數量已更新'));
+
+    if ( $cart_item_key && $quantity > 0 ) {
+        $result = WC()->cart->set_quantity( $cart_item_key, $quantity, true );
+        if ( false === $result ) {
+            wp_send_json_error( array( 'message' => '更新數量失敗' ) );
+        }
+        wp_send_json_success( array( 'message' => '數量已更新' ) );
     } else {
-        wp_send_json_error(array('message' => '無效的請求'));
+        wp_send_json_error( array( 'message' => '無效的請求' ) );
     }
 }
 
@@ -222,13 +234,19 @@ add_action('wp_ajax_yangsheep_remove_cart_item', 'yangsheep_remove_cart_item_aja
 add_action('wp_ajax_nopriv_yangsheep_remove_cart_item', 'yangsheep_remove_cart_item_ajax');
 function yangsheep_remove_cart_item_ajax() {
     check_ajax_referer( 'yangsheep_checkout_nonce', 'nonce' );
+    if ( ! WC()->cart ) {
+        wp_send_json_error( array( 'message' => '購物車不可用' ) );
+    }
     $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field($_POST['cart_item_key']) : '';
-    
-    if ($cart_item_key) {
-        WC()->cart->remove_cart_item($cart_item_key);
-        wp_send_json_success(array('message' => '商品已移除'));
+
+    if ( $cart_item_key ) {
+        $result = WC()->cart->remove_cart_item( $cart_item_key );
+        if ( false === $result ) {
+            wp_send_json_error( array( 'message' => '移除商品失敗' ) );
+        }
+        wp_send_json_success( array( 'message' => '商品已移除' ) );
     } else {
-        wp_send_json_error(array('message' => '無效的請求'));
+        wp_send_json_error( array( 'message' => '無效的請求' ) );
     }
 }
 

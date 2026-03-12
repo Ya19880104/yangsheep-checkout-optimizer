@@ -1,4 +1,6 @@
 <?php
+namespace YangSheep\CheckoutOptimizer\Order;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -6,11 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 
 /**
- * Class YANGSHEEP_Checkout_Order_Enhancer
+ * Class YSOrderEnhancer
  *
  * Handles enhanced order list UI and logistics status integration.
  */
-class YANGSHEEP_Checkout_Order_Enhancer {
+class YSOrderEnhancer {
 
     private static $instance = null;
 
@@ -32,9 +34,8 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         add_filter( 'woocommerce_my_account_my_orders_columns', array( $this, 'add_status_column' ) );
         add_action( 'woocommerce_my_account_my_orders_column_yangsheep_shipping_status', array( $this, 'render_status_column' ) );
 
-        // AJAX
+        // AJAX（僅登入用戶，訪客無需查看物流詳情）
         add_action( 'wp_ajax_yangsheep_get_order_logistics', array( $this, 'ajax_get_logistics_details' ) );
-        add_action( 'wp_ajax_nopriv_yangsheep_get_order_logistics', array( $this, 'ajax_get_logistics_details' ) );
 
         // Admin (Manual Tracking) - Default enabled to ensure visibility
         if ( YSSettingsManager::get( 'yangsheep_enable_manual_tracking', 'yes' ) === 'yes' ) {
@@ -42,10 +43,6 @@ class YANGSHEEP_Checkout_Order_Enhancer {
             // HPOS 相容: 同時 hook 傳統 save_post 和 HPOS woocommerce_process_shop_order_meta
             add_action( 'save_post_shop_order', array( $this, 'save_manual_tracking_data' ) );
             add_action( 'woocommerce_process_shop_order_meta', array( $this, 'save_manual_tracking_data' ) );
-
-            // AJAX for adding/removing manual tracking entries
-            add_action( 'wp_ajax_yangsheep_add_manual_tracking', array( $this, 'ajax_add_manual_tracking' ) );
-            add_action( 'wp_ajax_yangsheep_remove_manual_tracking', array( $this, 'ajax_remove_manual_tracking' ) );
 
             // Admin order list column
             add_filter( 'manage_edit-shop_order_columns', array( $this, 'add_admin_order_column' ), 20 );
@@ -68,14 +65,14 @@ class YANGSHEEP_Checkout_Order_Enhancer {
 
         wp_enqueue_style(
             'yangsheep-order-enhancer',
-            plugins_url( '../assets/css/yangsheep-order-enhancer.css', __FILE__ ),
+            YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-order-enhancer.css',
             array(),
             YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION
         );
 
         wp_enqueue_script(
             'yangsheep-order-enhancer',
-            plugins_url( '../assets/js/yangsheep-order-enhancer.js', __FILE__ ),
+            YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-order-enhancer.js',
             array( 'jquery' ),
             YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
             true
@@ -197,7 +194,12 @@ class YANGSHEEP_Checkout_Order_Enhancer {
         }
 
         // Permission Check: Owner or Admin
-        if ( $order->get_user_id() != get_current_user_id() && ! current_user_can( 'manage_woocommerce' ) ) {
+        // Guest 訂單（user_id=0）不允許未登入訪客透過 nopriv 查看
+        $order_user_id = (int) $order->get_user_id();
+        $current_user_id = (int) get_current_user_id();
+        if ( current_user_can( 'manage_woocommerce' ) ) {
+            // 管理員可查看所有訂單
+        } elseif ( $order_user_id === 0 || $current_user_id === 0 || $order_user_id !== $current_user_id ) {
             wp_send_json_error( '無權限查看此訂單' );
         }
 
@@ -752,6 +754,11 @@ class YANGSHEEP_Checkout_Order_Enhancer {
      */
     public function save_manual_tracking_data( $post_id ) {
         if ( ! isset( $_POST['yangsheep_manual_tracking_nonce'] ) || ! wp_verify_nonce( $_POST['yangsheep_manual_tracking_nonce'], 'yangsheep_save_manual_tracking' ) ) {
+            return;
+        }
+
+        // 權限檢查：確認當前使用者有編輯此訂單的權限
+        if ( ! current_user_can( 'edit_shop_orders' ) ) {
             return;
         }
 

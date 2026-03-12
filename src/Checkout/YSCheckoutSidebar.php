@@ -1,26 +1,30 @@
 <?php
 /**
  * 結帳側邊欄處理類別
- * 
+ *
  * 功能：
  * - 獨立的結帳金額摘要（商品小計、運費、總金額）
  * - 購物車內容簡化列表
  * - AJAX 自動更新
- * 
+ *
  * @package YANGSHEEP_Checkout_Optimization
  * @version 1.3.0
  * @since 2026-01-07
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+namespace YangSheep\CheckoutOptimizer\Checkout;
 
-class YANGSHEEP_Checkout_Sidebar {
-    
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class YSCheckoutSidebar {
+
     /**
      * 單例實例
      */
     private static $instance = null;
-    
+
     /**
      * 取得單例實例
      */
@@ -30,7 +34,7 @@ class YANGSHEEP_Checkout_Sidebar {
         }
         return self::$instance;
     }
-    
+
     /**
      * 建構函式
      */
@@ -39,11 +43,11 @@ class YANGSHEEP_Checkout_Sidebar {
         add_action( 'yangsheep_checkout_sidebar', [ $this, 'render_sidebar' ] );
         add_action( 'yangsheep_order_summary', [ $this, 'render_order_summary' ] );
         add_action( 'yangsheep_cart_contents', [ $this, 'render_cart_contents' ] );
-        
+
         // 註冊 AJAX Fragments
         add_filter( 'woocommerce_update_order_review_fragments', [ $this, 'register_fragments' ] );
     }
-    
+
     /**
      * 渲染完整側邊欄
      */
@@ -56,7 +60,7 @@ class YANGSHEEP_Checkout_Sidebar {
         </div>
         <?php
     }
-    
+
     /**
      * 渲染運輸方式顯示
      */
@@ -64,7 +68,7 @@ class YANGSHEEP_Checkout_Sidebar {
         if ( ! WC()->cart || ! WC()->cart->needs_shipping() ) {
             return;
         }
-        
+
         $shipping_name = $this->get_chosen_shipping_name();
         if ( empty( $shipping_name ) ) {
             return;
@@ -76,28 +80,28 @@ class YANGSHEEP_Checkout_Sidebar {
         </div>
         <?php
     }
-    
+
     /**
      * 取得選中的運輸方式名稱
      */
     private function get_chosen_shipping_name() {
         $packages = WC()->shipping()->get_packages();
         $chosen_methods = WC()->session->get( 'chosen_shipping_methods' );
-        
+
         if ( empty( $packages ) || empty( $chosen_methods ) ) {
             return '';
         }
-        
+
         foreach ( $packages as $i => $package ) {
             if ( isset( $chosen_methods[ $i ], $package['rates'][ $chosen_methods[ $i ] ] ) ) {
                 $rate = $package['rates'][ $chosen_methods[ $i ] ];
                 return $rate->get_label();
             }
         }
-        
+
         return '';
     }
-    
+
     /**
      * 渲染訂單金額摘要
      */
@@ -105,7 +109,7 @@ class YANGSHEEP_Checkout_Sidebar {
         if ( ! WC()->cart ) {
             return;
         }
-        
+
         $cart = WC()->cart;
         ?>
         <div class="yangsheep-order-summary" id="yangsheep-order-summary">
@@ -117,20 +121,20 @@ class YANGSHEEP_Checkout_Sidebar {
                     <span class="yangsheep-summary-label"><?php esc_html_e( '商品小計', 'yangsheep-checkout-optimization' ); ?></span>
                     <span class="yangsheep-summary-value"><?php echo $cart->get_cart_subtotal(); ?></span>
                 </div>
-                
+
                 <?php if ( $cart->needs_shipping() && WC()->session->get( 'chosen_shipping_methods' ) ) : ?>
                 <div class="yangsheep-summary-row">
                     <span class="yangsheep-summary-label"><?php esc_html_e( '運費', 'yangsheep-checkout-optimization' ); ?></span>
                     <span class="yangsheep-summary-value"><?php echo $this->get_shipping_total(); ?></span>
                 </div>
                 <?php endif; ?>
-                
+
                 <?php
                 // 顯示已套用的優惠券（含刪除按鈕）
                 $applied_coupons = $cart->get_applied_coupons();
                 if ( ! empty( $applied_coupons ) ) :
                     foreach ( $applied_coupons as $coupon_code ) :
-                        $coupon = new WC_Coupon( $coupon_code );
+                        $coupon = new \WC_Coupon( $coupon_code );
                         $discount_amount = $cart->get_coupon_discount_amount( $coupon_code, $cart->display_cart_ex_tax );
                         ?>
                         <div class="yangsheep-summary-row yangsheep-coupon-row">
@@ -162,7 +166,7 @@ class YANGSHEEP_Checkout_Sidebar {
                     <span class="yangsheep-summary-value yangsheep-discount-value">-<?php echo wc_price( $other_discount ); ?></span>
                 </div>
                 <?php endif; ?>
-                
+
                 <div class="yangsheep-summary-row yangsheep-total">
                     <span class="yangsheep-summary-label"><?php esc_html_e( '應付總額', 'yangsheep-checkout-optimization' ); ?></span>
                     <span class="yangsheep-summary-value yangsheep-total-amount">
@@ -174,7 +178,7 @@ class YANGSHEEP_Checkout_Sidebar {
         </div>
         <?php
     }
-    
+
     /**
      * 渲染購物車內容
      */
@@ -182,7 +186,7 @@ class YANGSHEEP_Checkout_Sidebar {
         if ( ! WC()->cart ) {
             return;
         }
-        
+
         $cart_items = WC()->cart->get_cart();
         $item_count = WC()->cart->get_cart_contents_count();
         ?>
@@ -192,7 +196,7 @@ class YANGSHEEP_Checkout_Sidebar {
                 <span class="yangsheep-toggle-icon">▼</span>
             </h3>
             <div class="yangsheep-cart-items" id="yangsheep-cart-items">
-                <?php foreach ( $cart_items as $cart_item_key => $cart_item ) : 
+                <?php foreach ( $cart_items as $cart_item_key => $cart_item ) :
                     $product = $cart_item['data'];
                     $product_name = $product->get_name();
                     $quantity = $cart_item['quantity'];
@@ -202,7 +206,7 @@ class YANGSHEEP_Checkout_Sidebar {
                     <span class="yangsheep-item-qty"><?php printf( esc_html__( '數量：%d', 'yangsheep-checkout-optimization' ), $quantity ); ?></span>
                 </div>
                 <?php endforeach; ?>
-                
+
                 <div class="yangsheep-cart-summary">
                     <?php printf( esc_html__( '合計有 %d 項商品', 'yangsheep-checkout-optimization' ), $item_count ); ?>
                 </div>
@@ -210,7 +214,7 @@ class YANGSHEEP_Checkout_Sidebar {
         </div>
         <?php
     }
-    
+
     /**
      * 取得運費總計
      */
@@ -218,7 +222,7 @@ class YANGSHEEP_Checkout_Sidebar {
         $packages = WC()->shipping()->get_packages();
         $chosen_methods = WC()->session->get( 'chosen_shipping_methods' );
         $total = 0;
-        
+
         foreach ( $packages as $i => $package ) {
             if ( isset( $chosen_methods[ $i ], $package['rates'][ $chosen_methods[ $i ] ] ) ) {
                 $rate = $package['rates'][ $chosen_methods[ $i ] ];
@@ -228,14 +232,14 @@ class YANGSHEEP_Checkout_Sidebar {
                 }
             }
         }
-        
+
         if ( $total == 0 ) {
             return '<span class="yangsheep-free-shipping">' . __( '免運費', 'yangsheep-checkout-optimization' ) . '</span>';
         }
-        
+
         return wc_price( $total );
     }
-    
+
     /**
      * 註冊 AJAX Fragments
      */
@@ -244,17 +248,17 @@ class YANGSHEEP_Checkout_Sidebar {
         ob_start();
         $this->render_order_summary();
         $fragments['#yangsheep-order-summary'] = ob_get_clean();
-        
+
         // 運輸方式顯示
         ob_start();
         $this->render_shipping_display();
         $fragments['#yangsheep-shipping-display'] = ob_get_clean();
-        
+
         // 購物車內容
         ob_start();
         $this->render_cart_contents();
         $fragments['#yangsheep-cart-contents'] = ob_get_clean();
-        
+
         return $fragments;
     }
 }

@@ -1,9 +1,11 @@
 <?php
+namespace YangSheep\CheckoutOptimizer\Checkout;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class YANGSHEEP_Checkout_Customizer {
+class YSCheckoutCustomizer {
 
     private static $instance = null;
 

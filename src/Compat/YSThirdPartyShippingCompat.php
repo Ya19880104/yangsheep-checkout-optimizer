@@ -31,13 +31,17 @@
  * - 使用高優先級確保樣式覆蓋第三方外掛
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+namespace YangSheep\CheckoutOptimizer\Compat;
 
-class YANGSHEEP_Third_Party_Shipping_Compat {
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class YSThirdPartyShippingCompat {
 
     /**
      * 單例實例
-     * @var YANGSHEEP_Third_Party_Shipping_Compat|null
+     * @var YSThirdPartyShippingCompat|null
      */
     private static $instance = null;
 
@@ -68,7 +72,7 @@ class YANGSHEEP_Third_Party_Shipping_Compat {
     /**
      * 取得單例實例
      *
-     * @return YANGSHEEP_Third_Party_Shipping_Compat
+     * @return YSThirdPartyShippingCompat
      */
     public static function get_instance() {
         if ( null === self::$instance ) {

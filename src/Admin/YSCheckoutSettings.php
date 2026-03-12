@@ -1,12 +1,15 @@
 <?php
+namespace YangSheep\CheckoutOptimizer\Admin;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
+use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 
-class YANGSHEEP_Checkout_Settings {
+class YSCheckoutSettings {
 
     private static $instance = null;
 
@@ -593,17 +596,17 @@ class YANGSHEEP_Checkout_Settings {
      * 取得所有物流方式（依運送區域分組）
      */
     private function get_all_shipping_methods_with_zones() {
-        if ( ! class_exists( 'WC_Shipping_Zones' ) ) {
+        if ( ! class_exists( '\WC_Shipping_Zones' ) ) {
             return array();
         }
 
         $result = array();
 
         // 取得所有運送區域
-        $zones = WC_Shipping_Zones::get_zones();
+        $zones = \WC_Shipping_Zones::get_zones();
 
         foreach ( $zones as $zone_data ) {
-            $zone = new WC_Shipping_Zone( $zone_data['zone_id'] );
+            $zone = new \WC_Shipping_Zone( $zone_data['zone_id'] );
             $zone_name = $zone->get_zone_name();
             $methods = $zone->get_shipping_methods( true ); // true = only enabled
 
@@ -622,7 +625,7 @@ class YANGSHEEP_Checkout_Settings {
         }
 
         // 加入「其他地點」區域（zone_id = 0）
-        $zone_rest = new WC_Shipping_Zone( 0 );
+        $zone_rest = new \WC_Shipping_Zone( 0 );
         $methods_rest = $zone_rest->get_shipping_methods( true );
 
         if ( ! empty( $methods_rest ) ) {
@@ -690,7 +693,7 @@ class YANGSHEEP_Checkout_Settings {
      * 購物金整合 Section Header
      */
     public function loyalty_section_header() {
-        $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
+        $is_wployalty_active = YSWPLoyaltyIntegration::is_wployalty_active();
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-star-filled"></span> WPLoyalty 整合</h3>';
 
         if ( ! $is_wployalty_active ) {
@@ -707,7 +710,7 @@ class YANGSHEEP_Checkout_Settings {
      */
     public function loyalty_enable_callback() {
         $val = YSSettingsManager::get( 'yangsheep_wployalty_enable', 'no' );
-        $is_wployalty_active = YANGSHEEP_WPLoyalty_Integration::is_wployalty_active();
+        $is_wployalty_active = YSWPLoyaltyIntegration::is_wployalty_active();
 
         echo '<input type="hidden" name="yangsheep_wployalty_enable_submitted" value="1" />';
         echo '<label class="ys-toggle-switch">';
@@ -1350,8 +1353,6 @@ class YANGSHEEP_Checkout_Settings {
         <?php
     }
 }
-
-add_action( 'init', array( 'YANGSHEEP_Checkout_Settings', 'get_instance' ) );
 
 // 前端注入動態 MyAccount CSS 變數
 add_action( 'wp_head', function() {

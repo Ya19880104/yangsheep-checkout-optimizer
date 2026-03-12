@@ -10,6 +10,11 @@
 jQuery(function($) {
     'use strict';
 
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     console.log('[YS WPLoyalty] Initializing...');
 
     var WPLoyaltyIntegration = {
@@ -181,16 +186,13 @@ jQuery(function($) {
             var labelMatch = text.match(/\d+[\d,]*\s*(points?|點|購物金)/i);
             var label = labelMatch ? labelMatch[1] : (this.settings.i18n.points || 'Points');
 
-            // 取得連結的 onclick 或 href
-            var linkAction = null;
-            if ($link.length) {
-                linkAction = $link.attr('onclick') || "jQuery('#wlr-reward-link').click()";
-            }
+            // 保存原始連結元素的參考（不存字串，避免動態執行）
+            var $linkRef = $link.length ? $link : null;
 
             return {
                 points: points,
                 label: label,
-                linkAction: linkAction,
+                $linkRef: $linkRef,
                 originalElement: $element
             };
         },
@@ -204,34 +206,38 @@ jQuery(function($) {
             var $block = $('<div class="ys-wployalty-block"></div>');
 
             // 標題
-            var $title = $('<h3 class="yangsheep-h3-title">' + (i18n.points || '購物金') + '</h3>');
+            var $title = $('<h3 class="yangsheep-h3-title">' + escHtml(i18n.points || '購物金') + '</h3>');
 
             // 可用點數文字
-            var availableText = (i18n.available || '目前有') + ' <strong class="ys-points-value">' +
-                                data.points + ' ' + data.label + '</strong> ' +
-                                (i18n.can_use || '可用');
+            var availableText = escHtml(i18n.available || '目前有') + ' <strong class="ys-points-value">' +
+                                escHtml(data.points) + ' ' + escHtml(data.label) + '</strong> ' +
+                                escHtml(i18n.can_use || '可用');
             var $available = $('<p class="ys-points-available">' + availableText + '</p>');
 
             // 說明文字
-            var $hint = $('<p class="ys-points-hint">' + (i18n.hint || '按下兌換按鈕，於彈出視窗中兌換') + '</p>');
+            var $hint = $('<p class="ys-points-hint">' + escHtml(i18n.hint || '按下兌換按鈕，於彈出視窗中兌換') + '</p>');
 
             // 兌換按鈕（加上 button class 以繼承佈景主題按鈕樣式）
             var $button = $('<button type="button" class="button ys-wployalty-button">' +
-                           (i18n.redeem || '點此兌換折扣') + '</button>');
+                           escHtml(i18n.redeem || '點此兌換折扣') + '</button>');
 
             // 綁定按鈕事件
             $button.on('click', function(e) {
                 e.preventDefault();
 
-                // 觸發原始 WLR 連結
+                // 觸發原始 WLR 連結（優先從 DOM 查找，備援用解析時保存的參考）
                 var $originalLink = data.originalElement.find('a#wlr-reward-link, a[href*="void"]');
                 if ($originalLink.length) {
                     $originalLink[0].click();
-                } else if (data.linkAction) {
-                    try {
-                        eval(data.linkAction);
-                    } catch (err) {
-                        console.error('[YS WPLoyalty] Error triggering link action:', err);
+                } else if (data.$linkRef && data.$linkRef.length) {
+                    data.$linkRef[0].click();
+                } else {
+                    // 最終備援：全域搜尋 WPLoyalty 連結
+                    var $globalLink = $('a#wlr-reward-link');
+                    if ($globalLink.length) {
+                        $globalLink[0].click();
+                    } else {
+                        console.warn('[YS WPLoyalty] 找不到兌換連結');
                     }
                 }
             });

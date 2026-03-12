@@ -6,6 +6,12 @@
 (function ($) {
     'use strict';
 
+    // HTML 特殊字元轉義，防止 XSS
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     var YSOrderEnhancer = {
         init: function () {
             $(document).on('click', '.ys-expand-toggle', this.handleToggle);
@@ -83,26 +89,26 @@
 
                         var detailHtml = '';
                         if (d.store_name) {
-                            detailHtml += '<div class="detail-item"><div class="detail-label">取貨門市</div><div class="detail-value">' + d.store_name + '</div></div>';
+                            detailHtml += '<div class="detail-item"><div class="detail-label">取貨門市</div><div class="detail-value">' + escHtml(d.store_name) + '</div></div>';
                         }
 
-                        var trackingLabel = d.tracking_label || '物流單號';
-                        detailHtml += '<div class="detail-item"><div class="detail-label">' + trackingLabel + '</div><div class="detail-value">' + (d.tracking_number || '-') + '</div></div>';
+                        var trackingLabel = escHtml(d.tracking_label || '物流單號');
+                        detailHtml += '<div class="detail-item"><div class="detail-label">' + trackingLabel + '</div><div class="detail-value">' + escHtml(d.tracking_number || '-') + '</div></div>';
 
                         var html = '<div class="ys-panel-header">' +
-                            '<h4 class="ys-panel-title">' + (d.service_name || '物流詳情') + '</h4>' +
+                            '<h4 class="ys-panel-title">' + escHtml(d.service_name || '物流詳情') + '</h4>' +
                             '<button type="button" class="ys-panel-refresh" data-order-id="' + orderId + '" data-logistics-index="' + logisticsIndex + '">🔄 更新貨態</button>' +
                             '</div>' +
                             '<div class="ys-status-display">' +
-                            '<div class="ys-status-text">' + d.status_text + '</div>' +
-                            '<div class="ys-status-time">' + (d.update_time || '') + '</div>' +
+                            '<div class="ys-status-text">' + escHtml(d.status_text) + '</div>' +
+                            '<div class="ys-status-time">' + escHtml(d.update_time || '') + '</div>' +
                             '</div>' +
                             stepHtml +
                             '<div class="ys-panel-details">' + detailHtml + '</div>';
 
                         $panel.html(html);
                     } else {
-                        $panel.html('<div class="ys-panel-error">' + (response.data || '無法載入物流資訊') + '</div>');
+                        $panel.html('<div class="ys-panel-error">' + escHtml(response.data || '無法載入物流資訊') + '</div>');
                     }
                 },
                 error: function () {

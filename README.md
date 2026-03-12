@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.4.14
+**當前版本**：1.4.15
 **最後更新**：2026-03-12
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -93,33 +93,47 @@ yangsheep-checkout-optimizer/
 │       ├── yangsheep-checkout.js          # 結帳頁面 JS
 │       ├── yangsheep-sidebar.js           # 側邊欄 JS
 │       ├── yangsheep-shipping-cards.js    # 物流卡片 JS
-│       └── yangsheep-order-enhancer.js    # 訂單強化 JS
-├── includes/
-│   ├── class-yangsheep-checkout-customizer.php     # 自訂器
-│   ├── class-yangsheep-checkout-settings.php       # 設定頁面
-│   ├── class-yangsheep-checkout-sidebar.php        # 側邊欄類別
-│   ├── class-yangsheep-checkout-fields.php         # 結帳欄位設置
-│   ├── class-yangsheep-shipping-cards.php          # 物流卡片類別
-│   ├── class-yangsheep-checkout-order-enhancer.php # 訂單強化類別
-│   ├── class-yangsheep-third-party-shipping-compat.php # 第三方物流相容性
-│   ├── class-ys-settings-manager.php             # 設定管理門面
-│   ├── class-ys-settings-repository.php          # 設定 CRUD 操作
-│   ├── class-ys-settings-table-maker.php         # 設定資料表建立
-│   └── class-ys-settings-migrator.php            # 設定資料遷移
+│       ├── yangsheep-order-enhancer.js    # 訂單強化 JS
+│       └── color-picker-init.js           # 後台顏色選擇器初始化
+├── src/                                   # PSR-4 自動載入（命名空間：YangSheep\CheckoutOptimizer）
+│   ├── Admin/
+│   │   └── YSCheckoutSettings.php         # 後台設定頁面
+│   ├── Checkout/
+│   │   ├── YSCheckoutCustomizer.php       # 自訂器（Color Picker enqueue）
+│   │   ├── YSCheckoutFields.php           # 結帳欄位設置
+│   │   ├── YSCheckoutSidebar.php          # 側邊欄類別
+│   │   └── YSShippingCards.php            # 物流卡片類別
+│   ├── Compat/
+│   │   ├── YSThirdPartyShippingCompat.php # 第三方物流相容性
+│   │   └── YSWPLoyaltyIntegration.php     # WPLoyalty 購物金整合
+│   ├── Order/
+│   │   └── YSOrderEnhancer.php            # 訂單頁面強化
+│   └── Settings/
+│       ├── YSSettingsManager.php          # 設定管理門面（Facade）
+│       ├── YSSettingsRepository.php       # 設定 CRUD 操作
+│       ├── YSSettingsTableMaker.php       # 設定資料表建立
+│       └── YSSettingsMigrator.php         # 設定資料遷移
 ├── templates/
-│   └── checkout/
-│       ├── form-checkout.php              # 結帳表單佈局
-│       ├── review-order.php               # 訂單明細
-│       └── shipping-cards.php             # 物流卡片模板
+│   ├── checkout/
+│   │   ├── form-checkout.php              # 結帳表單佈局
+│   │   ├── form-billing.php               # 帳單表單
+│   │   ├── form-shipping.php              # 運送表單
+│   │   ├── form-login.php                 # 登入表單
+│   │   ├── review-order.php               # 訂單明細
+│   │   └── shipping-cards.php             # 物流卡片模板
+│   └── myaccount/                         # 我的帳號模板覆寫
+├── DEVELOPMENT.md                         # 開發文件
 ├── README.md                              # 本檔案
-└── yangsheep-checkout-optimization.php    # 主外掛檔案
+└── yangsheep-checkout-optimization.php    # 主外掛檔案（含 PSR-4 自動載入器）
 ```
 
 ---
 
 ## 核心類別說明
 
-### YANGSHEEP_Checkout_Fields
+所有類別統一使用 `YS` 前綴，命名空間為 `YangSheep\CheckoutOptimizer\{Module}`。
+
+### YSCheckoutFields (`Checkout\YSCheckoutFields`)
 結帳欄位設置類別，處理：
 - WooCommerce 運送設定檢查
 - First Name / Last Name 關閉選項
@@ -128,7 +142,7 @@ yangsheep-checkout-optimizer/
 - 訂單備註設置
 - **收件人電話驗證**（`woocommerce_checkout_process` hook）
 
-### YANGSHEEP_Third_Party_Shipping_Compat
+### YSThirdPartyShippingCompat (`Compat\YSThirdPartyShippingCompat`)
 第三方物流相容性處理：
 - 綠界 CVS 欄位顯示/隱藏控制
 - PayNow CVS 欄位顯示/隱藏控制
@@ -136,19 +150,32 @@ yangsheep-checkout-optimizer/
 - **手機號碼前端驗證**（JS 即時驗證）
 - 僅在啟用對應物流外掛時載入
 
-### YANGSHEEP_Checkout_Order_Enhancer
+### YSOrderEnhancer (`Order\YSOrderEnhancer`)
 訂單頁面強化：
 - 前台物流狀態卡片渲染
 - 後台手動配送 Meta Box
 - 物流類型偵測（YS PayNow / PayUni / 其他）
 - AJAX 貨態更新
 
+### YSCheckoutSettings (`Admin\YSCheckoutSettings`)
+後台設定頁面，包含：
+- 顏色設定（按鈕、物流卡片、側邊欄等）
+- 功能開關（台灣化欄位、我的帳號視覺等）
+- 遷移管理 UI
+- MyAccount CSS 變數注入
+
+### YSSettingsManager (`Settings\YSSettingsManager`)
+設定存取門面（Facade），統一所有設定的讀寫：
+- `YSSettingsManager::get( $key, $default )` - 讀取設定
+- `YSSettingsManager::set( $key, $value )` - 寫入設定
+- 底層使用自訂資料表 `wp_ys_checkout_settings`
+
 ---
 
 ## 手機號碼驗證機制
 
 ### 前端驗證（JS）
-位置：`class-yangsheep-third-party-shipping-compat.php`
+位置：`src/Compat/YSThirdPartyShippingCompat.php`
 
 ```javascript
 // 驗證格式：必須是 09 開頭的 10 位數字
@@ -162,7 +189,7 @@ var isValid = /^09\d{8}$/.test(numericValue);
 - `checkout_error` 事件：WooCommerce 結帳錯誤時再次驗證
 
 ### 後端驗證（PHP）
-位置：`class-yangsheep-checkout-fields.php`
+位置：`src/Checkout/YSCheckoutFields.php`
 
 ```php
 // 驗證格式：必須是 09 開頭的 10 位數字
@@ -203,6 +230,18 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.4.15 (2026-03-12)
+
+#### 重構
+- **PSR-4 目錄結構遷移** - 將 `includes/` 下所有類別遷移至 `src/` 目錄
+  - 命名空間統一為 `YangSheep\CheckoutOptimizer\{Module}`
+  - 手動 PSR-4 自動載入器（不依賴 Composer）
+  - 移除 `composer.json`（不再需要）
+
+#### 清理
+- 移除 `.review_tmp/` 重構臨時檔案
+- 更新 `.gitignore` 排除 `.claude/` 和 `.review_tmp/`
 
 ### v1.4.14 (2026-03-12)
 
@@ -245,7 +284,7 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
   - `get_status_class()` 同步新增相同關鍵字判斷
 
 #### 技術變更
-- `class-yangsheep-checkout-order-enhancer.php` - PayNow / PayUni 回傳資料新增 `tracking_label` 欄位
+- `src/Order/YSOrderEnhancer.php` - PayNow / PayUni 回傳資料新增 `tracking_label` 欄位
 - `yangsheep-order-enhancer.js` - 物流單號標籤改為 `d.tracking_label || '物流單號'` 動態渲染
 
 ### v1.4.10 (2026-02-04)
@@ -257,7 +296,7 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
   - 同時處理「關閉 Last Name」和「台灣化欄位」的設定
 
 #### 技術變更
-- `class-yangsheep-checkout-fields.php` 新增 `filter_address_to_edit()` 方法
+- `src/Checkout/YSCheckoutFields.php` 新增 `filter_address_to_edit()` 方法
 - Hook: `woocommerce_address_to_edit` (priority: 20)
 
 ### v1.4.9 (2026-02-04)

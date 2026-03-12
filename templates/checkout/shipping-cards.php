@@ -4,12 +4,14 @@
  * 
  * 顯示卡片式物流選項，取代原本訂單表格中的物流區塊
  * 
- * @package YANGSHEEP_Checkout_Optimization
- * @version 1.3.0
+ * @package YangSheep\CheckoutOptimizer
+ * @version 1.4.14
  * @since 2026-01-07
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+use YangSheep\CheckoutOptimizer\Checkout\YSShippingCards;
 
 // 取得物流包裹
 $packages = WC()->shipping()->get_packages();
@@ -30,7 +32,7 @@ do_action( 'yangsheep_before_shipping_cards' );
         $available_methods = $package['rates'];
         
         // 取得已選擇的物流
-        $chosen_method = YANGSHEEP_Shipping_Cards::get_chosen_shipping_method( $i );
+        $chosen_method = YSShippingCards::get_chosen_shipping_method( $i );
         
         // 如果沒有可用物流
         if ( empty( $available_methods ) ) : ?>
@@ -74,7 +76,7 @@ do_action( 'yangsheep_before_shipping_cards' );
                                 </span>
                             </span>
                             <span class="yangsheep-shipping-price">
-                                <?php echo YANGSHEEP_Shipping_Cards::format_shipping_cost( $method ); ?>
+                                <?php echo YSShippingCards::format_shipping_cost( $method ); ?>
                             </span>
                         </span>
                     </label>

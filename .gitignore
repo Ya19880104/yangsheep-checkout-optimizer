@@ -46,6 +46,10 @@ composer.lock
 ehthumbs.db
 Thumbs.db
 
+# Claude Code
+.claude/
+.review_tmp/
+
 # Temporary files
 *.tmp
 *.bak

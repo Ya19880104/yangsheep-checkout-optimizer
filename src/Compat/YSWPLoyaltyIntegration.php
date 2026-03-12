@@ -8,6 +8,8 @@
  * @since 1.3.33
  */
 
+namespace YangSheep\CheckoutOptimizer\Compat;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -17,12 +19,12 @@ use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 /**
  * WPLoyalty 整合類別
  */
-class YANGSHEEP_WPLoyalty_Integration {
+class YSWPLoyaltyIntegration {
 
     /**
      * 單例實例
      *
-     * @var YANGSHEEP_WPLoyalty_Integration
+     * @var YSWPLoyaltyIntegration
      */
     private static $instance = null;
 
@@ -36,7 +38,7 @@ class YANGSHEEP_WPLoyalty_Integration {
     /**
      * 取得單例實例
      *
-     * @return YANGSHEEP_WPLoyalty_Integration
+     * @return YSWPLoyaltyIntegration
      */
     public static function get_instance() {
         if ( null === self::$instance ) {
@@ -172,6 +174,3 @@ class YANGSHEEP_WPLoyalty_Integration {
         );
     }
 }
-
-// 初始化
-YANGSHEEP_WPLoyalty_Integration::get_instance();
