@@ -86,13 +86,31 @@ class YSCheckoutSettings {
     }
 
     private function __construct() {
-        add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
-        add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先於 settings_init
+        add_action( 'admin_menu', array( $this, 'add_admin_menu' ), 22 );
+add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先於 settings_init
         add_action( 'admin_init', array( $this, 'settings_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+        add_filter( 'ys_toolbox_plugins', array( $this, 'register_toolbox_card' ) );
         add_action( 'wp_ajax_yangsheep_reset_colors', array( $this, 'ajax_reset_colors' ) );
         add_action( 'wp_ajax_yangsheep_migrate_settings', array( $this, 'ajax_migrate_settings' ) );
         add_action( 'wp_ajax_yangsheep_cleanup_options', array( $this, 'ajax_cleanup_options' ) );
+    }
+
+    /**
+     * 註冊本外掛的工具箱卡片資訊
+     *
+     * @param array $plugins 已註冊的外掛列表。
+     * @return array
+     */
+    public function register_toolbox_card( $plugins ) {
+        $plugins[] = array(
+            'name'    => '結帳強化',
+            'version' => YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
+            'icon'    => 'dashicons-cart',
+            'desc'    => '優化 WooCommerce 結帳頁面，提供物流卡片、地址自動完成、訂單頁強化等功能。',
+            'url'     => admin_url( 'admin.php?page=ys-checkout-optimizer' ),
+        );
+        return $plugins;
     }
 
     /**
@@ -175,20 +193,29 @@ class YSCheckoutSettings {
             }
         }
 
-        // 只建立一次頂層選單
+        // 只建立一次頂層選單（含歡迎頁面）
         if ( ! $toolbox_exists ) {
+            $welcome_callback = $this->get_toolbox_welcome_callback();
+
             add_menu_page(
                 __( '電商工具箱', 'yangsheep-checkout-optimization' ),
                 __( '電商工具箱', 'yangsheep-checkout-optimization' ),
                 'manage_options',
                 'ys-toolbox',
-                '__return_null',
+                $welcome_callback,
                 'dashicons-store',
                 56
             );
 
-            // 移除 WordPress 自動產生的重複子選單
-            remove_submenu_page( 'ys-toolbox', 'ys-toolbox' );
+            // 將第一個子選單顯示為「總覽」而非重複的「電商工具箱」
+            add_submenu_page(
+                'ys-toolbox',
+                __( '電商工具箱', 'yangsheep-checkout-optimization' ),
+                __( '總覽', 'yangsheep-checkout-optimization' ),
+                'manage_options',
+                'ys-toolbox',
+                $welcome_callback
+            );
         }
 
         // 註冊子選單
@@ -200,6 +227,127 @@ class YSCheckoutSettings {
             'ys-checkout-optimizer',
             array( $this, 'settings_page' )
         );
+    }
+
+    /**
+     * 取得歡迎頁面回調
+     *
+     * @return callable
+     */
+    private function get_toolbox_welcome_callback() {
+        $fallback_classes = array(
+            '\YangSheep\ShoplinePayment\Admin\YSAdminSettings',
+            '\yangsheep\paynow\shipping\settings\YSSettingsTab',
+        );
+
+        foreach ( $fallback_classes as $class ) {
+            if ( class_exists( $class ) && method_exists( $class, 'render_toolbox_welcome' ) ) {
+                return array( $class, 'render_toolbox_welcome' );
+            }
+        }
+
+        return array( $this, 'render_toolbox_welcome' );
+    }
+
+    /**
+     * 渲染電商工具箱歡迎頁面（fallback）
+     */
+    public static function render_toolbox_welcome() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $plugins = apply_filters( 'ys_toolbox_plugins', array() );
+
+        ?>
+        <div class="wrap">
+            <h1 style="display:none;"><?php esc_html_e( '電商工具箱', 'yangsheep-checkout-optimization' ); ?></h1>
+        </div>
+
+        <div class="ys-toolbox-welcome">
+            <div class="ys-toolbox-header">
+                <div class="ys-toolbox-header-content">
+                    <div class="ys-toolbox-logo">
+                        <span class="dashicons dashicons-store"></span>
+                    </div>
+                    <h2>電商工具箱</h2>
+                    <p class="ys-toolbox-subtitle">WooCommerce 電商擴充套件，由 YANGSHEEP DESIGN 開發維護</p>
+                </div>
+            </div>
+
+            <?php if ( ! empty( $plugins ) ) : ?>
+            <div class="ys-toolbox-cards">
+                <?php
+                foreach ( $plugins as $plugin ) :
+                    $plugin = wp_parse_args( $plugin, array(
+                        'name'    => __( '未知外掛', 'yangsheep-checkout-optimization' ),
+                        'version' => '0.0.0',
+                        'icon'    => 'dashicons-admin-plugins',
+                        'desc'    => '',
+                        'url'     => '#',
+                    ) );
+                ?>
+                <a href="<?php echo esc_url( $plugin['url'] ); ?>" class="ys-toolbox-card">
+                    <div class="ys-toolbox-card-icon">
+                        <span class="dashicons <?php echo esc_attr( $plugin['icon'] ); ?>"></span>
+                    </div>
+                    <div class="ys-toolbox-card-body">
+                        <h3><?php echo esc_html( $plugin['name'] ); ?></h3>
+                        <span class="ys-toolbox-card-version">v<?php echo esc_html( $plugin['version'] ); ?></span>
+                        <p><?php echo esc_html( $plugin['desc'] ); ?></p>
+                    </div>
+                    <span class="ys-toolbox-card-arrow dashicons dashicons-arrow-right-alt2"></span>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php else : ?>
+            <div class="ys-toolbox-empty">
+                <span class="dashicons dashicons-info-outline"></span>
+                <p>尚未偵測到已啟用的 YS 外掛。</p>
+            </div>
+            <?php endif; ?>
+
+            <div class="ys-toolbox-footer">
+                <div class="ys-toolbox-footer-info">
+                    <span class="dashicons dashicons-heart"></span>
+                    <span>由 <strong>YANGSHEEP DESIGN</strong> 用心開發</span>
+                    <span class="ys-toolbox-sep">|</span>
+                    <a href="https://yangsheep.com.tw" target="_blank" rel="noopener">yangsheep.com.tw</a>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .ys-toolbox-welcome{max-width:860px;margin:20px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif}
+            .ys-toolbox-header{background:linear-gradient(135deg,#3a4f63 0%,#2c3e50 100%);border-radius:12px;padding:40px;margin-bottom:24px;color:#fff}
+            .ys-toolbox-header-content{text-align:center}
+            .ys-toolbox-logo{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:rgba(255,255,255,.15);border-radius:16px;margin-bottom:16px}
+            .ys-toolbox-logo .dashicons{font-size:32px;width:32px;height:32px;color:#fff}
+            .ys-toolbox-header h2{font-size:24px;font-weight:600;margin:0 0 8px;color:#fff}
+            .ys-toolbox-subtitle{font-size:14px;opacity:.8;margin:0}
+            .ys-toolbox-cards{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+            .ys-toolbox-card{display:flex;align-items:center;gap:20px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:24px;text-decoration:none;color:inherit;transition:all .2s ease}
+            .ys-toolbox-card:hover{border-color:#8fa8b8;box-shadow:0 2px 12px rgba(0,0,0,.08);transform:translateY(-1px)}
+            .ys-toolbox-card:focus{outline:2px solid #8fa8b8;outline-offset:2px}
+            .ys-toolbox-card-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:52px;height:52px;background:#f0f4f7;border-radius:12px}
+            .ys-toolbox-card-icon .dashicons{font-size:24px;width:24px;height:24px;color:#3a4f63}
+            .ys-toolbox-card-body{flex:1;min-width:0}
+            .ys-toolbox-card-body h3{font-size:15px;font-weight:600;margin:0 0 4px;color:#1d2327;display:inline}
+            .ys-toolbox-card-version{display:inline-block;font-size:11px;color:#8fa8b8;background:#f0f4f7;padding:1px 8px;border-radius:10px;margin-left:8px;vertical-align:middle}
+            .ys-toolbox-card-body p{font-size:13px;color:#646970;margin:6px 0 0;line-height:1.5}
+            .ys-toolbox-card-arrow{flex-shrink:0;color:#c3c4c7;transition:color .2s ease}
+            .ys-toolbox-card:hover .ys-toolbox-card-arrow{color:#8fa8b8}
+            .ys-toolbox-empty{text-align:center;padding:48px 24px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;margin-bottom:24px}
+            .ys-toolbox-empty .dashicons{font-size:40px;width:40px;height:40px;color:#c3c4c7;margin-bottom:12px}
+            .ys-toolbox-empty p{color:#646970;font-size:14px;margin:0}
+            .ys-toolbox-footer{text-align:center;padding:16px 0}
+            .ys-toolbox-footer-info{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#8c8f94}
+            .ys-toolbox-footer-info .dashicons{font-size:14px;width:14px;height:14px;color:#cc99c2}
+            .ys-toolbox-footer-info a{color:#8fa8b8;text-decoration:none}
+            .ys-toolbox-footer-info a:hover{color:#3a4f63}
+            .ys-toolbox-sep{color:#ddd;margin:0 4px}
+        </style>
+        <?php
     }
 
     public function enqueue_admin_scripts( $hook ) {

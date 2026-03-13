@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.4.16
+**當前版本**：1.4.17
 **最後更新**：2026-03-13
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,12 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+### v1.4.17 (2026-03-13)
+
+#### 修復
+- **電商工具箱空白子選單** - 修正 `remove_submenu_page` 執行時機，以 priority 999 延後移除
+- **模板版本標記同步** - 所有檔案版本統一為 1.4.17
+
 ### v1.4.16 (2026-03-13)
 
 #### 重構
@@ -241,7 +247,6 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 #### 修復
 - **後台 AJAX 訊息 XSS 防護** - `.html()` 改為 jQuery DOM 建構 + `.text()`
-- **模板版本標記同步** - `shipping-cards.php` @version 更新
 
 ### v1.4.15 (2026-03-12)
 
