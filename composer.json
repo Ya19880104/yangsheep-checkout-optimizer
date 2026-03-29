@@ -1,0 +1,30 @@
+{
+    "name": "yangsheep/yangsheep-checkout-optimizer",
+    "description": "WooCommerce 結帳頁面強化外掛",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "YANGSHEEP DESIGN",
+            "homepage": "https://yangsheep.com.tw"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "YangSheep\\CheckoutOptimizer\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.0",
+        "yangsheep/ys-plugin-hub-client": "^2.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../packages/ys-plugin-hub-client"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true
+    }
+}

@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:         1.4.17
+ * Version:         1.5.0
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.4.17' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.5.0' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -28,23 +28,38 @@ function yangsheep_checkout_optimizer_wc_missing_notice() {
     echo '</p></div>';
 }
 
-// PSR-4 自動載入器
-spl_autoload_register( function ( $class ) {
-    $prefix = 'YangSheep\\CheckoutOptimizer\\';
-    $base_dir = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/';
+// Composer 自動載入（包含 hub-client）
+if ( file_exists( YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php' ) ) {
+    require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php';
+} else {
+    // Fallback PSR-4 自動載入器
+    spl_autoload_register( function ( $class ) {
+        $prefix = 'YangSheep\\CheckoutOptimizer\\';
+        $base_dir = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/';
 
-    $len = strlen( $prefix );
-    if ( strncmp( $prefix, $class, $len ) !== 0 ) {
-        return;
-    }
+        $len = strlen( $prefix );
+        if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+            return;
+        }
 
-    $relative_class = substr( $class, $len );
-    $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+        $relative_class = substr( $class, $len );
+        $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
 
-    if ( file_exists( $file ) ) {
-        require_once $file;
-    }
-} );
+        if ( file_exists( $file ) ) {
+            require_once $file;
+        }
+    } );
+}
+
+// 註冊到 YS Plugin Hub Client（自動更新 + 市集）
+if ( class_exists( '\YangSheep\PluginHubClient\YSPluginHubClient' ) ) {
+    \YangSheep\PluginHubClient\YSPluginHubClient::register( array(
+        'slug'        => 'yangsheep-checkout-optimizer',
+        'version'     => YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
+        'plugin_file' => __FILE__,
+        'name'        => 'YANGSHEEP 結帳強化',
+    ) );
+}
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsTableMaker;
@@ -63,6 +78,14 @@ register_activation_hook( __FILE__, 'yangsheep_checkout_optimizer_activate' );
 function yangsheep_checkout_optimizer_activate() {
     $table_maker = YSSettingsTableMaker::instance();
     $table_maker->create_table();
+
+    // 建立 Hub Client 資料表
+    if ( class_exists( '\YangSheep\PluginHubClient\Database\YSHubClientTableMaker' ) ) {
+        $hub_table = \YangSheep\PluginHubClient\Database\YSHubClientTableMaker::instance();
+        if ( $hub_table->schema_update_required() ) {
+            $hub_table->create_table();
+        }
+    }
 
     // 自動遷移
     $migrator = YSSettingsMigrator::instance();
