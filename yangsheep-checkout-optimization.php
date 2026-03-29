@@ -51,16 +51,19 @@ if ( file_exists( YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php' ) 
     } );
 }
 
-// 註冊到 YS Plugin Hub Client（自動更新 + 市集）
-if ( class_exists( '\YangSheep\PluginHubClient\YSPluginHubClient' ) ) {
-    \YangSheep\PluginHubClient\YSPluginHubClient::register( array(
-        'slug'        => 'yangsheep-checkout-optimizer',
-        'version'     => YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
-        'plugin_file' => __FILE__,
-        'name'        => 'YANGSHEEP 結帳強化',
-    ) );
-}
+// 註冊到 YS Plugin Hub Client — 延遲到 plugins_loaded（hub-client 可能在本外掛之後載入）
+add_action( 'plugins_loaded', function () {
+    if ( class_exists( '\YangSheep\PluginHubClient\YSPluginHubClient' ) ) {
+        \YangSheep\PluginHubClient\YSPluginHubClient::register( array(
+            'slug'        => 'yangsheep-checkout-optimizer',
+            'version'     => YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
+            'plugin_file' => __FILE__,
+            'name'        => 'YANGSHEEP 結帳強化',
+        ) );
+    }
+}, 5 ); // priority 5 — 在 hub-client boot (10) 之前
 
+// use 語句放在檔案頂層仍然安全（PSR-4 autoloader 已註冊，class 只在實際使用時載入）
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsTableMaker;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
@@ -76,8 +79,13 @@ use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 // 外掛啟用時建立資料表
 register_activation_hook( __FILE__, 'yangsheep_checkout_optimizer_activate' );
 function yangsheep_checkout_optimizer_activate() {
-    $table_maker = YSSettingsTableMaker::instance();
-    $table_maker->create_table();
+    // 建立設定資料表（不依賴 WooCommerce）
+    try {
+        $table_maker = YSSettingsTableMaker::instance();
+        $table_maker->create_table();
+    } catch ( \Throwable $e ) {
+        // 靜默處理 — 表可能已存在或 WC 尚未載入
+    }
 
     // 建立 Hub Client 資料表
     if ( class_exists( '\YangSheep\PluginHubClient\Database\YSHubClientTableMaker' ) ) {
@@ -87,10 +95,12 @@ function yangsheep_checkout_optimizer_activate() {
         }
     }
 
-    // 自動遷移
-    $migrator = YSSettingsMigrator::instance();
-    if ( $migrator->migration_required() ) {
-        $migrator->migrate();
+    // 自動遷移（需要 WooCommerce）
+    if ( class_exists( 'WooCommerce' ) ) {
+        $migrator = YSSettingsMigrator::instance();
+        if ( $migrator->migration_required() ) {
+            $migrator->migrate();
+        }
     }
 }
 
