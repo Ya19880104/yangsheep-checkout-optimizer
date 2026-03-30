@@ -28,28 +28,28 @@ function yangsheep_checkout_optimizer_wc_missing_notice() {
     echo '</p></div>';
 }
 
-// Composer 自動載入（包含 hub-client）
+// Composer 自動載入（載入 hub-client）
 if ( file_exists( YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php' ) ) {
     require_once YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'vendor/autoload.php';
-} else {
-    // Fallback PSR-4 自動載入器
-    spl_autoload_register( function ( $class ) {
-        $prefix = 'YangSheep\\CheckoutOptimizer\\';
-        $base_dir = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/';
-
-        $len = strlen( $prefix );
-        if ( strncmp( $prefix, $class, $len ) !== 0 ) {
-            return;
-        }
-
-        $relative_class = substr( $class, $len );
-        $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
-
-        if ( file_exists( $file ) ) {
-            require_once $file;
-        }
-    } );
 }
+
+// 永遠註冊自身 namespace 的 Fallback PSR-4（vendor/autoload.php 不含自身 namespace）
+spl_autoload_register( function ( $class ) {
+    $prefix   = 'YangSheep\\CheckoutOptimizer\\';
+    $base_dir = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'src/';
+
+    $len = strlen( $prefix );
+    if ( strncmp( $prefix, $class, $len ) !== 0 ) {
+        return;
+    }
+
+    $relative_class = substr( $class, $len );
+    $file = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+    if ( file_exists( $file ) ) {
+        require_once $file;
+    }
+} );
 
 // 註冊到 YS Plugin Hub Client — 延遲到 plugins_loaded（hub-client 可能在本外掛之後載入）
 add_action( 'plugins_loaded', function () {
