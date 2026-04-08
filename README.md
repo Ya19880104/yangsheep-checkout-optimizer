@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.8
+**當前版本**：1.6.9
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,7 +231,7 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
-### v1.6.8 (2026-04-08)
+### v1.6.9 (2026-04-08)
 
 #### 修復
 - **收件人電話欄位位置錯誤** - 第三方物流外掛（如 WPBR SF Express）覆蓋 priority 和 class 導致電話欄位跑到地址下方，`force_phone_fields()` 現在強制覆蓋 priority=15 並清除第三方加入的 `form-row-wide`、`wpbc-*` class
