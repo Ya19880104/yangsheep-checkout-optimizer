@@ -172,14 +172,16 @@ jQuery(function ($) {
     });
 
     // ===== 5. 建立帳號 checkbox =====
-    // 使用 CSS class toggle（.ys-show）控制顯隱，!important 防止 WC JS 覆蓋
+    // 直接對密碼/帳號欄位 toggle .ys-show class（不依賴容器嵌套）
     function syncAccountFields() {
-        var $fields = $('.yangsheep-account-fields');
-        if (!$fields.length) return;
-        if ($('#createaccount').is(':checked')) {
-            $fields.addClass('ys-show');
+        var $checkbox = $('#createaccount');
+        // 沒有 checkbox = 強制註冊，密碼必須顯示
+        var show = !$checkbox.length || $checkbox.is(':checked');
+        var $targets = $('.yangsheep-account-fields, #account_password_field, #account_username_field');
+        if (show) {
+            $targets.addClass('ys-show');
         } else {
-            $fields.removeClass('ys-show');
+            $targets.removeClass('ys-show');
         }
     }
 

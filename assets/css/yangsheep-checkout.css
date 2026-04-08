@@ -713,10 +713,18 @@ a.woocommerce-remove-coupon {
     }
 }
 
-/* 建立帳號欄位：預設隱藏，勾選 checkbox 後加 .ys-show 才顯示 */
-/* 必須在 media query 外，所有螢幕尺寸都適用 */
-.yangsheep-account-fields:not(.ys-show) {
+/* 建立帳號密碼：預設隱藏，勾選 checkbox 後才顯示 */
+/* 直接針對欄位 ID，不依賴容器嵌套（WC 可能把欄位渲染在容器外） */
+.yangsheep-account-fields:not(.ys-show),
+#account_password_field:not(.ys-show),
+#account_username_field:not(.ys-show) {
     display: none !important;
+}
+/* 密碼欄位在 billing grid 中全寬顯示 */
+#account_password_field.ys-show,
+#account_username_field.ys-show {
+    grid-column: 1 / -1;
+    width: 100% !important;
 }
 
 /* RWD: <=999.9px（平板以下通用） */

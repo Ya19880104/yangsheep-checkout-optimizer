@@ -235,7 +235,9 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 #### 修復
 - **收件人電話欄位位置錯誤** - 第三方物流外掛（如 WPBR SF Express）覆蓋 priority 和 class 導致電話欄位跑到地址下方，`force_phone_fields()` 現在強制覆蓋 priority=15 並清除第三方加入的 `form-row-wide`、`wpbc-*` class
-- **建立帳號密碼異常顯示** - 容器 div 的 `create-account` class 被 WooCommerce checkout.js 的 `slideToggle` 反轉 `display:none`，移除該 class 改由 `yangsheep-account-fields` 獨立控制
+- **建立帳號密碼異常顯示** - WooCommerce 將 `#account_password_field` 渲染在 billing grid 而非帳號容器內，改用 CSS `.ys-show` class + `!important` 直接控制欄位顯隱，不依賴容器嵌套
+- **強制註冊時密碼欄位不顯示** - 無 `#createaccount` checkbox 時 JS 自動判定為強制註冊，密碼欄位永遠顯示
+- **密碼欄位寬度修正** - 顯示時設定 `grid-column: 1/-1` 全寬顯示
 
 ### v1.4.17 (2026-03-13)
 
