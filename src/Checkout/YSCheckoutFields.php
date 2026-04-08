@@ -421,10 +421,23 @@ class YSCheckoutFields {
         if ( ! isset( $fields['shipping']['shipping_phone'] ) ) {
             $fields['shipping']['shipping_phone'] = array(
                 'label' => __( '收件人電話', 'yangsheep-checkout-optimization' ), 'required' => true,
-                'class' => array( 'form-row-last' ), 'priority' => 25, 'type' => 'tel', 'validate' => array( 'phone' ),
+                'class' => array( 'form-row' ), 'priority' => 15, 'type' => 'tel', 'validate' => array( 'phone' ),
             );
         } else {
             $fields['shipping']['shipping_phone']['required'] = true;
+            // 強制覆蓋 priority，防止第三方外掛（如 WPBR）改動排序
+            $fields['shipping']['shipping_phone']['priority'] = 15;
+            // 清除第三方外掛加入的錯誤 class（如 form-row-wide、wpbc-*）
+            $classes = isset( $fields['shipping']['shipping_phone']['class'] ) ? $fields['shipping']['shipping_phone']['class'] : array();
+            if ( is_array( $classes ) ) {
+                $classes = array_filter( $classes, function( $class ) {
+                    return ! in_array( $class, array( 'form-row-wide', 'form-row-first', 'form-row-last' ), true )
+                        && strpos( $class, 'wpbc' ) === false
+                        && strpos( $class, 'cvs' ) === false;
+                });
+            }
+            $classes[] = 'form-row';
+            $fields['shipping']['shipping_phone']['class'] = array_values( array_unique( $classes ) );
         }
         return $fields;
     }

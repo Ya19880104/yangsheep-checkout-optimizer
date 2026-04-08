@@ -1262,7 +1262,6 @@ a.woocommerce-remove-coupon {
     }
 
     /* 建立帳號內部元素全寬（覆蓋 form-row width:auto） */
-    .yangsheep-create-account .create-account,
     .yangsheep-create-account .yangsheep-account-fields,
     .yangsheep-create-account #account_password_field,
     .yangsheep-create-account #account_username_field {
@@ -1304,13 +1303,11 @@ a.woocommerce-remove-coupon {
 
     /* 建立帳號區塊全寬 */
     .woocommerce-billing-fields__field-wrapper .yangsheep-create-account,
-    .woocommerce-billing-fields__field-wrapper .create-account,
     #createaccount_field {
         grid-column: 1 / -1;
     }
 
     /* 建立帳號內部元素全寬 */
-    .yangsheep-create-account .create-account,
     .yangsheep-create-account .yangsheep-account-fields,
     .yangsheep-create-account #account_password_field,
     .yangsheep-create-account #account_username_field {
