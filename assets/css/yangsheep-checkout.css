@@ -699,10 +699,6 @@ a.woocommerce-remove-coupon {
     }
 
     /*購買時註冊欄位 */
-    /* 預設隱藏，只有加上 .ys-show 才顯示（!important 防止 WC JS 覆蓋） */
-    .yangsheep-account-fields:not(.ys-show) {
-        display: none !important;
-    }
     .yangsheep-account-fields {
         margin-top: 15px;
     }
@@ -715,6 +711,12 @@ a.woocommerce-remove-coupon {
         background: rgba(0, 0, 0, 0.03);
         border-radius: 4px;
     }
+}
+
+/* 建立帳號欄位：預設隱藏，勾選 checkbox 後加 .ys-show 才顯示 */
+/* 必須在 media query 外，所有螢幕尺寸都適用 */
+.yangsheep-account-fields:not(.ys-show) {
+    display: none !important;
 }
 
 /* RWD: <=999.9px（平板以下通用） */
