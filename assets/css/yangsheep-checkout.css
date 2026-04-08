@@ -699,6 +699,10 @@ a.woocommerce-remove-coupon {
     }
 
     /*購買時註冊欄位 */
+    /* 預設隱藏，只有加上 .ys-show 才顯示（!important 防止 WC JS 覆蓋） */
+    .yangsheep-account-fields:not(.ys-show) {
+        display: none !important;
+    }
     .yangsheep-account-fields {
         margin-top: 15px;
     }

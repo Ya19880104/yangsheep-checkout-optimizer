@@ -30,7 +30,7 @@ defined('ABSPATH') || exit;
             <?php endif; ?>
             <?php do_action('woocommerce_before_checkout_registration_form',$checkout); ?>
             <?php if ( $checkout->get_checkout_fields('account') ): ?>
-                <div class="yangsheep-account-fields" <?php if ( ! $checkout->is_registration_required() ) echo 'style="display:none;"'; ?>>
+                <div class="yangsheep-account-fields <?php echo $checkout->is_registration_required() ? 'ys-show' : ''; ?>">
                     <p class="yangsheep-account-note"><?php esc_html_e('註冊成為會員後，帳號為您的電子郵件地址。','yangsheep-checkout-optimization'); ?></p>
                 <?php foreach($checkout->get_checkout_fields('account') as $key=>$field): ?>
                     <?php woocommerce_form_field($key,$field,$checkout->get_value($key)); ?>

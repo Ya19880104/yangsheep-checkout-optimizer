@@ -172,25 +172,22 @@ jQuery(function ($) {
     });
 
     // ===== 5. 建立帳號 checkbox =====
-    $('#createaccount').on('change', function () {
-        if (this.checked) {
-            $('.yangsheep-account-fields').slideDown(200);
+    // 使用 CSS class toggle（.ys-show）控制顯隱，!important 防止 WC JS 覆蓋
+    function syncAccountFields() {
+        var $fields = $('.yangsheep-account-fields');
+        if (!$fields.length) return;
+        if ($('#createaccount').is(':checked')) {
+            $fields.addClass('ys-show');
         } else {
-            $('.yangsheep-account-fields').slideUp(200);
+            $fields.removeClass('ys-show');
         }
-    });
-
-    // 初始狀態：根據 checkbox 決定密碼欄位顯隱
-    if ($('#createaccount').length && !$('#createaccount').is(':checked')) {
-        $('.yangsheep-account-fields').hide();
     }
 
-    // WooCommerce AJAX 更新後重新同步狀態
-    $(document.body).on('updated_checkout', function () {
-        if ($('#createaccount').length && !$('#createaccount').is(':checked')) {
-            $('.yangsheep-account-fields').hide();
-        }
-    });
+    $('#createaccount').on('change', syncAccountFields);
+    syncAccountFields(); // 初始狀態
+
+    // WooCommerce AJAX 更新後重新同步
+    $(document.body).on('updated_checkout', syncAccountFields);
 
     // ===== 6. 訂單備註 checkbox =====
     $('#yangsheep_show_order_notes').on('change', function () {
