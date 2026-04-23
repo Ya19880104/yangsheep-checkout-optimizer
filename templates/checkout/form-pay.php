@@ -5,12 +5,32 @@
  * 重新付款頁（order-pay endpoint）區塊式設計，沿用結帳頁 CSS 變數。
  * 參考 WooCommerce core form-pay.php v8.2.0。
  *
- * @version 1.0.0
+ * 視覺設計：
+ *   ┌──────────────────────────────────┐
+ *   │ 訂單明細                          │
+ *   ├──────────────────────────────────┤
+ *   │ [縮圖] 商品名      單價 × 數量 小計 │
+ *   ├──────────────────────────────────┤
+ *   │ 小計                      NT$xxx  │
+ *   │ 運送方式  HELLO           NT$xxx  │
+ *   ├──────────────────────────────────┤
+ *   │ 總計                      NT$xxx  │（放大加強）
+ *   └──────────────────────────────────┘
+ *
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 $totals = $order->get_order_item_totals();
+
+// 付款方式不在訂單摘要重複顯示（下方有選擇支付方式區塊）
+if ( isset( $totals['payment_method'] ) ) {
+    unset( $totals['payment_method'] );
+}
+
+// 區分主要總計列（放大強調）
+$final_total_keys = array( 'order_total' );
 ?>
 <div class="yangsheep-design-checkout-page yangsheep-design-pay-page" style="margin-top:20px;">
 
@@ -19,55 +39,80 @@ $totals = $order->get_order_item_totals();
 
   <form id="order_review" method="post">
 
-    <!-- 1. 訂單商品明細區塊 -->
-    <div class="yangsheep-review-wrapper">
-      <div class="yangsheep-order-review">
+    <!-- 1. 訂單明細區塊 -->
+    <section class="yangsheep-review-wrapper yangsheep-pay-summary">
+      <header class="yangsheep-pay-summary__header">
         <h3 class="yangsheep-h3-title"><?php esc_html_e( '訂單明細', 'yangsheep-checkout-optimization' ); ?></h3>
+        <span class="yangsheep-pay-summary__order-no">
+          <?php echo esc_html( sprintf( __( '訂單編號 #%s', 'yangsheep-checkout-optimization' ), $order->get_order_number() ) ); ?>
+        </span>
+      </header>
 
-        <div class="yangsheep-pay-order-items-container">
-          <table class="shop_table yangsheep-pay-items-table">
-            <thead>
-              <tr>
-                <th class="product-name"><?php esc_html_e( '商品', 'yangsheep-checkout-optimization' ); ?></th>
-                <th class="product-quantity"><?php esc_html_e( '數量', 'yangsheep-checkout-optimization' ); ?></th>
-                <th class="product-total"><?php esc_html_e( '小計', 'yangsheep-checkout-optimization' ); ?></th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php if ( count( $order->get_items() ) > 0 ) : ?>
-                <?php foreach ( $order->get_items() as $item_id => $item ) : ?>
-                  <?php if ( ! apply_filters( 'woocommerce_order_item_visible', true, $item ) ) { continue; } ?>
-                  <tr class="<?php echo esc_attr( apply_filters( 'woocommerce_order_item_class', 'order_item', $item, $order ) ); ?>">
-                    <td class="product-name">
-                      <?php
-                      echo wp_kses_post( apply_filters( 'woocommerce_order_item_name', $item->get_name(), $item, false ) );
-                      do_action( 'woocommerce_order_item_meta_start', $item_id, $item, $order, false );
-                      wc_display_item_meta( $item );
-                      do_action( 'woocommerce_order_item_meta_end', $item_id, $item, $order, false );
-                      ?>
-                    </td>
-                    <td class="product-quantity">
-                      <?php echo apply_filters( 'woocommerce_order_item_quantity_html', ' <strong class="product-quantity">' . sprintf( '&times;&nbsp;%s', esc_html( $item->get_quantity() ) ) . '</strong>', $item ); ?>
-                    </td>
-                    <td class="product-subtotal"><?php echo wp_kses_post( $order->get_formatted_line_subtotal( $item ) ); ?></td>
-                  </tr>
-                <?php endforeach; ?>
+      <!-- 商品列表 -->
+      <ul class="yangsheep-pay-items" role="list">
+        <?php foreach ( $order->get_items() as $item_id => $item ) :
+          if ( ! apply_filters( 'woocommerce_order_item_visible', true, $item ) ) continue;
+
+          $_product  = $item->get_product();
+          $quantity  = $item->get_quantity();
+          $thumbnail = $_product ? $_product->get_image( array( 60, 60 ) ) : '';
+          $name      = apply_filters( 'woocommerce_order_item_name', $item->get_name(), $item, false );
+          $permalink = $_product ? $_product->get_permalink() : '';
+          $subtotal  = $order->get_formatted_line_subtotal( $item );
+          $unit_price = $_product ? wc_price( (float) $item->get_subtotal() / max( 1, $quantity ), array( 'currency' => $order->get_currency() ) ) : '';
+        ?>
+          <li class="yangsheep-pay-item">
+            <div class="yangsheep-pay-item__media">
+              <?php if ( $thumbnail ) : ?>
+                <?php if ( $permalink ) : ?>
+                  <a href="<?php echo esc_url( $permalink ); ?>" target="_blank" rel="noopener"><?php echo $thumbnail; ?></a>
+                <?php else : ?>
+                  <?php echo $thumbnail; ?>
+                <?php endif; ?>
+              <?php else : ?>
+                <span class="yangsheep-pay-item__media-placeholder" aria-hidden="true"></span>
               <?php endif; ?>
-            </tbody>
-            <tfoot>
-              <?php if ( $totals ) : ?>
-                <?php foreach ( $totals as $total ) : ?>
-                  <tr>
-                    <th scope="row" colspan="2"><?php echo wp_kses_post( $total['label'] ); ?></th>
-                    <td class="product-total"><?php echo wp_kses_post( $total['value'] ); ?></td>
-                  </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
-            </tfoot>
-          </table>
+            </div>
+            <div class="yangsheep-pay-item__body">
+              <div class="yangsheep-pay-item__name">
+                <?php echo wp_kses_post( $name ); ?>
+              </div>
+              <div class="yangsheep-pay-item__meta">
+                <?php
+                do_action( 'woocommerce_order_item_meta_start', $item_id, $item, $order, false );
+                wc_display_item_meta( $item );
+                do_action( 'woocommerce_order_item_meta_end', $item_id, $item, $order, false );
+                ?>
+              </div>
+              <div class="yangsheep-pay-item__price-row">
+                <span class="yangsheep-pay-item__unit"><?php echo wp_kses_post( $unit_price ); ?></span>
+                <span class="yangsheep-pay-item__sep" aria-hidden="true">×</span>
+                <span class="yangsheep-pay-item__qty"><?php echo esc_html( $quantity ); ?></span>
+              </div>
+            </div>
+            <div class="yangsheep-pay-item__subtotal">
+              <?php echo wp_kses_post( $subtotal ); ?>
+            </div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+
+      <!-- 金額摘要（小計 / 運送 / 稅金...）+ 最終總計 -->
+      <?php if ( ! empty( $totals ) ) : ?>
+        <div class="yangsheep-pay-totals">
+          <?php foreach ( $totals as $key => $total ) :
+            $is_final = in_array( $key, $final_total_keys, true );
+            $row_class = 'yangsheep-pay-totals__row' . ( $is_final ? ' is-final' : '' );
+            $row_class .= ' yangsheep-pay-totals__row--' . sanitize_html_class( $key );
+          ?>
+            <div class="<?php echo esc_attr( $row_class ); ?>">
+              <span class="yangsheep-pay-totals__label"><?php echo wp_kses_post( $total['label'] ); ?></span>
+              <span class="yangsheep-pay-totals__value"><?php echo wp_kses_post( $total['value'] ); ?></span>
+            </div>
+          <?php endforeach; ?>
         </div>
-      </div>
-    </div>
+      <?php endif; ?>
+    </section>
 
     <?php
     /**
@@ -77,7 +122,7 @@ $totals = $order->get_order_item_totals();
     ?>
 
     <!-- 2. 付款區塊 -->
-    <div class="yangsheep-payment">
+    <section class="yangsheep-payment">
       <h3 class="yangsheep-h3-title"><?php esc_html_e( '選擇支付方式', 'yangsheep-checkout-optimization' ); ?></h3>
       <div class="yangsheep-payment-block">
         <div id="payment">
@@ -112,7 +157,7 @@ $totals = $order->get_order_item_totals();
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
   </form>
 </div>

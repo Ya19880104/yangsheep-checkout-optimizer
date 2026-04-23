@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.11
+**當前版本**：1.6.12
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,17 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.12 (2026-04-23)
+
+#### 變更
+- **Order Pay 訂單明細重新設計** — 放棄原本 shop_table tfoot 混排方式，改為 div-based 卡片版面：
+  - 商品列（`.yangsheep-pay-item`）：60×60 縮圖 + 商品名 + 單價/數量 + 右側小計，CSS Grid 三欄排版
+  - Totals 區（`.yangsheep-pay-totals`）：獨立於商品列，小計/運送 flex 行顯示
+  - **總計列**（`.is-final`）：上方分隔線 + 金額放大至 22px + 主色強調
+  - 明細 header 新增「訂單編號 #xxx」pill badge
+  - 移除重複的「付款方式」行（下方選擇區塊已處理）
+  - 手機響應式：縮圖 52×52、padding 縮小
 
 ### v1.6.11 (2026-04-23)
 
