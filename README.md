@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.9
+**當前版本**：1.6.10
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,12 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.10 (2026-04-23)
+
+#### 修復
+- **`templates/myaccount/form-login.php` 無限遞迴造成 500** — 當 WooCommerce 開啟「允許在我的帳號頁註冊」且使用者未登入時，第 61 行 `wc_get_template( 'myaccount/form-login.php' )` 會遞迴呼叫自己觸發 stack overflow。移除遞迴，改為內嵌註冊表單 HTML（對齊 WooCommerce core form-login.php v9.9.0 結構）
+- **觸發條件**：新 Chrome instance（無 session）+ 我的帳號視覺開啟 + WC 註冊選項開啟
 
 ### v1.6.9 (2026-04-08)
 
