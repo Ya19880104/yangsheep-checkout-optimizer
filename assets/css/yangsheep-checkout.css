@@ -1699,7 +1699,7 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 /* --- 響應式：手機（≤ 768px）收斂 padding + 字級 --- */
 @media (max-width: 768px) {
     .yangsheep-design-pay-page {
-        margin: 12px auto 28px;
+        margin: 10px auto 24px;
     }
     .yangsheep-design-pay-page .yangsheep-h3-title {
         font-size: 16px;
@@ -1708,8 +1708,9 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 
     /* 訂單明細卡片 */
     .yangsheep-pay-summary {
-        padding: 14px 14px;
+        padding: 14px 12px;
         border-radius: 10px;
+        margin-bottom: 12px;
     }
     .yangsheep-pay-summary__header {
         padding-bottom: 10px;
@@ -1722,13 +1723,13 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 
     /* 商品列 */
     .yangsheep-pay-item {
-        grid-template-columns: 52px 1fr auto;
+        grid-template-columns: 48px 1fr auto;
         gap: 10px;
-        padding: 10px 0;
+        padding: 8px 0;
     }
     .yangsheep-pay-item__media {
-        width: 52px;
-        height: 52px;
+        width: 48px;
+        height: 48px;
         border-radius: 6px;
     }
     .yangsheep-pay-item__name {
@@ -1745,15 +1746,15 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 
     /* Totals 區 */
     .yangsheep-pay-totals {
-        margin-top: 14px;
-        padding-top: 14px;
+        margin-top: 12px;
+        padding-top: 12px;
         gap: 8px;
     }
     .yangsheep-pay-totals__row {
         font-size: 13px;
     }
     .yangsheep-pay-totals__row.is-final {
-        padding-top: 12px;
+        padding-top: 10px;
         font-size: 14px;
     }
     .yangsheep-pay-totals__row.is-final .yangsheep-pay-totals__label {
@@ -1763,18 +1764,25 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         font-size: 20px;
     }
 
-    /* 付款區塊收斂 padding，給 SDK 更多橫向空間 */
+    /* 付款外框：橫向 padding 大幅收斂，讓 SDK 有最大橫向空間 */
     .yangsheep-design-pay-page .yangsheep-payment {
-        padding: 14px 12px !important;
+        padding: 12px 8px !important;
         border-radius: 10px !important;
     }
-    /* 付款方式卡片 padding 收斂 */
+    /* 付款方式卡片：橫向 padding 收到最小 */
     .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
-        padding: 10px 10px !important;
+        padding: 10px 8px !important;
     }
-    /* payment_box（SDK 容器）padding 收斂，避免 SDK iframe 被擠 */
+    /* payment_box（SDK 容器）：讓 SDK 貼邊 */
     .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
-        padding: 10px 6px !important;
+        padding: 8px 2px !important;
+        margin-top: 8px !important;
+    }
+    /* SHOPLINE SDK iframe 容器：移除任何額外 margin */
+    .yangsheep-design-pay-page #payment .payment_box > div,
+    .yangsheep-design-pay-page #payment .payment_box iframe {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
     /* 按鈕區 */
@@ -1788,18 +1796,31 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     }
 }
 
-/* --- 小手機（≤ 400px）極窄 padding --- */
+/* --- 小手機（≤ 480px）進一步收斂 padding --- */
+@media (max-width: 480px) {
+    .yangsheep-design-pay-page .yangsheep-payment {
+        padding: 10px 6px !important;
+    }
+    .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
+        padding: 8px 6px !important;
+    }
+    .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
+        padding: 6px 0 !important;
+    }
+}
+
+/* --- 極窄手機（≤ 400px）SDK 貼邊 --- */
 @media (max-width: 400px) {
     .yangsheep-pay-summary {
         padding: 12px 10px;
     }
     .yangsheep-pay-item {
-        grid-template-columns: 46px 1fr auto;
+        grid-template-columns: 42px 1fr auto;
         gap: 8px;
     }
     .yangsheep-pay-item__media {
-        width: 46px;
-        height: 46px;
+        width: 42px;
+        height: 42px;
     }
     .yangsheep-pay-item__name {
         font-size: 13px;
@@ -1811,12 +1832,16 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         font-size: 18px;
     }
     .yangsheep-design-pay-page .yangsheep-payment {
-        padding: 12px 10px !important;
+        padding: 8px 4px !important;
     }
     .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
-        padding: 10px 8px !important;
+        padding: 8px 4px !important;
     }
     .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
-        padding: 8px 4px !important;
+        padding: 4px 0 !important;
+    }
+    .yangsheep-design-pay-page .yangsheep-pay-submit {
+        padding-top: 10px;
+        margin-top: 10px;
     }
 }

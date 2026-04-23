@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.13
+**當前版本**：1.6.14
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,18 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.14 (2026-04-23)
+
+#### 變更（order-pay 手機視圖進一步減少 padding）
+- 手機 SDK 貼邊優化：使用者實測 SHOPLINE SDK 信用卡欄位在 ≤ 400px 仍被擠
+- 斷點新增 **480px** 中間層級（原只有 768/400）
+- 三層 padding 全面壓縮：
+  - `.yangsheep-payment` 外框：768px → 12/8、480px → 10/6、400px → 8/4
+  - `.wc_payment_method` 卡片：768px → 10/8、480px → 8/6、400px → 8/4
+  - `.payment_box` SDK 容器：768px → 8/2、480px → 6/0、400px → 4/0
+- `.payment_box > div, iframe` 清除 margin-left/right 避免 SDK 內部額外縮進
+- 商品縮圖：768px → 48×48、400px → 42×42（原 52 / 46）
 
 ### v1.6.13 (2026-04-23)
 
