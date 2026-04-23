@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.14
+**當前版本**：1.6.15
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,21 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.15 (2026-04-23)
+
+#### 變更
+- **Padding 採固定值，移除多層 media query 覆寫** — 使用者指定：
+  - `.yangsheep-pay-summary`：`padding: 20px 10px`
+  - `.yangsheep-design-pay-page .yangsheep-payment`：`padding: 20px 10px !important`
+  - `li.wc_payment_method`：`padding: 5px !important`
+  - `.payment_box` SDK 容器：`padding: 5px !important`
+  - 移除 768/480/400 media queries 裡針對這 4 個 class 的 padding 覆寫，保留字級/margin/縮圖尺寸規則
+- **變更付款方式頁重新設計** — 新增 `templates/checkout/form-change-payment-method.php` 覆寫 WooCommerce Subscriptions 的 change-payment-method 模板：
+  - 套用與 order-pay 相同的 `.yangsheep-design-pay-page` 區塊式視覺
+  - 商品列改 div-based（縮圖 + 商品名 + 單價×數量 + 小計）
+  - Totals 區獨立 + 總計主色強調
+  - 保留 WCS 專屬功能：`supports-payment-method-changes` class、`update_all_subscriptions_payment_method` checkbox、`_wcsnonce`、`woocommerce_change_payment` hidden input、所有 WCS hooks/filters（`woocommerce_change_payment_button_text`、`wcs_gateway_change_payment_button_text`、`woocommerce_change_payment_button_html`、`woocommerce_subscriptions_change_payment_before/after_submit`）
 
 ### v1.6.14 (2026-04-23)
 

@@ -1439,12 +1439,12 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     letter-spacing: 0.01em;
 }
 
-/* --- 訂單明細區塊 --- */
+/* --- 訂單明細區塊（固定 20/10 padding，所有裝置一致） --- */
 .yangsheep-pay-summary {
     background: var(--yangsheep-order-items-bg, #fff);
     border: 1px solid var(--theme-section-border-color, #e5e5e5);
     border-radius: var(--block-border-radius, 10px);
-    padding: 22px 24px;
+    padding: 20px 10px;
     margin-bottom: 18px;
 }
 
@@ -1659,9 +1659,22 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     letter-spacing: 0.01em;
 }
 
-/* --- 付款區塊（order-pay 頁專用微調，沿用 .yangsheep-payment 視覺） --- */
+/* --- 付款區塊（order-pay 頁專用，固定 20/10 padding + 內層 5px 貼邊） ---
+   選擇器特意加入 .yangsheep-payment-block 提升 specificity 以勝過 wp_head 動態 CSS */
 .yangsheep-design-pay-page .yangsheep-payment {
     margin-bottom: 0;
+    padding: 20px 10px !important;
+}
+
+/* 付款方式卡片（li）內層 padding 縮到 5px */
+.yangsheep-design-pay-page .yangsheep-payment-block #payment ul.payment_methods > li.wc_payment_method {
+    padding: 5px !important;
+}
+
+/* SDK 容器 payment_box padding 縮到 5px */
+.yangsheep-design-pay-page .yangsheep-payment-block #payment .wc_payment_methods .payment_box {
+    padding: 5px !important;
+    margin-top: 5px !important;
 }
 
 /* --- 送出按鈕區塊 --- */
@@ -1706,9 +1719,8 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         margin-bottom: 10px;
     }
 
-    /* 訂單明細卡片 */
+    /* 訂單明細卡片（padding 固定 20/10 不被覆寫） */
     .yangsheep-pay-summary {
-        padding: 14px 12px;
         border-radius: 10px;
         margin-bottom: 12px;
     }
@@ -1764,20 +1776,7 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         font-size: 20px;
     }
 
-    /* 付款外框：橫向 padding 大幅收斂，讓 SDK 有最大橫向空間 */
-    .yangsheep-design-pay-page .yangsheep-payment {
-        padding: 12px 8px !important;
-        border-radius: 10px !important;
-    }
-    /* 付款方式卡片：橫向 padding 收到最小 */
-    .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
-        padding: 10px 8px !important;
-    }
-    /* payment_box（SDK 容器）：讓 SDK 貼邊 */
-    .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
-        padding: 8px 2px !important;
-        margin-top: 8px !important;
-    }
+    /* payment 外框 / li / payment_box padding 採用全域固定值（summary 20/10、payment 20/10、li 5、box 5），此處不覆寫 */
     /* SHOPLINE SDK iframe 容器：移除任何額外 margin */
     .yangsheep-design-pay-page #payment .payment_box > div,
     .yangsheep-design-pay-page #payment .payment_box iframe {
@@ -1796,24 +1795,8 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     }
 }
 
-/* --- 小手機（≤ 480px）進一步收斂 padding --- */
-@media (max-width: 480px) {
-    .yangsheep-design-pay-page .yangsheep-payment {
-        padding: 10px 6px !important;
-    }
-    .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
-        padding: 8px 6px !important;
-    }
-    .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
-        padding: 6px 0 !important;
-    }
-}
-
-/* --- 極窄手機（≤ 400px）SDK 貼邊 --- */
+/* --- 極窄手機（≤ 400px）字級收斂（padding 仍採全域固定值） --- */
 @media (max-width: 400px) {
-    .yangsheep-pay-summary {
-        padding: 12px 10px;
-    }
     .yangsheep-pay-item {
         grid-template-columns: 42px 1fr auto;
         gap: 8px;
@@ -1830,15 +1813,6 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     }
     .yangsheep-pay-totals__row.is-final .yangsheep-pay-totals__value {
         font-size: 18px;
-    }
-    .yangsheep-design-pay-page .yangsheep-payment {
-        padding: 8px 4px !important;
-    }
-    .yangsheep-design-pay-page #payment ul.payment_methods>li.wc_payment_method {
-        padding: 8px 4px !important;
-    }
-    .yangsheep-design-pay-page #payment .wc_payment_methods .payment_box {
-        padding: 4px 0 !important;
     }
     .yangsheep-design-pay-page .yangsheep-pay-submit {
         padding-top: 10px;
