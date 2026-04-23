@@ -1419,3 +1419,111 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 }
 
 /* 超取時的超商資訊欄位 - 樣式已移至 class-yangsheep-third-party-shipping-compat.php */
+/* ============================================================
+   Order Pay 頁面專用樣式（重新付款 / order-pay endpoint）
+   v1.6.11 — 區塊化設計，沿用結帳頁 CSS 變數
+   ============================================================ */
+.yangsheep-design-pay-page {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.yangsheep-design-pay-page .yangsheep-h3-title {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* 商品明細表格區塊化 */
+.yangsheep-design-pay-page .yangsheep-pay-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: var(--block-border-radius, 8px);
+    overflow: hidden;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table thead th {
+    background: var(--section-bg-color, #f5f7f8);
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid var(--theme-section-border-color, #c5d1d8);
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table thead th.product-quantity,
+.yangsheep-design-pay-page .yangsheep-pay-items-table thead th.product-total {
+    text-align: center;
+    width: 20%;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table td.product-quantity,
+.yangsheep-design-pay-page .yangsheep-pay-items-table td.product-subtotal,
+.yangsheep-design-pay-page .yangsheep-pay-items-table td.product-total {
+    text-align: center;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot th,
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot td {
+    padding: 10px 15px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot tr:last-child th,
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot tr:last-child td {
+    border-bottom: none;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot th {
+    text-align: right;
+    color: #555;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-items-table tfoot td.product-total {
+    text-align: right;
+    color: #222;
+}
+
+/* 送出按鈕區塊 */
+.yangsheep-design-pay-page .yangsheep-pay-submit {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-submit #place_order {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.yangsheep-design-pay-page .yangsheep-pay-submit #place_order:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* 響應式：手機版縮小 padding */
+@media (max-width: 768px) {
+    .yangsheep-design-pay-page .yangsheep-pay-items-table thead th,
+    .yangsheep-design-pay-page .yangsheep-pay-items-table tbody td,
+    .yangsheep-design-pay-page .yangsheep-pay-items-table tfoot th,
+    .yangsheep-design-pay-page .yangsheep-pay-items-table tfoot td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+}
