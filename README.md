@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.12
+**當前版本**：1.6.13
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,16 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.13 (2026-04-23)
+
+#### 修復（order-pay 頁）
+- **「NT$80 經由 HELLO」字級同大** — WC 原本用 `<small class="shipped_via">` 縮小文字，新增選擇器讓 `shipped_via` / `includes_tax` / `small` 強制 `font-size: inherit; font-weight: inherit; color: inherit`
+- **移除多餘外層 padding** — `.yangsheep-design-pay-page` 移除 `padding: 0 15px`（Blocksy `ct-container` 已提供水平 padding）
+- **RWD 優化** — 新增 900px / 768px / 400px 三段斷點：
+  - 768px：訂單明細卡片 padding 14px、商品列縮圖 52×52、付款區 padding 14/12、payment_box padding 10/6、總計金額 20px
+  - 400px：縮圖 46×46、padding 再收斂，避免 SDK 付款欄位擠壓
+- **付款區塊讓給 SDK** — `.yangsheep-payment` 在手機 padding 14/12（原本 20）；`.wc_payment_method` padding 10/10（原本 12/15）；`.payment_box` padding 10/6，讓 SHOPLINE SDK iframe 橫向空間更多
 
 ### v1.6.12 (2026-04-23)
 
