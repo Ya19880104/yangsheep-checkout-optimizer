@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.15
+**當前版本**：1.6.16
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,15 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.16 (2026-04-23)
+
+#### 變更（桌機 padding 加大）
+- 桌機版外層卡片 padding 放大給呼吸感（手機 ≤768px 仍維持 20/10）：
+  - `.yangsheep-pay-summary`：桌機 `28px 32px`、手機 `20px 10px`
+  - `.yangsheep-design-pay-page .yangsheep-payment`：桌機 `28px 28px`、手機 `20px 10px`
+  - `li.wc_payment_method` 維持 `5px`（SDK 貼邊，無論桌機手機）
+  - `.payment_box` 維持 `5px`（SDK 貼邊，無論桌機手機）
 
 ### v1.6.15 (2026-04-23)
 
