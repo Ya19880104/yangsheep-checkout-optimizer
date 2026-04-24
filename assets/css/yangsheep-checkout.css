@@ -1824,3 +1824,378 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         margin-top: 10px;
     }
 }
+
+
+/* ============================================================
+   Thankyou 感謝頁樣式（v1.6.17）
+   - max-width 1280px
+   - 配色透過 CSS 變數對齊後台設定
+   - 父層 .ct-container 已處理水平 padding，此處不重複
+   ============================================================ */
+.yangsheep-design-thankyou-page {
+    max-width: 1280px;
+    margin: 30px auto 50px;
+    color: var(--ys-text-primary, #3d4852);
+}
+
+/* ---- Hero 區 ---- */
+.yangsheep-thankyou-hero {
+    text-align: center;
+    padding: 48px 20px 40px;
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.yangsheep-thankyou-hero--success::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--theme-button-background-initial-color, #8fa8b8),
+        var(--yangsheep-shipping-card-bg-active, #9db4a0)
+    );
+}
+
+.yangsheep-thankyou-hero__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--yangsheep-payment-bg, #e8eef2);
+    color: var(--theme-button-background-initial-color, #8fa8b8);
+    margin-bottom: 20px;
+}
+
+.yangsheep-thankyou-hero--failed .yangsheep-thankyou-hero__icon {
+    background: #fdecec;
+    color: #d9534f;
+}
+
+.yangsheep-thankyou-hero--failed::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: #d9534f;
+}
+
+.yangsheep-thankyou-hero__title {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f252b;
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+}
+
+.yangsheep-thankyou-hero__subtitle {
+    margin: 0 auto;
+    max-width: 640px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #6b7680;
+}
+
+.yangsheep-thankyou-hero__actions {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.yangsheep-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: var(--block-border-radius, 8px);
+    border: 2px solid transparent;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.yangsheep-btn--primary {
+    background: var(--theme-button-background-initial-color, #8fa8b8);
+    color: var(--theme-button-text-initial-color, #fff);
+}
+
+.yangsheep-btn--primary:hover {
+    background: var(--theme-button-hover-bg, #6b7a95);
+    color: var(--theme-button-hover-text, #fff);
+}
+
+.yangsheep-btn--ghost {
+    background: transparent;
+    color: var(--theme-button-background-initial-color, #8fa8b8);
+    border-color: var(--theme-button-background-initial-color, #8fa8b8);
+}
+
+.yangsheep-btn--ghost:hover {
+    background: var(--theme-button-background-initial-color, #8fa8b8);
+    color: var(--theme-button-text-initial-color, #fff);
+}
+
+/* ---- Order Overview 4 欄卡片 ---- */
+.yangsheep-thankyou-overview {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+}
+
+.yangsheep-thankyou-overview__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-thankyou-overview__cell {
+    min-width: 0;
+}
+
+.yangsheep-thankyou-overview__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #8b95a0;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.yangsheep-thankyou-overview__value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f252b;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+
+.yangsheep-thankyou-overview__cell--email .yangsheep-thankyou-overview__value {
+    font-size: 15px;
+    font-weight: 500;
+    color: #4a5560;
+}
+
+/* ---- 總計 banner ---- */
+.yangsheep-thankyou-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 24px;
+}
+
+.yangsheep-thankyou-total__label {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f252b;
+}
+
+.yangsheep-thankyou-total__value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--theme-button-background-initial-color, #8fa8b8);
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.yangsheep-thankyou-total__value .woocommerce-Price-amount {
+    font-size: inherit;
+    color: inherit;
+    font-weight: inherit;
+}
+
+/* ---- Gateway notice（ATM 轉帳等指示） ---- */
+.yangsheep-thankyou-gateway-notice:empty {
+    display: none;
+}
+.yangsheep-thankyou-gateway-notice {
+    margin-bottom: 24px;
+}
+.yangsheep-thankyou-gateway-notice > *:last-child {
+    margin-bottom: 0;
+}
+
+/* ---- Order details + addresses（WC 原生輸出容器） ---- */
+.yangsheep-thankyou-details .woocommerce-order-details,
+.yangsheep-thankyou-details .woocommerce-customer-details {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+}
+
+.yangsheep-thankyou-details h2,
+.yangsheep-thankyou-details h3.woocommerce-order-details__title,
+.yangsheep-thankyou-details h2.woocommerce-order-details__title,
+.yangsheep-thankyou-details h2.woocommerce-column__title {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f252b;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+/* 訂單明細表格 */
+.yangsheep-thankyou-details .woocommerce-table--order-details,
+.yangsheep-thankyou-details .shop_table.order_details {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.yangsheep-thankyou-details .woocommerce-table--order-details th,
+.yangsheep-thankyou-details .shop_table.order_details th {
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7680;
+    text-align: left;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-thankyou-details .woocommerce-table--order-details td,
+.yangsheep-thankyou-details .shop_table.order_details td {
+    padding: 14px 8px;
+    font-size: 14px;
+    color: #2a313a;
+    border-bottom: 1px solid var(--theme-section-border-color, #eee);
+    vertical-align: middle;
+}
+
+.yangsheep-thankyou-details .woocommerce-table--order-details tfoot th,
+.yangsheep-thankyou-details .woocommerce-table--order-details tfoot td,
+.yangsheep-thankyou-details .shop_table.order_details tfoot th,
+.yangsheep-thankyou-details .shop_table.order_details tfoot td {
+    padding: 10px 8px;
+    font-size: 14px;
+}
+
+.yangsheep-thankyou-details .woocommerce-table--order-details tfoot tr:last-child th,
+.yangsheep-thankyou-details .woocommerce-table--order-details tfoot tr:last-child td,
+.yangsheep-thankyou-details .shop_table.order_details tfoot tr:last-child th,
+.yangsheep-thankyou-details .shop_table.order_details tfoot tr:last-child td {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--theme-button-background-initial-color, #8fa8b8);
+    border-bottom: none;
+    padding-top: 14px;
+    border-top: 2px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-thankyou-details .shipped_via {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    margin-left: 4px;
+}
+
+/* 帳單/運送地址 2 欄 */
+.yangsheep-thankyou-details .woocommerce-customer-details .woocommerce-columns--addresses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+}
+
+.yangsheep-thankyou-details .woocommerce-customer-details address {
+    font-style: normal;
+    line-height: 1.7;
+    color: #4a5560;
+    padding: 16px 18px;
+    background: var(--section-bg-color, #f5f7f8);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: 8px;
+}
+
+/* ---- 響應式 ---- */
+@media (max-width: 900px) {
+    .yangsheep-thankyou-overview__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .yangsheep-thankyou-details .woocommerce-customer-details .woocommerce-columns--addresses {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .yangsheep-design-thankyou-page {
+        margin: 16px auto 32px;
+    }
+    .yangsheep-thankyou-hero {
+        padding: 36px 16px 28px;
+    }
+    .yangsheep-thankyou-hero__icon {
+        width: 72px;
+        height: 72px;
+    }
+    .yangsheep-thankyou-hero__icon svg {
+        width: 44px;
+        height: 44px;
+    }
+    .yangsheep-thankyou-hero__title {
+        font-size: 22px;
+    }
+    .yangsheep-thankyou-hero__subtitle {
+        font-size: 14px;
+    }
+    .yangsheep-thankyou-overview,
+    .yangsheep-thankyou-details .woocommerce-order-details,
+    .yangsheep-thankyou-details .woocommerce-customer-details {
+        padding: 20px 16px;
+    }
+    .yangsheep-thankyou-overview__grid {
+        gap: 16px 18px;
+        padding-bottom: 18px;
+    }
+    .yangsheep-thankyou-overview__label {
+        font-size: 12px;
+    }
+    .yangsheep-thankyou-overview__value {
+        font-size: 14px;
+    }
+    .yangsheep-thankyou-total {
+        padding-top: 18px;
+    }
+    .yangsheep-thankyou-total__label {
+        font-size: 15px;
+    }
+    .yangsheep-thankyou-total__value {
+        font-size: 26px;
+    }
+    .yangsheep-btn {
+        min-width: 120px;
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .yangsheep-thankyou-overview__grid {
+        grid-template-columns: 1fr;
+    }
+    .yangsheep-thankyou-total {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .yangsheep-thankyou-total__value {
+        font-size: 24px;
+    }
+}

@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.16
+**當前版本**：1.6.17
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,20 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.17 (2026-04-24)
+
+#### 新增
+- **感謝頁（Order Received / thankyou）重新設計** — 新增 `templates/checkout/thankyou.php` 覆寫：
+  - Hero 區：成功 / 失敗兩種狀態，含圓形 icon（inline SVG checkmark 或 x）、客製化問候「感謝您的訂購，{客戶名}！」、副標訂購確認訊息
+  - 成功狀態頂部有主色 → 輔色漸層條；失敗狀態頂部紅色條
+  - **訂單概覽 4 欄卡片**：訂單編號 / 訂購日期 / Email / 付款方式（≤900px 變 2 欄、≤480px 變 1 欄）
+  - **總計 banner**：主色強調 32px（手機 24px）
+  - **電腦寬度 100%（max-width 1280px）**：比 order-pay 的 820px 寬，讓訂單明細表格有更多橫向空間
+  - 水平 padding 交給父層 `.ct-container` 處理，不重複
+  - 配色全數透過 CSS 變數對齊後台設定（`--theme-button-background-initial-color` 等）
+  - 保留 WC 標準 hooks：`woocommerce_before_thankyou`、`woocommerce_thankyou_{gateway}`（ATM 轉帳指示等）、`woocommerce_thankyou`（訂單明細 + 地址）
+  - 失敗狀態保留「重新付款」+「前往我的帳號」按鈕（主色實心 + ghost 外框）
 
 ### v1.6.16 (2026-04-23)
 
