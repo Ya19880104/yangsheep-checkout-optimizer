@@ -1948,21 +1948,21 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     color: var(--theme-button-text-initial-color, #fff);
 }
 
-/* ---- Order Overview 4 欄卡片 ---- */
+/* ---- Order Overview 4 欄卡片（v1.6.19 字級統一、視覺融合） ---- */
 .yangsheep-thankyou-overview {
     background: var(--yangsheep-order-items-bg, #fff);
     border: 1px solid var(--theme-section-border-color, #e5e5e5);
     border-radius: var(--block-border-radius, 12px);
-    padding: 28px 32px;
-    margin-bottom: 24px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
 }
 
 .yangsheep-thankyou-overview__grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px 28px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+    gap: 18px 24px;
+    /* v1.6.19：移除底部 border，改用 margin 分隔 */
+    margin-bottom: 18px;
 }
 
 .yangsheep-thankyou-overview__cell {
@@ -1970,16 +1970,16 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 }
 
 .yangsheep-thankyou-overview__label {
+    /* v1.6.19：移除 uppercase、letter-spacing，更自然 */
     font-size: 13px;
     font-weight: 500;
     color: #8b95a0;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .yangsheep-thankyou-overview__value {
-    font-size: 16px;
+    /* v1.6.19：16 → 15 與其他區塊對齊 */
+    font-size: 15px;
     font-weight: 600;
     color: #1f252b;
     overflow-wrap: anywhere;
@@ -1987,28 +1987,31 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 }
 
 .yangsheep-thankyou-overview__cell--email .yangsheep-thankyou-overview__value {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     color: #4a5560;
 }
 
-/* ---- 總計 banner ---- */
+/* ---- 總計 row（v1.6.19：融合進 overview 卡片，字級收斂） ---- */
 .yangsheep-thankyou-total {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 16px;
-    padding-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--theme-section-border-color, #e5e5e5);
 }
 
 .yangsheep-thankyou-total__label {
-    font-size: 18px;
+    /* v1.6.19：18 → 15，跟 overview 對齊 */
+    font-size: 15px;
     font-weight: 600;
     color: #1f252b;
 }
 
 .yangsheep-thankyou-total__value {
-    font-size: 32px;
+    /* v1.6.19：32 → 22，降低字級落差 */
+    font-size: 22px;
     font-weight: 700;
     color: var(--theme-button-background-initial-color, #8fa8b8);
     letter-spacing: 0.01em;
@@ -2032,26 +2035,28 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     margin-bottom: 0;
 }
 
-/* ---- Order details + addresses（WC 原生輸出容器） ---- */
+/* ---- Order details + addresses（v1.6.19 字級視覺統一） ---- */
 .yangsheep-thankyou-details .woocommerce-order-details,
 .yangsheep-thankyou-details .woocommerce-customer-details {
     background: var(--yangsheep-order-items-bg, #fff);
     border: 1px solid var(--theme-section-border-color, #e5e5e5);
     border-radius: var(--block-border-radius, 12px);
-    padding: 28px 32px;
-    margin-bottom: 24px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
 }
 
 .yangsheep-thankyou-details h2,
 .yangsheep-thankyou-details h3.woocommerce-order-details__title,
 .yangsheep-thankyou-details h2.woocommerce-order-details__title,
 .yangsheep-thankyou-details h2.woocommerce-column__title {
-    margin: 0 0 20px 0;
-    font-size: 20px;
+    margin: 0 0 16px 0;
+    /* v1.6.19：20 → 17，與 overview / total 字級對齊 */
+    font-size: 17px;
     font-weight: 700;
     color: #1f252b;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--theme-section-border-color, #e5e5e5);
+    padding-bottom: 10px;
+    /* v1.6.19：2px → 1px 更淡 */
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
 }
 
 /* 訂單明細表格 */
@@ -2088,16 +2093,18 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     font-size: 14px;
 }
 
+/* tfoot 最後一列（小計是唯一剩下的最後一列；v1.6.19 淡化） */
 .yangsheep-thankyou-details .woocommerce-table--order-details tfoot tr:last-child th,
 .yangsheep-thankyou-details .woocommerce-table--order-details tfoot tr:last-child td,
 .yangsheep-thankyou-details .shop_table.order_details tfoot tr:last-child th,
 .yangsheep-thankyou-details .shop_table.order_details tfoot tr:last-child td {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--theme-button-background-initial-color, #8fa8b8);
+    /* v1.6.19：16 → 15、移除粗體強調（總計已在 overview banner） */
+    font-size: 15px;
+    font-weight: 600;
+    color: #2a313a;
     border-bottom: none;
-    padding-top: 14px;
-    border-top: 2px solid var(--theme-section-border-color, #e5e5e5);
+    padding-top: 12px;
+    border-top: 1px solid var(--theme-section-border-color, #e5e5e5);
 }
 
 .yangsheep-thankyou-details .shipped_via {
@@ -2114,14 +2121,21 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     gap: 28px;
 }
 
+/* v1.6.19：address 移除內框 + 背景（使用者回饋內部框線多餘） */
 .yangsheep-thankyou-details .woocommerce-customer-details address {
     font-style: normal;
-    line-height: 1.7;
+    line-height: 1.8;
     color: #4a5560;
-    padding: 16px 18px;
-    background: var(--section-bg-color, #f5f7f8);
-    border: 1px solid var(--theme-section-border-color, #e5e5e5);
-    border-radius: 8px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+}
+
+/* 訂購人資料每一行（WC 以 <br> 分隔）加點間距 */
+.yangsheep-thankyou-details .woocommerce-customer-details address br {
+    line-height: 2;
 }
 
 /* ---- 響應式 ---- */
@@ -2197,5 +2211,334 @@ body.yangsheep-cvs-mode #shipping_phone_field {
     }
     .yangsheep-thankyou-total__value {
         font-size: 24px;
+    }
+}
+
+
+/* ============================================================
+   我的帳號 > 訂單內頁 / 訂閱內頁（v1.6.19）
+   重用 .yangsheep-design-thankyou-page 的區塊樣式 +
+   補 Hero / Status badge / Subscription details / Related orders
+   ============================================================ */
+
+/* .yangsheep-design-myaccount-view-page 繼承 thankyou-page 的
+   max-width 1280px + margin + 父層 padding（不重複）*/
+
+/* ---- Hero（小版，無 icon） ---- */
+.yangsheep-view-hero {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 20px 28px;
+    margin-bottom: 20px;
+}
+
+.yangsheep-view-hero__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.yangsheep-view-hero__title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f252b;
+    line-height: 1.4;
+}
+
+.yangsheep-view-hero__sub {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    color: #6b7680;
+}
+
+/* ---- Status badge ---- */
+.yangsheep-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: #e5e7eb;
+    color: #4b5563;
+    white-space: nowrap;
+}
+
+/* 訂單狀態 */
+.yangsheep-status-badge--pending       { background: #fef3c7; color: #92400e; }
+.yangsheep-status-badge--processing    { background: #dbeafe; color: #1e40af; }
+.yangsheep-status-badge--on-hold       { background: #fef3c7; color: #92400e; }
+.yangsheep-status-badge--completed     { background: #d1fae5; color: #065f46; }
+.yangsheep-status-badge--cancelled,
+.yangsheep-status-badge--failed        { background: #fee2e2; color: #991b1b; }
+.yangsheep-status-badge--refunded      { background: #e0e7ff; color: #3730a3; }
+
+/* 訂閱狀態 */
+.yangsheep-status-badge--active        { background: #d1fae5; color: #065f46; }
+.yangsheep-status-badge--paused        { background: #fef3c7; color: #92400e; }
+.yangsheep-status-badge--expired       { background: #f3f4f6; color: #6b7280; }
+.yangsheep-status-badge--switched      { background: #e0e7ff; color: #3730a3; }
+.yangsheep-status-badge--pending-cancel { background: #fee2e2; color: #991b1b; }
+
+/* ---- 訂單更新紀錄 ---- */
+.yangsheep-view-notes {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+.yangsheep-view-notes .yangsheep-h3-title {
+    margin: 0 0 16px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f252b;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+.yangsheep-view-notes .woocommerce-OrderUpdates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.yangsheep-view-notes .woocommerce-OrderUpdate {
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--theme-section-border-color, #e5e5e5);
+}
+.yangsheep-view-notes .woocommerce-OrderUpdate:last-child {
+    border-bottom: none;
+}
+.yangsheep-view-notes .woocommerce-OrderUpdate-meta {
+    font-size: 12px;
+    color: #8b95a0;
+    margin: 0 0 4px 0;
+}
+.yangsheep-view-notes .woocommerce-OrderUpdate-description {
+    font-size: 14px;
+    color: #2a313a;
+    line-height: 1.6;
+}
+
+/* ---- Subscription details 表格（WCS 原生 shop_table）美化 ---- */
+.yangsheep-view-subscription-details {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+
+.yangsheep-view-subscription-details .shop_table.subscription_details {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+}
+.yangsheep-view-subscription-details .shop_table.subscription_details td {
+    padding: 12px 8px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--theme-section-border-color, #eee);
+    vertical-align: middle;
+}
+.yangsheep-view-subscription-details .shop_table.subscription_details tr:last-child td {
+    border-bottom: none;
+}
+.yangsheep-view-subscription-details .shop_table.subscription_details td:first-child {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7680;
+    width: 30%;
+    max-width: 200px;
+}
+.yangsheep-view-subscription-details .shop_table.subscription_details td:last-child {
+    color: #1f252b;
+    font-weight: 500;
+}
+
+/* 訂閱動作按鈕列 */
+.yangsheep-view-subscription-details .shop_table.subscription_details td .woocommerce-button,
+.yangsheep-view-subscription-details .shop_table.subscription_details td .button {
+    display: inline-block;
+    padding: 8px 16px !important;
+    margin: 2px 6px 2px 0 !important;
+    font-size: 13px !important;
+    font-weight: 600;
+    border-radius: var(--block-border-radius, 6px) !important;
+    background: var(--theme-button-background-initial-color, #8fa8b8) !important;
+    color: var(--theme-button-text-initial-color, #fff) !important;
+    border: 2px solid transparent !important;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.yangsheep-view-subscription-details .shop_table.subscription_details td .woocommerce-button:hover,
+.yangsheep-view-subscription-details .shop_table.subscription_details td .button:hover {
+    background: var(--theme-button-hover-bg, #6b7a95) !important;
+    color: var(--theme-button-hover-text, #fff) !important;
+}
+
+/* 訂閱總計（subscription-totals-table）套用與訂單明細相同樣式 */
+.yangsheep-view-subscription-details h2,
+.yangsheep-view-subscription-details h3 {
+    margin: 16px 0 16px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f252b;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-view-subscription-details .shop_table.order_details,
+.yangsheep-view-subscription-details .shop_table.my_account_orders {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+.yangsheep-view-subscription-details .shop_table.order_details th,
+.yangsheep-view-subscription-details .shop_table.my_account_orders th {
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7680;
+    text-align: left;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+.yangsheep-view-subscription-details .shop_table.order_details td,
+.yangsheep-view-subscription-details .shop_table.my_account_orders td {
+    padding: 14px 8px;
+    font-size: 14px;
+    color: #2a313a;
+    border-bottom: 1px solid var(--theme-section-border-color, #eee);
+    vertical-align: middle;
+}
+.yangsheep-view-subscription-details .shop_table.my_account_orders tbody tr:last-child td {
+    border-bottom: none;
+}
+.yangsheep-view-subscription-details .shop_table.order_details tfoot tr:last-child th,
+.yangsheep-view-subscription-details .shop_table.order_details tfoot tr:last-child td {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2a313a;
+    border-bottom: none;
+    padding-top: 12px;
+    border-top: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+/* related-orders 檢視按鈕 */
+.yangsheep-view-subscription-details .shop_table.my_account_orders .order-actions .button,
+.yangsheep-view-subscription-details .shop_table.my_account_orders .order-actions .woocommerce-button {
+    display: inline-block;
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+    font-weight: 600;
+    border-radius: var(--block-border-radius, 6px) !important;
+    background: var(--theme-button-background-initial-color, #8fa8b8) !important;
+    color: var(--theme-button-text-initial-color, #fff) !important;
+    border: 2px solid transparent !important;
+    text-decoration: none;
+}
+
+/* Auto-renew toggle 對齊 */
+.yangsheep-view-subscription-details .wcs-auto-renew-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Address 區塊在 view-subscription / view-order 也套相同無框樣式 */
+.yangsheep-design-myaccount-view-page .woocommerce-customer-details,
+.yangsheep-view-subscription-details .woocommerce-customer-details,
+.yangsheep-design-myaccount-view-page .woocommerce-order-details {
+    background: var(--yangsheep-order-items-bg, #fff);
+    border: 1px solid var(--theme-section-border-color, #e5e5e5);
+    border-radius: var(--block-border-radius, 12px);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+
+.yangsheep-design-myaccount-view-page .woocommerce-customer-details h2,
+.yangsheep-view-subscription-details .woocommerce-customer-details h2,
+.yangsheep-design-myaccount-view-page .woocommerce-order-details h2 {
+    margin: 0 0 16px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f252b;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+.yangsheep-design-myaccount-view-page .woocommerce-customer-details address,
+.yangsheep-view-subscription-details .woocommerce-customer-details address {
+    font-style: normal;
+    line-height: 1.8;
+    color: #4a5560;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+}
+
+/* 訂單明細表格（view-order 頁）套與 thankyou 相同樣式 */
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .shop_table.order_details,
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .woocommerce-table--order-details {
+    width: 100%;
+    border-collapse: collapse;
+}
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .shop_table th {
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7680;
+    text-align: left;
+    border-bottom: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .shop_table td {
+    padding: 14px 8px;
+    font-size: 14px;
+    color: #2a313a;
+    border-bottom: 1px solid var(--theme-section-border-color, #eee);
+}
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .shop_table tfoot tr:last-child th,
+.yangsheep-design-myaccount-view-page .woocommerce-order-details .shop_table tfoot tr:last-child td {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2a313a;
+    border-bottom: none;
+    padding-top: 12px;
+    border-top: 1px solid var(--theme-section-border-color, #e5e5e5);
+}
+
+/* ---- 響應式 ---- */
+@media (max-width: 768px) {
+    .yangsheep-view-hero {
+        padding: 16px 16px;
+    }
+    .yangsheep-view-hero__title {
+        font-size: 17px;
+    }
+    .yangsheep-view-notes,
+    .yangsheep-view-subscription-details,
+    .yangsheep-design-myaccount-view-page .woocommerce-customer-details,
+    .yangsheep-design-myaccount-view-page .woocommerce-order-details {
+        padding: 18px 16px;
+    }
+    .yangsheep-view-subscription-details .shop_table.subscription_details td:first-child {
+        width: 35%;
+        max-width: none;
+    }
+    .yangsheep-view-subscription-details .shop_table.subscription_details td {
+        font-size: 13px;
+        padding: 10px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .yangsheep-view-hero__row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

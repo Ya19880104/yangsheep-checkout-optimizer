@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.18
+**當前版本**：1.6.19
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,25 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.19 (2026-04-25)
+
+#### 變更（感謝頁字級統一 + 視覺融合）
+使用者回饋：目前字級大小落差過大（總計 32px vs overview 16px vs label 13px），
+訂購人資料內部有多餘框線。
+
+- **總計字級收斂**：32px → 22px（降低與其他區塊落差）
+- **Overview / Total 視覺融合**：
+  - 移除 grid 下方分隔 border（改 margin-bottom）
+  - Total 上方改為較淡 1px border（原本是 padding-top + 粗 border）
+  - Total label 18 → 15px，與 Overview 對齊
+  - Overview value 16 → 15px、Email 15 → 14px
+  - Overview label 移除 `text-transform: uppercase` + `letter-spacing`
+- **訂購人資料**：address 移除內框與淡藍背景（font: 14px, padding: 0, border/bg: none）
+- **區塊標題 h2**：20 → 17px、border-bottom 2px → 1px（更淡）
+- **訂單明細 tfoot 最後列**（小計唯一剩下）：16 → 15px、移除主色強調
+
+字級層級收斂到 **13 / 14 / 15 / 17 / 22 / 28**（Hero title）範圍，整體視覺統一。
 
 ### v1.6.18 (2026-04-25)
 
