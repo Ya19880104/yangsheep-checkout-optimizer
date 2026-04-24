@@ -125,8 +125,21 @@ defined( 'ABSPATH' ) || exit;
      * - `woocommerce_thankyou_{gateway_id}` — 讓各 gateway 輸出額外訊息（例如 ATM 轉帳指示）
      * - `woocommerce_thankyou` — 觸發 WC_Shortcode_Checkout::order_details
      *    會渲染 order-details.php（訂單明細表）+ address.php（帳單/運送地址）
+     *
+     * 訂單明細 tfoot 濾掉 `payment_method` 與 `order_total`，避免與
+     * 上方 Overview 4 欄卡片 + 總計 banner 重複顯示。
+     * 保留：商品列、cart_subtotal、shipping、tax 等計算過程。
      */
+    $ys_hide_duplicate_totals = function ( $total_rows ) {
+        if ( is_array( $total_rows ) ) {
+            unset( $total_rows['payment_method'] );
+            unset( $total_rows['order_total'] );
+        }
+        return $total_rows;
+    };
+    add_filter( 'woocommerce_get_order_item_totals', $ys_hide_duplicate_totals, 99, 1 );
     ?>
+
     <div class="yangsheep-thankyou-gateway-notice">
       <?php do_action( 'woocommerce_thankyou_' . $order->get_payment_method(), $order->get_id() ); ?>
     </div>
@@ -134,6 +147,8 @@ defined( 'ABSPATH' ) || exit;
     <div class="yangsheep-thankyou-details">
       <?php do_action( 'woocommerce_thankyou', $order->get_id() ); ?>
     </div>
+
+    <?php remove_filter( 'woocommerce_get_order_item_totals', $ys_hide_duplicate_totals, 99 ); ?>
 
   <?php else : ?>
 

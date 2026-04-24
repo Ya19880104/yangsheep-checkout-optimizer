@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.17
+**當前版本**：1.6.18
 **最後更新**：2026-04-08
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -230,6 +230,17 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.18 (2026-04-25)
+
+#### 修復（感謝頁合併重複顯示）
+- **訂單明細表格 tfoot 濾掉 `payment_method` 與 `order_total`**
+  - 付款方式 → 只在 Overview 4 欄卡片顯示
+  - 訂單總計 → 只在總計 banner（主色強調 32px）顯示
+  - 訂單明細表 tfoot 只留：小計 / 運費 / 稅金（保留金額計算過程）
+- 實作：template 內用匿名函式 hook `woocommerce_get_order_item_totals` priority 99，
+  在 `do_action('woocommerce_thankyou')` 之後用同一變數 remove_filter，
+  不影響其他頁面的訂單總計顯示
 
 ### v1.6.17 (2026-04-24)
 
