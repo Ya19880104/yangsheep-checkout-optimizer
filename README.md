@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.19
-**最後更新**：2026-04-08
+**當前版本**：1.6.20
+**最後更新**：2026-04-29
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -83,6 +83,7 @@ yangsheep-checkout-optimizer/
 ├── assets/
 │   ├── css/
 │   │   ├── yangsheep-checkout.css         # 結帳頁面樣式
+│   │   ├── yangsheep-cart.css             # 購物車折扣代碼欄位對齊
 │   │   ├── yangsheep-sidebar.css          # 側邊欄樣式
 │   │   ├── yangsheep-myaccount.css        # 我的帳號樣式
 │   │   ├── yangsheep-order.css            # 訂單頁面樣式
@@ -230,6 +231,13 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.20 (2026-04-29)
+
+#### 修復（折扣代碼欄位高度）
+- **購物車頁 coupon row 對齊**：新增 `assets/css/yangsheep-cart.css`，讓折扣代碼輸入框、使用優惠券按鈕與更新購物車按鈕維持一致高度。
+- **Checkout coupon 區塊同步修正**：固定折扣代碼輸入框與按鈕高度為 56px，避免主題表單樣式覆蓋造成高度不一致。
+- **手機版響應式**：窄版寬度下折扣代碼輸入框與按鈕改為上下堆疊，避免文字或按鈕擠壓。
 
 ### v1.6.19 (2026-04-25)
 

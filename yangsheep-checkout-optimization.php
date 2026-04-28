@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.6.19
+ * Version:           1.6.20
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.19' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.20' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -132,6 +132,10 @@ add_action( 'init', function(){
 add_action( 'wp_enqueue_scripts', function(){
     if ( ! function_exists( 'is_checkout' ) ) {
         return;
+    }
+
+    if ( function_exists( 'is_cart' ) && is_cart() ) {
+        wp_enqueue_style( 'yangsheep-cart', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-cart.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
     }
 
     // 結帳頁面專用 CSS/JS

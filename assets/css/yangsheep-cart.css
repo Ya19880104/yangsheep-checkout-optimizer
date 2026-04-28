@@ -1,0 +1,38 @@
+/* Cart coupon alignment */
+.woocommerce-cart-form .coupon {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.woocommerce-cart-form .coupon #coupon_code {
+    height: 56px;
+    min-height: 56px;
+    padding: 0 16px !important;
+    box-sizing: border-box;
+    line-height: normal;
+}
+
+.woocommerce-cart-form .coupon .button[name="apply_coupon"],
+.woocommerce-cart-form .actions .button[name="update_cart"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+@media (max-width: 689px) {
+    .woocommerce-cart-form .coupon {
+        flex-direction: column;
+    }
+
+    .woocommerce-cart-form .coupon #coupon_code,
+    .woocommerce-cart-form .coupon .button[name="apply_coupon"] {
+        width: 100%;
+    }
+}

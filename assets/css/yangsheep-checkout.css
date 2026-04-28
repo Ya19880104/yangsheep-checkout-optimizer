@@ -532,9 +532,31 @@ a.woocommerce-remove-coupon {
     background: #fff !important;
 }
 
+.yangsheep_checkout_coupon {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 .yangsheep-inputform {
     width: 100%;
     margin: 10px 0 5px !important;
+}
+
+.yangsheep_checkout_coupon .yangsheep-inputform {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 !important;
+}
+
+.yangsheep_checkout_coupon #coupon_code {
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    padding: 0 16px !important;
+    box-sizing: border-box;
+    line-height: normal;
 }
 
 .yangsheep-coupon-button {
@@ -543,12 +565,29 @@ a.woocommerce-remove-coupon {
     margin-bottom: 0;
 }
 
+.yangsheep_checkout_coupon .yangsheep-coupon-button {
+    flex: 0 0 126px;
+    width: auto;
+    margin: 0;
+}
+
 .yangsheep-coupon-button button {
     padding: 10px 0;
     width: 100%;
     color: var(--theme-button-text-initial-color) !important;
     border-radius: 2px;
     margin-bottom: 0;
+}
+
+.yangsheep_checkout_coupon .yangsheep-coupon-button button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    min-height: 56px;
+    padding: 0 20px !important;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
 /* 購物金 */
@@ -799,6 +838,17 @@ a.woocommerce-remove-coupon {
         border-top: 1px solid var(--theme-section-border-color);
         margin-top: 20px;
         padding-top: 20px;
+    }
+}
+
+@media(max-width:575.9px) {
+    .yangsheep_checkout_coupon {
+        flex-direction: column;
+    }
+
+    .yangsheep_checkout_coupon .yangsheep-coupon-button {
+        flex: 0 0 auto;
+        width: 100%;
     }
 }
 
