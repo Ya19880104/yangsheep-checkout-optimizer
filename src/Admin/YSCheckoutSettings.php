@@ -641,7 +641,12 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             $opt_name,
             $label,
             function() use ( $opt_name, $desc ) {
-                $val = YSSettingsManager::get( $opt_name, 'no' );
+                // v1.6.22：fresh state 時讀取 DEFAULT_VALUES 作為 fallback，
+                // 而非寫死 'no'，讓預設啟用的開關（如收件人手機驗證）正確顯示為勾選狀態。
+                $default = isset( YSSettingsManager::DEFAULT_VALUES[ $opt_name ] )
+                    ? YSSettingsManager::DEFAULT_VALUES[ $opt_name ]
+                    : 'no';
+                $val = YSSettingsManager::get( $opt_name, $default );
                 echo '<input type="hidden" name="'.esc_attr($opt_name).'_submitted" value="1" />';
                 echo '<label class="ys-toggle-switch">';
                 echo '<input type="checkbox" name="'.esc_attr($opt_name).'" value="yes" '.checked( $val, 'yes', false ).' />';

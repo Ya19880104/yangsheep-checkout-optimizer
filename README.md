@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.21
+**當前版本**：1.6.22
 **最後更新**：2026-04-29
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,14 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.22 (2026-04-25)
+
+#### 修復
+- **後台 checkbox 預設值未反映 DEFAULT_VALUES** — `add_checkbox_field()` line 644 寫死 fallback `'no'`，不論 `DEFAULT_VALUES` 設什麼一律以「關閉」狀態顯示。
+- 例：v1.6.21 新增的 `yangsheep_validate_phone_shipping` 預設 `'yes'`，但 fresh state（DB 無 row）下 UI 顯示為「關閉」，導致使用者誤以為預設未啟用。
+- **修法**：`add_checkbox_field()` 改為從 `YSSettingsManager::DEFAULT_VALUES[ $opt_name ]` 動態取 fallback；若 key 不在 DEFAULT_VALUES 才退回 `'no'`。
+- **副作用**：使用者按儲存時，因 UI checkbox 預設已勾選，POST 會帶 `yes` → DB 寫入正確 default，循環修正。
 
 ### v1.6.21 (2026-04-25)
 
