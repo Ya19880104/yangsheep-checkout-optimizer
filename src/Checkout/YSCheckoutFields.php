@@ -31,7 +31,9 @@ class YSCheckoutFields {
         add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'force_phone_fields' ), 9999 );
         add_filter( 'woocommerce_billing_fields', array( $this, 'force_billing_phone' ), 9999 );
+        // v1.6.20：兩個電話驗證 hook 都註冊，內部依設定決定是否實際執行
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_shipping_phone' ) );
+        add_action( 'woocommerce_checkout_process', array( $this, 'validate_billing_phone' ) );
     }
 
     public function maybe_remove_address_required_for_cvs( $fields ) {
@@ -454,7 +456,20 @@ class YSCheckoutFields {
         return $fields;
     }
 
+    /**
+     * 收件人電話驗證（v1.6.20：受 yangsheep_validate_phone_shipping 開關控制，預設 yes）
+     *
+     * 觸發條件：
+     * 1. setting 'yangsheep_validate_phone_shipping' = yes
+     * 2. 使用者勾選「運送至不同地址」(ship_to_different_address)
+     * 3. shipping_phone 有值
+     */
     public function validate_shipping_phone() {
+        // v1.6.20：讀取後台開關，預設 yes
+        $enabled = YSSettingsManager::get( 'yangsheep_validate_phone_shipping', 'yes' );
+        if ( 'yes' !== $enabled ) {
+            return;
+        }
         // phpcs:disable WordPress.Security.NonceVerification.Missing
         $ship_to_different = isset( $_POST['ship_to_different_address'] ) ? wc_clean( wp_unslash( $_POST['ship_to_different_address'] ) ) : '';
         $shipping_phone    = isset( $_POST['shipping_phone'] ) ? wc_clean( wp_unslash( $_POST['shipping_phone'] ) ) : '';
@@ -470,6 +485,35 @@ class YSCheckoutFields {
                 wc_add_notice( __( '收件人電話必須為 10 位數字', 'yangsheep-checkout-optimization' ), 'error' );
             } else {
                 wc_add_notice( __( '請輸入有效的收件人手機號碼', 'yangsheep-checkout-optimization' ), 'error' );
+            }
+        }
+    }
+
+    /**
+     * 訂購人電話驗證（v1.6.20：受 yangsheep_validate_phone_billing 開關控制，預設 no）
+     *
+     * 預設關閉以允許市話或國際號碼。啟用後規則同收件人：09 開頭 + 10 碼。
+     */
+    public function validate_billing_phone() {
+        $enabled = YSSettingsManager::get( 'yangsheep_validate_phone_billing', 'no' );
+        if ( 'yes' !== $enabled ) {
+            return;
+        }
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        $billing_phone = isset( $_POST['billing_phone'] ) ? wc_clean( wp_unslash( $_POST['billing_phone'] ) ) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+        if ( empty( $billing_phone ) ) {
+            // 必填驗證由 WC 內建處理；這裡只負責格式檢查
+            return;
+        }
+        $phone_numeric = preg_replace( '/\D/', '', $billing_phone );
+        if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
+            if ( substr( $phone_numeric, 0, 2 ) !== '09' ) {
+                wc_add_notice( __( '訂購人電話必須為 09 開頭的手機號碼', 'yangsheep-checkout-optimization' ), 'error' );
+            } elseif ( strlen( $phone_numeric ) !== 10 ) {
+                wc_add_notice( __( '訂購人電話必須為 10 位數字', 'yangsheep-checkout-optimization' ), 'error' );
+            } else {
+                wc_add_notice( __( '請輸入有效的訂購人手機號碼', 'yangsheep-checkout-optimization' ), 'error' );
             }
         }
     }

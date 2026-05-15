@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.20
+**當前版本**：1.6.21
 **最後更新**：2026-04-29
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,28 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.21 (2026-04-25)
+
+#### 新增（台灣手機號碼驗證後台開關）
+- **後台新增兩個 checkbox**（電商工具箱 → 結帳強化 → 結帳頁面 → 欄位設定）：
+  - `yangsheep_validate_phone_shipping` — **收件人電話 台灣手機驗證**（預設 yes）
+  - `yangsheep_validate_phone_billing` — **訂購人電話 台灣手機驗證**（預設 no）
+- 驗證規則（兩者相同）：`/^09\d{8}$/`（09 開頭 + 10 碼）；輸入時自動 strip 非數字字元（容許 `0975-011-321` 或 `09 7501 1321`）
+- 錯誤訊息分三段（更友善）：
+  - 不是 09 開頭 → 「必須為 09 開頭的手機號碼」
+  - 不是 10 碼 → 「必須為 10 位數字」
+  - 其他無效 → 「請輸入有效的手機號碼」
+- **訂購人電話預設關閉**：允許市話 / 國際號碼 / 公司電話等使用情境
+- **收件人電話預設啟用**：物流配送需要可送達手機 SMS 取貨通知
+
+#### 技術
+- `YSSettingsManager::ALL_SETTING_KEYS` + `DEFAULT_VALUES` 新增兩個 key
+- `YSCheckoutSettings::$checkbox_options` + `$options` 新增兩個 key
+- `YSCheckoutSettings::settings_init()` 新增兩個 `add_checkbox_field()`
+- `YSCheckoutFields::validate_shipping_phone()` 開頭加 setting 守衛
+- `YSCheckoutFields::validate_billing_phone()` 新方法 + `woocommerce_checkout_process` hook
+- 兩個 hook 永遠註冊，內部依設定決定是否實際執行（不需要 conditional add_action）
 
 ### v1.6.20 (2026-04-29)
 

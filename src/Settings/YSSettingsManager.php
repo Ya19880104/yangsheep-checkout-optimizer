@@ -58,6 +58,9 @@ class YSSettingsManager {
         'yangsheep_checkout_order_note',
         'yangsheep_myaccount_visual',
         'yangsheep_wployalty_enable',
+        // 電話驗證（v1.6.20）
+        'yangsheep_validate_phone_billing',
+        'yangsheep_validate_phone_shipping',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text',
@@ -137,6 +140,9 @@ class YSSettingsManager {
         'yangsheep_checkout_order_note'       => 'yes',
         'yangsheep_myaccount_visual'          => 'no',
         'yangsheep_wployalty_enable'          => 'no',
+        // 電話驗證（v1.6.20）：帳單預設關閉、運送預設開啟
+        'yangsheep_validate_phone_billing'    => 'no',
+        'yangsheep_validate_phone_shipping'   => 'yes',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text' => '',

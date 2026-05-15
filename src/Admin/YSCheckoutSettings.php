@@ -367,6 +367,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         'yangsheep_checkout_order_note',
         'yangsheep_myaccount_visual',
         'yangsheep_wployalty_enable',
+        // v1.6.20：電話驗證開關
+        'yangsheep_validate_phone_billing',
+        'yangsheep_validate_phone_shipping',
     );
 
     public function settings_init() {
@@ -411,6 +414,10 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             'yangsheep_checkout_close_lname',
             'yangsheep_checkout_tw_fields',
             'yangsheep_checkout_order_note',
+
+            // v1.6.20 Phone Validation
+            'yangsheep_validate_phone_billing',
+            'yangsheep_validate_phone_shipping',
 
             // My Account UI
             'yangsheep_myaccount_visual',
@@ -458,6 +465,10 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         $this->add_checkbox_field( 'yangsheep_checkout_close_lname', __( '關閉 Last Name', 'yangsheep-checkout-optimization' ), __( '啟用後只顯示「姓名」欄位（使用 First Name）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_tw_fields', __( '台灣化欄位', 'yangsheep-checkout-optimization' ), __( '帳單只保留：姓名、電話、電子郵件；運送欄位調整為台灣格式', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_order_note', __( '訂單備註開關', 'yangsheep-checkout-optimization' ), __( '用戶勾選才顯示備註欄位', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+
+        // v1.6.20：台灣手機號碼驗證（09 開頭 + 10 碼）
+        $this->add_checkbox_field( 'yangsheep_validate_phone_shipping', __( '收件人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，收件人電話必須為 09 開頭的 10 碼台灣手機號碼（自動忽略空白、連字號）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+        $this->add_checkbox_field( 'yangsheep_validate_phone_billing', __( '訂購人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，訂購人電話也必須為 09 開頭的 10 碼台灣手機號碼。預設關閉以允許市話或國際號碼', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // 超取物流方式設定
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );
