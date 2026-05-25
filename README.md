@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.22
-**最後更新**：2026-04-29
+**當前版本**：1.6.23
+**最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -231,6 +231,11 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.23 (2026-05-25)
+
+#### 更新
+- 更新內建 YS Plugin Hub Client 到 v2.0.1，支援市集平台篩選與分類標籤顯示。
 
 ### v1.6.22 (2026-04-25)
 
