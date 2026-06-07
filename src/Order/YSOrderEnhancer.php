@@ -753,6 +753,15 @@ class YSOrderEnhancer {
      * Save Manual Tracking Data - 支援多筆
      */
     public function save_manual_tracking_data( $post_id ) {
+        // v1.6.23 修復：Re-entrancy guard
+        // 同一筆訂單在 dual hook（save_post_shop_order + woocommerce_process_shop_order_meta）
+        // 下會被觸發兩次；舊版又在內部呼叫 $order->save() 重新觸發訂單儲存流程，
+        // 造成遞迴 / 訂單編輯頁無法儲存轉圈圈。
+        static $processed = array();
+        if ( isset( $processed[ $post_id ] ) ) {
+            return;
+        }
+
         if ( ! isset( $_POST['yangsheep_manual_tracking_nonce'] ) || ! wp_verify_nonce( $_POST['yangsheep_manual_tracking_nonce'], 'yangsheep_save_manual_tracking' ) ) {
             return;
         }
@@ -766,6 +775,10 @@ class YSOrderEnhancer {
         if ( ! $order ) {
             return;
         }
+
+        // 通過所有檢查後才標記 processed，避免 nonce/權限失敗的 early return
+        // 影響後續正常 hook（理論上同一 request 不會再有合法 nonce 出現）
+        $processed[ $post_id ] = true;
 
         // 處理多筆記錄
         $entries = array();
@@ -798,11 +811,9 @@ class YSOrderEnhancer {
 
         $order->update_meta_data( '_yangsheep_manual_tracking_entries', $entries );
 
-        // 清理舊格式（可選）
-        // $order->delete_meta_data( '_yangsheep_manual_carrier' );
-        // $order->delete_meta_data( '_yangsheep_manual_tracking_no' );
-
-        $order->save();
+        // v1.6.23 修復：改用 save_meta_data() 只持久化 meta，不觸發整張
+        // 訂單儲存流程，避免遞迴回 save_post_shop_order / woocommerce_process_shop_order_meta。
+        $order->save_meta_data();
     }
 
     /**

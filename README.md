@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.23
+**當前版本**：1.6.25
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,18 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.25 (2026-05-25)
+
+#### 修復（手動配送單號儲存遞迴 / 訂單編輯頁轉圈圈）
+- **`YSOrderEnhancer::save_manual_tracking_data()` 遞迴儲存修復**
+- **症狀**：啟用「手動配送單號輸入」後，後台訂單編輯頁按「更新」時可能持續轉圈圈、timeout 或回 500，導致訂單狀態無法修改
+- **Root cause**：
+  1. 該 callback 同時掛在兩個 hook 上：`save_post_shop_order` + `woocommerce_process_shop_order_meta`，傳統 post type 模式下單次儲存會觸發兩次
+  2. 函式末端呼叫 `$order->save()` 會重新觸發整張訂單儲存流程 → 再次觸發 `save_post_shop_order` / `woocommerce_process_shop_order_meta` → 遞迴回 `save_manual_tracking_data()`
+- **修法**：
+  1. `$order->save()` → **`$order->save_meta_data()`**：只持久化 meta，不觸發訂單儲存流程
+  2. 加入 **static array re-entrancy guard**：同一筆 `$post_id` 在同一個 request 內只處理一次，徹底阻擋 dual hook 與遞迴重入
 
 ### v1.6.23 (2026-05-25)
 
