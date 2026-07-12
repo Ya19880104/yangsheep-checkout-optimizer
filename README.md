@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.25
+**當前版本**：1.6.26
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,20 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.26 (2026-07-11)
+
+#### 修復（結帳頁數量調整期間可送單 → 舊購物車建單）
+- **購物車突變鎖（實體在途證據模型）**：點擊數量 +/−/移除商品 到 `updated_checkout` 重繪完成之間（debounce 1.5s + AJAX + 更新往返 ≈ 3 秒），畫面數量與伺服器購物車不一致；此期間送出結帳會以「舊購物車」建單（實測產生數量/金額錯誤的訂單）
+- **鎖定條件＝三種在途證據任一存在**：qty debounce timer 在途、cart 突變 AJAX 在飛（jqXHR 集合＋`readyState` 過濾自癒）、cart 已寫入等待重繪落地。每個事件點重算——**無關來源（配送方式/地址）觸發的 `updated_checkout` 不會提前解鎖**，連續點擊跨越 AJAX 邊界也不會被前一輪完成事件解鎖
+- **fail-closed 看門狗**：只監控「重繪等待卡死」；檢查點上若 `update_order_review` XHR 仍在飛（慢站/CDN）＝續等，確認無任何在途請求（updated_checkout 丟失、cart 已定案）才結算解鎖——絕不因「時間到」開閘
+- **每商品獨立 debounce**：原共用單一 timer，第二個商品的點擊會取消第一個商品尚未送出的更新（實測兩商品各 +1 只有一項生效）→ 改為 `cartKey → timer` 各自獨立
+- **突變串行佇列（generation 化＋own XHR token）**：兩條 qty/remove AJAX 併發時，PHP 端各自載入 WC session cart 再寫回，後完成者以舊快照覆蓋先完成者（last-writer-wins）→ 一次只飛一條；各筆成功只標記 `redrawNeeded`，**佇列全部清空後才觸發單次 `update_checkout`**；**上一代重繪未落地時 drain 暫停**（新一代 cart AJAX 不與上一代 `update_order_review` 併發寫 session），結算後自動恢復
+- **重繪結算綁定本代自己的 XHR**：WC 原生在 `update_checkout` 後延遲 5ms 才發請求——這段空窗內舊請求完成觸發的 `updated_checkout` 不得結算本代（`awaitingOwnXhrStart` 擋）；本代 trigger 後的第一個 `update_order_review` 即 generation token（`ownRedrawXhr`），被 wc-checkout abort 時自動改綁繼任請求；**只有本代 XHR 確實完成（readyState 4）才結算解鎖**，無關來源的完成事件一概不動；看門狗同樣以本代 XHR 判「慢 vs 丟失」
+- **下單按鈕共用鎖（window 級引用計數）**：與 YS Shopline 金流外掛共用 `window.__ysPlaceOrderLocks` 引用計數——「各自記取得前狀態」在雙持有情境仍會互解，改為 count 歸零才考慮 enable、並尊重首位取鎖時的外部 disable；未持鎖時完全不碰按鈕（實測雙持有 maxCount=2 全程零誤 enable）
+- **abort 自癒**：突變 XHR 以 `.always()` 於 success/error/abort 全路徑移除，readyState 過濾（4=完成、0=已 abort）為第二道保險——被 abort 的請求不會變成永久在途的殭屍鎖
+- **支援探針**：`window.__ysCheckoutOptimizerBuild`（runtime 版本）與 `window.__ysMutationLockDebug()`（唯讀狀態快照），純診斷不影響行為
+- 對所有金流閘道皆生效（此 race 不限 SHOPLINE）
 
 ### v1.6.25 (2026-05-25)
 

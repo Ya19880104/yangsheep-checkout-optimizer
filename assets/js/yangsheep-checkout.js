@@ -4,7 +4,10 @@
 jQuery(function ($) {
     'use strict';
 
-    console.log('[YS Checkout] v2.6.0 初始化');
+    // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
+    // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
+    window.__ysCheckoutOptimizerBuild = '1.6.26';
+    console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
         ? yangsheep_checkout_params.nonce
@@ -530,13 +533,258 @@ jQuery(function ($) {
     window.YSTaiwanAddress = YSTaiwanAddress;
 
     // ===== 8. 商品數量控制 =====
-    var qtyUpdateTimer = null;
+    // v1.6.26: debounce timer 改為每商品獨立（cartKey → timer）。
+    // 共用單一 timer 時，第二個商品的點擊會 clearTimeout 掉第一個商品尚未送出的更新，
+    // 造成第一項數量遺失（實測：兩商品各 +1 → 只有第二項生效）。
+    var qtyTimers = {};
     var QTY_DEBOUNCE_MS = 1500;
 
-    function updateCartQuantity(cartKey, quantity) {
-        if (!window.wc_checkout_params) return;
+    function qtyTimersPending() {
+        var k;
+        for (k in qtyTimers) {
+            if (Object.prototype.hasOwnProperty.call(qtyTimers, k)) return true;
+        }
+        return false;
+    }
 
-        $.ajax({
+    /**
+     * v1.6.26: 購物車突變鎖（實體在途證據模型）
+     *
+     * 點擊 +/-/移除 到 updated_checkout 重繪完成之間，畫面數量與伺服器 cart 不一致
+     * （debounce 1.5s + AJAX + update_order_review ≈ 3 秒）。此期間若送出結帳，
+     * 訂單會以「舊 cart」建單（實測產生數量/金額錯誤訂單）。
+     *
+     * 鎖定條件 = 三種在途證據任一存在（每個事件點重算，不用單一 boolean）：
+     *   1. qty debounce timer 在途（qtyTimers，每商品獨立）
+     *   2. cart 突變 AJAX 在飛（mutationXhrs 集合，readyState 過濾自癒）
+     *   3. cart 已寫入、等待重繪（redrawNeeded＝佇列進行中累積 / awaitingRedraw＝佇列清空後的單次重繪在途）
+     *
+     * 關鍵性質：
+     * - 無關來源（配送方式/地址）觸發的 updated_checkout 只有在「awaitingRedraw 已設
+     *   （＝我們已 trigger）且當下無 update_order_review 在飛」時才會結算證據 3；
+     *   證據 1/2 仍在（debounce 未到期、AJAX 在飛）就維持鎖定——
+     *   前一輪或別人的完成事件不會提前解鎖下一輪突變。
+     * - fail-closed 看門狗：只處理「證據 3 卡死」（updated_checkout 丟失）。檢查點上
+     *   若 update_order_review XHR 仍在飛（readyState < 4）＝慢而未壞 → 續等；
+     *   只有確認無任何在途請求才視為丟失並結算（此時 cart 已由伺服器定案）。
+     *   證據 1/2 天然自癒（timer 必到期、XHR 必 complete），不設逾時開閘。
+     */
+    var mutationXhrs = [];       // cart 突變 AJAX 的 jqXHR 集合
+    var awaitingRedraw = false;  // 本 generation 的 cart 已全部寫入、等待重繪落地（單一旗標，非計數）
+    var awaitingOwnXhrStart = false; // 已 trigger、但本代的 update_order_review 尚未發出
+                                     //（WC 原生在 update_checkout 後延遲 5ms 才發請求——這段空窗內
+                                     //  舊請求完成觸發的 updated_checkout 不得結算本代）
+    var ownRedrawXhr = null;         // 本代實際綁定的 update_order_review jqXHR（generation token）
+    var redrawWatchdog = null;
+    var REDRAW_WATCHDOG_MS = 10000;
+    var trackedUpdateXhr = null; // 最近的 update_order_review jqXHR（看門狗判「慢 vs 丟失」用）
+
+    $(document).ajaxSend(function (e, xhr, settings) {
+        if (settings && typeof settings.url === 'string' && settings.url.indexOf('wc-ajax=update_order_review') !== -1) {
+            trackedUpdateXhr = xhr;
+            if (awaitingOwnXhrStart) {
+                // 本代 trigger 後的第一個 update_order_review ＝ 本代的重繪請求
+                awaitingOwnXhrStart = false;
+                ownRedrawXhr = xhr;
+            } else if (awaitingRedraw && ownRedrawXhr && ownRedrawXhr.readyState === 0) {
+                // 本代請求被 wc-checkout abort（別的觸發合併重發）→ 繼任請求同樣載有本代
+                // 已寫入的 cart 變更，改綁繼任者
+                ownRedrawXhr = xhr;
+            }
+        }
+    });
+
+    /**
+     * v1.6.26: cart 突變串行佇列（generation 化）。
+     *
+     * 兩條 qty/remove AJAX 併發時，PHP 端各自載入 WC session cart 再寫回，
+     * 後完成者會以舊快照覆蓋先完成者（last-writer-wins）——改為一次只飛一條，
+     * 前一條 complete（含 abort）才發下一條。
+     *
+     * 重繪也 generation 化：各筆 mutation 成功只標記 redrawNeeded，
+     * 「佇列全部清空」才觸發**單次** update_checkout（中途不觸發 → 不與
+     * update_order_review 交錯、wc-checkout 不會 abort 我們的重算）。
+     */
+    var mutationQueue = [];
+    var mutationActive = false;
+    var redrawNeeded = false;
+
+    function drainMutationQueue() {
+        // 上一代重繪尚未落地時暫停：新一代的 cart AJAX 與上一代的 update_order_review
+        // 併發會對 WC session 再現 last-writer-wins——結算/看門狗處會恢復 drain
+        if (mutationActive || awaitingRedraw || mutationQueue.length === 0) return;
+        mutationActive = true;
+        var job = mutationQueue.shift();
+        job(function () {
+            mutationActive = false;
+            if (mutationQueue.length > 0) {
+                drainMutationQueue();
+            } else if (redrawNeeded) {
+                // 本 generation 的 cart 變更已全部寫入伺服器 → 單次重繪
+                redrawNeeded = false;
+                awaitingRedraw = true;
+                awaitingOwnXhrStart = true; // 本代 XHR 尚未發出（WC 5ms pre-send 空窗起點）
+                ownRedrawXhr = null;
+                $(document.body).trigger('update_checkout');
+                armRedrawWatchdog();
+            }
+            refreshMutationLock();
+        });
+    }
+
+    function enqueueCartMutation(job) {
+        mutationQueue.push(job);
+        refreshMutationLock();
+        drainMutationQueue();
+    }
+
+    function mutationInFlight() {
+        // readyState 4 = 完成、0 = 已 abort（abort 後永遠停在 0，不能視為在途）
+        mutationXhrs = mutationXhrs.filter(function (x) { return x && x.readyState !== 4 && x.readyState !== 0; });
+        return qtyTimersPending() || mutationActive || mutationQueue.length > 0 || mutationXhrs.length > 0 || redrawNeeded || awaitingRedraw;
+    }
+
+    /**
+     * v1.6.26: 追蹤突變 XHR——.always() 於 success/error/abort 全路徑移除，
+     * readyState 過濾為第二道保險（兩者皆備，abort 不會留下永久在途的殭屍）。
+     */
+    function trackMutationXhr(xhr) {
+        mutationXhrs.push(xhr);
+        xhr.always(function () {
+            var i = mutationXhrs.indexOf(xhr);
+            if (i !== -1) mutationXhrs.splice(i, 1);
+            refreshMutationLock();
+        });
+    }
+
+    /**
+     * v1.6.26: 下單按鈕共用鎖（window 級引用計數 registry）。
+     *
+     * 「各自記取得前狀態」在雙持有情境仍會互解（A 持鎖期間 B 取鎖，A 先釋放
+     * 會把按鈕 enable 掉 B 的鎖）→ 改為 window.__ysPlaceOrderLocks 引用計數：
+     * YS 系外掛（本外掛 + ys-shopline defer）共用同一協定，count 歸零才考慮
+     * enable；第一位取鎖者記下「非參與者是否已 disable」，歸零時尊重之。
+     * registry 掛在 window，不受 fragment 替換按鈕節點影響；
+     * 持有期間每次 refresh 對新節點 re-assert disabled。
+     */
+    function ysPlaceOrderLockRegistry() {
+        if (!window.__ysPlaceOrderLocks) {
+            window.__ysPlaceOrderLocks = { count: 0, externalDisabled: false };
+        }
+        return window.__ysPlaceOrderLocks;
+    }
+
+    function ysAcquirePlaceOrderLock() {
+        var reg = ysPlaceOrderLockRegistry();
+        var $btn = $('#place_order');
+        if (reg.count === 0) {
+            reg.externalDisabled = $btn.length ? $btn.prop('disabled') === true : false;
+        }
+        reg.count++;
+        $btn.prop('disabled', true).attr('aria-busy', 'true');
+    }
+
+    function ysReleasePlaceOrderLock() {
+        var reg = ysPlaceOrderLockRegistry();
+        if (reg.count === 0) return;
+        reg.count--;
+        if (reg.count === 0) {
+            var $btn = $('#place_order');
+            $btn.removeAttr('aria-busy');
+            if (!reg.externalDisabled) {
+                $btn.prop('disabled', false);
+            }
+        }
+    }
+
+    var mutationLockHeld = false;
+
+    function refreshMutationLock() {
+        var busy = mutationInFlight();
+        var $btn = $('#place_order');
+        if ($btn.length) {
+            if (busy) {
+                if (!mutationLockHeld) {
+                    mutationLockHeld = true;
+                    ysAcquirePlaceOrderLock();
+                } else {
+                    // re-assert：fragment 替換後的新按鈕節點不帶 disabled，重新套用
+                    $btn.prop('disabled', true).attr('aria-busy', 'true');
+                }
+            } else if (mutationLockHeld) {
+                mutationLockHeld = false;
+                ysReleasePlaceOrderLock();
+            }
+            // busy=false 且未持鎖：完全不碰按鈕（別人的鎖不是我們能解的）
+        }
+        if (awaitingRedraw) {
+            armRedrawWatchdog();
+        } else {
+            clearTimeout(redrawWatchdog);
+            redrawWatchdog = null;
+        }
+    }
+
+    function armRedrawWatchdog() {
+        clearTimeout(redrawWatchdog);
+        redrawWatchdog = setTimeout(function () {
+            if (!awaitingRedraw) return;
+            // 本代 XHR 仍在飛（readyState 1-3；0=已 abort 不算）→ fail-closed：續等下一個檢查點
+            if (ownRedrawXhr && ownRedrawXhr.readyState !== 4 && ownRedrawXhr.readyState !== 0) {
+                armRedrawWatchdog();
+                return;
+            }
+            // 本代尚未認領 XHR，但場上有 update 在飛（可能即為本代、ajaxSend 綁定競態）→ 保守續等
+            if (awaitingOwnXhrStart && trackedUpdateXhr && trackedUpdateXhr.readyState !== 4 && trackedUpdateXhr.readyState !== 0) {
+                armRedrawWatchdog();
+                return;
+            }
+            // 無任何在途證據 → 本代重繪確認丟失；cart 已由伺服器定案，結算並恢復佇列
+            awaitingRedraw = false;
+            awaitingOwnXhrStart = false;
+            ownRedrawXhr = null;
+            refreshMutationLock();
+            drainMutationQueue();
+        }, REDRAW_WATCHDOG_MS);
+    }
+
+    $(document.body).on('updated_checkout', function () {
+        // 只結算「本 generation 自己的」重繪（generation token＝ownRedrawXhr）：
+        // - awaitingOwnXhrStart（WC 5ms pre-send 空窗）期間收到的一律是舊事件 → 不結算
+        // - 只有本代綁定的 XHR 確實完成（readyState 4）才結算；
+        //   無關來源（配送/地址）的完成事件、或本代請求仍在飛時，一概不動
+        if (awaitingRedraw && !awaitingOwnXhrStart && ownRedrawXhr && ownRedrawXhr.readyState === 4) {
+            awaitingRedraw = false;
+            ownRedrawXhr = null;
+            drainMutationQueue(); // 上一代已落地 → 恢復被暫停的下一代佇列
+        }
+        refreshMutationLock();
+    });
+
+    // 唯讀診斷快照（支援/除錯用，不影響任何行為）
+    window.__ysMutationLockDebug = function () {
+        return {
+            queue: mutationQueue.length,
+            active: mutationActive,
+            redrawNeeded: redrawNeeded,
+            awaitingRedraw: awaitingRedraw,
+            awaitingOwnXhrStart: awaitingOwnXhrStart,
+            ownXhrState: ownRedrawXhr ? ownRedrawXhr.readyState : null,
+            qtyTimers: Object.keys(qtyTimers).length,
+            qtyTimerKeys: Object.keys(qtyTimers).map(function (k) { return String(k).substring(0, 8); }),
+            xhrs: mutationXhrs.length,
+            lockHeld: mutationLockHeld,
+            registry: window.__ysPlaceOrderLocks ? { count: window.__ysPlaceOrderLocks.count, ext: window.__ysPlaceOrderLocks.externalDisabled } : null
+        };
+    };
+
+    function updateCartQuantity(cartKey, quantity, done) {
+        if (!window.wc_checkout_params) {
+            if (done) done();
+            return;
+        }
+
+        var xhr = $.ajax({
             url: wc_checkout_params.ajax_url,
             type: 'POST',
             data: {
@@ -547,16 +795,28 @@ jQuery(function ($) {
             },
             success: function (response) {
                 if (response.success) {
-                    $(document.body).trigger('update_checkout');
+                    // cart 已寫入伺服器 → 標記需要重繪；重繪由佇列清空時統一觸發一次
+                    redrawNeeded = true;
                 }
+                // response 異常：cart 未變，XHR complete 後證據 2 自然消失
+                refreshMutationLock();
+            },
+            error: function () {
+                refreshMutationLock();
             }
         });
+        trackMutationXhr(xhr);
+        if (done) xhr.always(done); // 串行佇列：complete（含 abort）才放行下一條
+        refreshMutationLock();
     }
 
-    function removeCartItem(cartKey) {
-        if (!window.wc_checkout_params) return;
+    function removeCartItem(cartKey, done) {
+        if (!window.wc_checkout_params) {
+            if (done) done();
+            return;
+        }
 
-        $.ajax({
+        var xhr = $.ajax({
             url: wc_checkout_params.ajax_url,
             type: 'POST',
             data: {
@@ -566,10 +826,18 @@ jQuery(function ($) {
             },
             success: function (response) {
                 if (response.success) {
-                    $(document.body).trigger('update_checkout');
+                    // cart 已寫入伺服器 → 標記需要重繪；重繪由佇列清空時統一觸發一次
+                    redrawNeeded = true;
                 }
+                refreshMutationLock();
+            },
+            error: function () {
+                refreshMutationLock();
             }
         });
+        trackMutationXhr(xhr);
+        if (done) xhr.always(done);
+        refreshMutationLock();
     }
 
     $(document).on('click', '.yangsheep-qty-minus', function () {
@@ -581,10 +849,14 @@ jQuery(function ($) {
         if (currentVal > 1) {
             var newVal = currentVal - 1;
             $value.text(newVal);
-            clearTimeout(qtyUpdateTimer);
-            qtyUpdateTimer = setTimeout(function () {
-                updateCartQuantity(cartKey, newVal);
+            if (qtyTimers[cartKey]) clearTimeout(qtyTimers[cartKey]); // 同商品連按重排；不影響其他商品
+            qtyTimers[cartKey] = setTimeout(function () {
+                delete qtyTimers[cartKey];
+                enqueueCartMutation(function (done) {
+                    updateCartQuantity(cartKey, newVal, done);
+                });
             }, QTY_DEBOUNCE_MS);
+            refreshMutationLock(); // 證據 1：per-item debounce 在途
         }
     });
 
@@ -598,10 +870,14 @@ jQuery(function ($) {
         if (!maxVal || currentVal < maxVal) {
             var newVal = currentVal + 1;
             $value.text(newVal);
-            clearTimeout(qtyUpdateTimer);
-            qtyUpdateTimer = setTimeout(function () {
-                updateCartQuantity(cartKey, newVal);
+            if (qtyTimers[cartKey]) clearTimeout(qtyTimers[cartKey]); // 同商品連按重排；不影響其他商品
+            qtyTimers[cartKey] = setTimeout(function () {
+                delete qtyTimers[cartKey];
+                enqueueCartMutation(function (done) {
+                    updateCartQuantity(cartKey, newVal, done);
+                });
             }, QTY_DEBOUNCE_MS);
+            refreshMutationLock(); // 證據 1：per-item debounce 在途
         }
     });
 
@@ -609,7 +885,9 @@ jQuery(function ($) {
         var cartKey = $(this).data('cart-key');
         var $row = $(this).closest('tr');
         $row.css('opacity', '0.5');
-        removeCartItem(cartKey);
+        enqueueCartMutation(function (done) {
+            removeCartItem(cartKey, done); // 內部 push mutationXhrs（證據 2）並刷新鎖
+        });
     });
 
     // ===== 9. 超取/宅配欄位切換 =====
