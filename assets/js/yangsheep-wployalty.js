@@ -129,12 +129,19 @@ jQuery(function($) {
 
             // 如果沒有 WLR 訊息
             if (!$wlrMessage.length) {
-                // 檢查是否已經有我們建立的自訂區塊（避免重複隱藏）
-                if ($couponPoint.find('.ys-wployalty-block').length) {
-                    // 已有自訂區塊，保持顯示
+                // v1.6.31：先移除自己既有的 .ys-wployalty-block（若之前建過）
+                $couponPoint.find('.ys-wployalty-block').remove();
+
+                // 檢查是否還有其他外掛（例如 YITH Points）掛在 couponPoint 內的內容
+                var $othersRemaining = $couponPoint.children().not('.ys-wployalty-block, script, style');
+                if ($othersRemaining.length > 0) {
+                    // 還有其他外掛內容 → 保持容器顯示（不 hide）
+                    $couponPoint.addClass('has-content').show();
+                    $couponBlock.addClass('has-point');
                     return;
                 }
-                // 沒有 WLR 訊息也沒有自訂區塊，隱藏購物金區塊
+
+                // 完全沒內容才隱藏購物金區塊
                 $couponPoint.removeClass('has-content').hide();
                 $couponBlock.removeClass('has-point');
                 return;
@@ -156,14 +163,17 @@ jQuery(function($) {
             // 建立美化的購物金區塊
             var $customBlock = this.createCustomPointsBlock(pointsData);
 
-            // 清空並填入自訂區塊
-            $couponPoint.empty().append($customBlock);
+            // v1.6.31：改為只移除自己既有的 .ys-wployalty-block 再 append
+            // 不用 .empty() 避免清掉 YITH Points 或其他外掛加的元素
+            // （initPointRedeemBlock 可能同時把 YITH #yith-par-message-cart 搬進來）
+            $couponPoint.find('.ys-wployalty-block').remove();
+            $couponPoint.append($customBlock);
 
             // 顯示購物金區塊
             $couponPoint.addClass('has-content').show();
             $couponBlock.addClass('has-point');
 
-            console.log('[YS WPLoyalty] Custom points block created');
+            console.log('[YS WPLoyalty] Custom points block created (additive, preserves 3rd-party children)');
         },
 
         /**

@@ -6,14 +6,23 @@
  * 和 yangsheep-checkout.css（line 609-650）的舊 YITH 相容碎片
  * 整理成正式 Compat 模組。
  *
+ * v1.6.30：預設 selectors 從
+ *   [ '#yith-par-message-cart', '#yith-par-message-reward-cart' ]
+ * 收斂為只 `#yith-par-message-cart`；`#yith-par-message-reward-cart`
+ * 是 YITH 的 hidden submit target（內含 ywpar_input_points 供表單送出），
+ * 且外掛內部 CSS 用 display:none !important 強制隱藏，搬到
+ * `.yangsheep-coupon-point` 只複製一份不可見 DOM，沒視覺效果反而
+ * duplicate DOM 風險。真正供顯示的訊息在 `#yith-par-message-cart`。
+ *
  * 職責：
  * 1. 檢測 YITH Points & Rewards 外掛啟用
  * 2. 提供設定開關（yangsheep_yith_points_integration，預設 yes）
  * 3. wp_localize_script 傳 flag → JS 端擴充 `initPointRedeemBlock`
- *    讓它同時搬移 WPLoyalty 的 `.wlr_point_redeem_message` 與
- *    YITH 的 `#yith-par-message-cart` / `#yith-par-message-reward-cart`
- *    到 `.yangsheep-coupon-point` 區塊
- * 4. 提供 add_filter 讓 JS side 知道要抓 YITH selector
+ *    讓它搬移 YITH 的 `#yith-par-message-cart` 到 `.yangsheep-coupon-point`
+ *    區塊；WPLoyalty `.wlr_point_redeem_message` 走 yangsheep-wployalty.js
+ *    的獨立流程
+ * 4. 提供 apply_filters( 'yangsheep_yith_points_selectors', $arr ) 供
+ *    第三方擴充/加回其他 selector
  *
  * @package YangSheep\CheckoutOptimizer\Compat
  * @since 1.6.29

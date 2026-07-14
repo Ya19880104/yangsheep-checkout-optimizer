@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.30
+**當前版本**：1.6.31
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,26 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.31 (2026-07-14)
+
+回應獨立 review P1 / P3。
+
+#### P1 修 WPLoyalty `.empty()` 清掉 YITH race condition
+**問題**：`yangsheep-checkout.js:168` 在 `updated_checkout` +300ms 搬 YITH `#yith-par-message-cart` 到 `.yangsheep-coupon-point`；但 `yangsheep-wployalty.js:60` 也在同 +300ms 觸發，且 `processWLRMessage` line 160 `$couponPoint.empty().append($customBlock)` **會清掉 `.yangsheep-coupon-point` 內所有子元素**，包含剛剛搬進來的 YITH 訊息。
+
+WPLoyalty on + YITH on 情境下實際跑起來仍可能 YITH 訊息先被搬進去、再被 WPLoyalty 清空。
+
+**修法**：`processWLRMessage` 兩處改為 additive / scoped，不再共用 `.empty()`
+- Line 160：`$couponPoint.empty().append(...)` → `$couponPoint.find('.ys-wployalty-block').remove(); $couponPoint.append(...)`
+- Line 137-141：「無 WLR 訊息就 hide 整個 couponPoint」改為只移除自己既有的 `.ys-wployalty-block`；若其他外掛（YITH）還有子元素則保留容器 show
+
+副作用：`.ys-wployalty-block` wrapper 是 WPLoyalty 建立時就標記的；YITH 訊息保留 YITH 自己的 id（`#yith-par-message-cart`），兩者互不衝突。
+
+#### P3 YSYithPointsIntegration docblock 修正
+- 舊 docblock（v1.6.29）仍描述會搬 `#yith-par-message-reward-cart`，但 v1.6.30 實作已移除該 selector
+- 更新 docblock 加入 v1.6.30 的說明段：解釋為何 reward-cart 被拿掉、真正供顯示的 selector 是誰
+- 不是 runtime bug，但避免後續 review / 維護誤判
 
 ### v1.6.30 (2026-07-14)
 
