@@ -118,12 +118,20 @@ jQuery(function ($) {
         var $pointBlock = $('.yangsheep-coupon-point');
         var $couponBlock = $('.yangsheep-coupon-block');
 
-        // 只偵測 WLR 購物金訊息 class
-        var $wlrMessage = $('.wlr_point_redeem_message').not('.yangsheep-coupon-point *');
+        // v1.6.29：支援多來源購物金訊息（WPLoyalty + YITH Points and Rewards）
+        // 原本只抓 WLR .wlr_point_redeem_message；現在若 YSYithPointsIntegration
+        // 已啟用（yangsheep_yith_points.enabled = true），也一併搬 YITH selectors
+        var selectors = ['.wlr_point_redeem_message'];
+        if (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.enabled) {
+            if (Array.isArray(yangsheep_yith_points.selectors)) {
+                selectors = selectors.concat(yangsheep_yith_points.selectors);
+            }
+        }
+        var $pointMessages = $(selectors.join(', ')).not('.yangsheep-coupon-point *');
 
-        // 如果有 WLR 購物金訊息且不在購物金區塊內，移入
-        if ($wlrMessage.length && $pointBlock.length) {
-            $wlrMessage.each(function() {
+        // 如果有購物金訊息且不在購物金區塊內，移入
+        if ($pointMessages.length && $pointBlock.length) {
+            $pointMessages.each(function() {
                 if (!$(this).closest('.yangsheep-coupon-point').length) {
                     $(this).detach().appendTo($pointBlock);
                 }

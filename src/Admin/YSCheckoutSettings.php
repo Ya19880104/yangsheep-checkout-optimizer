@@ -372,6 +372,8 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         'yangsheep_validate_phone_shipping',
         // v1.6.28：YITH coupon 友善顯示
         'yangsheep_yith_coupon_friendly_label',
+        // v1.6.29：YITH Points and Rewards 結帳頁整合
+        'yangsheep_yith_points_integration',
     );
 
     public function settings_init() {
@@ -423,6 +425,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
 
             // v1.6.28 YITH coupon 友善顯示
             'yangsheep_yith_coupon_friendly_label',
+
+            // v1.6.29 YITH Points and Rewards 結帳頁整合
+            'yangsheep_yith_points_integration',
 
             // My Account UI
             'yangsheep_myaccount_visual',
@@ -477,6 +482,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
 
         // v1.6.28：YITH 折扣代碼顯示友善名稱
         $this->add_checkbox_field( 'yangsheep_yith_coupon_friendly_label', __( 'YITH 折扣代碼顯示中文名稱', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points & Rewards / Subscriptions / Gift Cards 等外掛產生的系統代碼（如 ywpar_discount_1）會顯示為「購物金折抵」「YITH 訂閱折扣」等友善名稱', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+
+        // v1.6.29：YITH Points and Rewards 結帳頁整合
+        $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( 'YITH 購物金結帳頁整合', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points and Rewards 的購物金折抵訊息（#yith-par-message-cart 等）會自動搬移到結帳頁購物金區塊；僅在網站已安裝並啟用 YITH Points and Rewards 時實際生效', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // 超取物流方式設定
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );

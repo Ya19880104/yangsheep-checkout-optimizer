@@ -63,6 +63,8 @@ class YSSettingsManager {
         'yangsheep_validate_phone_shipping',
         // YITH coupon 友善顯示（v1.6.28）
         'yangsheep_yith_coupon_friendly_label',
+        // YITH Points and Rewards 結帳頁整合（v1.6.29）
+        'yangsheep_yith_points_integration',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text',
@@ -147,6 +149,8 @@ class YSSettingsManager {
         'yangsheep_validate_phone_shipping'   => 'yes',
         // YITH coupon 友善顯示（v1.6.28，預設啟用）
         'yangsheep_yith_coupon_friendly_label' => 'yes',
+        // YITH Points and Rewards 結帳頁整合（v1.6.29，預設啟用；僅在 YITH 外掛存在時生效）
+        'yangsheep_yith_points_integration'    => 'yes',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text' => '',

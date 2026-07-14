@@ -250,13 +250,24 @@ class YSThirdPartyShippingCompat {
                 var $ecpayLabels = $('.ys-cvs-choose-label');
 
                 if (show) {
-                    $ecpayFields.addClass('ys-cvs-shown').show();
+                    // v1.6.29 修：只 show 內部真的有 input/textarea/select 的 field
+                    // woomp / RY Tools 新版可能只註冊 <p> label wrapper（沒 input），
+                    // 這種空 wrapper 硬 show 會顯示 3 個永遠空的「門市名稱/地址/電話」label
+                    // 造成使用者誤以為超取沒回傳（實際門市顯示在 .show_choose_cvs_name span）
+                    $ecpayFields.each(function() {
+                        var $p = $(this);
+                        if ($p.find('input, textarea, select').length > 0) {
+                            $p.addClass('ys-cvs-shown').show();
+                        } else {
+                            $p.removeClass('ys-cvs-shown').hide();
+                        }
+                    });
                     $ecpayChooseCvs.addClass('ys-cvs-shown').show();
                     $ecpayLabels.filter(function() {
                         // 只顯示在 ECPay 區域內的標籤
                         return $(this).closest('#CVSStoreName_field, #CVSAddress_field, .woocommerce-shipping-fields').length > 0;
                     }).addClass('ys-cvs-shown').show();
-                    console.log('[YS Compat] ECPay CVS fields shown');
+                    console.log('[YS Compat] ECPay CVS fields shown (only fields with real input)');
                 } else {
                     $ecpayFields.removeClass('ys-cvs-shown').hide();
                     $ecpayChooseCvs.removeClass('ys-cvs-shown').hide();

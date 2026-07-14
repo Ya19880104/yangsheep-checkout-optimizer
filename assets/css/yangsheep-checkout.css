@@ -2592,3 +2592,24 @@ body.yangsheep-cvs-mode #shipping_phone_field {
         align-items: flex-start;
     }
 }
+
+
+/* ============================================================
+   v1.6.29 修正
+   1. HFCM #customer_details max-width:90% mismatch
+      wecoware / 類似客戶站在 HFCM 內注入 max-width:90% 給
+      form.checkout #customer_details，造成付款區 960、收件人 864 的
+      區塊寬度不齊。直接用高特異性 override 蓋回 100%。
+   ============================================================ */
+body.woocommerce-checkout form.checkout.woocommerce-checkout #customer_details,
+.yangsheep-design-checkout-page form.checkout #customer_details,
+form.checkout #customer_details {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* 順便讓 payment/order-review 的 max-width 一致（若 HFCM 也給了 payment 90% 才會影響） */
+body.woocommerce-checkout form.checkout .woocommerce-checkout-payment,
+body.woocommerce-checkout form.checkout .yangsheep-payment {
+    max-width: 100% !important;
+}

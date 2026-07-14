@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.28
+**當前版本**：1.6.29
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,30 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.29 (2026-07-14)
+
+三合一，回應獨立 review 提出的 P1 / P2：
+
+#### 1. 修 CVS 「門市名稱/地址/電話」空 label 假回傳
+`src/Compat/YSThirdPartyShippingCompat.php::toggleEcpayCvsFields()`
+- Root cause：好用版擴充 woomp / RY Tools 新版只註冊 `<p>` label wrapper（`CVSStoreName_field / CVSAddress_field / CVSTelephone_field`）**沒對應 `<input>`**，實際門市名稱寫進 `<span class="show_choose_cvs_name">`
+- 舊版 `.show()` 這 3 個 `<p>` 造成永遠顯示空 label，使用者誤以為超取沒回傳
+- 修法：`$ecpayFields.each()` 檢查內部有 `input/textarea/select` 才 `.show()`，否則 `.hide()`
+
+#### 2. HFCM `#customer_details max-width:90%` scoped override
+- wecoware 等客戶站 HFCM snippet 注入 `max-width: 90%` 給 `form.checkout #customer_details`，造成付款區 960px / 收件人 864px 區塊寬度不齊
+- 加 3 層 CSS selector（`body.woocommerce-checkout`、`.yangsheep-design-checkout-page`、`form.checkout`）+ `!important` 覆蓋回 `max-width: 100%`
+- 順便讓 `.woocommerce-checkout-payment` / `.yangsheep-payment` 一致
+
+#### 3. YITH Points and Rewards 結帳頁整合（正式模組化）
+新增 `src/Compat/YSYithPointsIntegration.php`
+- 檢測 YITH Points and Rewards（YWPAR）外掛啟用
+- 後台開關 `yangsheep_yith_points_integration`（預設 yes）
+- 存在時 `wp_localize_script` 傳 `yangsheep_yith_points = { enabled: true, selectors: [...] }` 到前端
+- `yangsheep-checkout.js::initPointRedeemBlock` 擴充：把原本只抓 WPLoyalty `.wlr_point_redeem_message` 的邏輯，並抓 YITH `#yith-par-message-cart` + `#yith-par-message-reward-cart` 一併搬進 `.yangsheep-coupon-point`
+- 開放 `apply_filters( 'yangsheep_yith_points_selectors', $arr )` 供擴充
+- 保留舊有 scoped CSS（`.yangsheep-coupon-point .ywpar_apply_discounts_container` 等）於主 stylesheet，不重複移動避免 backward compat
 
 ### v1.6.28 (2026-07-11)
 

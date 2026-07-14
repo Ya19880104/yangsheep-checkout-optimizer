@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.6.28
+ * Version:           1.6.29
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.28' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.29' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -76,6 +76,7 @@ use YangSheep\CheckoutOptimizer\Order\YSOrderEnhancer;
 use YangSheep\CheckoutOptimizer\Compat\YSThirdPartyShippingCompat;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 use YangSheep\CheckoutOptimizer\Compat\YSYithCouponDisplay;
+use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
 
 // 外掛啟用時建立資料表
 register_activation_hook( __FILE__, 'yangsheep_checkout_optimizer_activate' );
@@ -128,6 +129,7 @@ add_action( 'init', function(){
     YSThirdPartyShippingCompat::get_instance();
     YSWPLoyaltyIntegration::get_instance();
     YSYithCouponDisplay::get_instance();
+    YSYithPointsIntegration::get_instance();
 });
 
 // 前端 CSS/JS
