@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.29
+**當前版本**：1.6.30
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,28 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.30 (2026-07-14)
+
+回應獨立 review P2 / P3。
+
+#### P2 修 `initPointRedeemBlock` early return 阻擋 YITH selector
+- 舊版：`yangsheep-checkout.js:113` 只要 `yangsheep_wployalty.enabled` → 整個函式 `return`
+- 副作用：同時啟用「WPLoyalty 整合」與「YITH Points 整合」時，v1.6.29 加的 YITH selector 合併邏輯**不會執行**
+- 修法：拿掉 early return，改為條件式收集 selector
+  - WPLoyalty enabled → 跳過 WLR selector（交由 wployalty.js）
+  - YITH enabled → 照樣收集 YITH selector
+  - 兩者並存 → 只搬 YITH
+  - 皆未啟用 → 收集 WLR（原本邏輯）
+  - 收集後 `selectors.length === 0` 才 early return
+
+#### P3 `#yith-par-message-reward-cart` 從 selectors 移除
+- 舊 v1.6.29 selectors 包含 `#yith-par-message-reward-cart`
+- 但外掛內部 CSS `yangsheep-checkout.css:644` 用 `display: none !important` 硬隱藏
+- 且該元素是 YITH 的 hidden submit target（內含 `ywpar_input_points` 供表單送出）
+- 搬到 `.yangsheep-coupon-point` 只會複製一份不可見的元素，沒視覺效果反而 duplicate DOM
+- 修法：預設 selectors 只留 `#yith-par-message-cart`（真正供顯示的訊息）
+- 需要擴充仍可用 `apply_filters( 'yangsheep_yith_points_selectors', $arr )` 加回
 
 ### v1.6.29 (2026-07-14)
 

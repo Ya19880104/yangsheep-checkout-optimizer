@@ -81,9 +81,13 @@ class YSYithPointsIntegration {
             'yangsheep_yith_points',
             array(
                 'enabled'  => true,
+                // v1.6.30：拿掉 #yith-par-message-reward-cart。它是 YITH 的 hidden
+                // submit target（內含 ywpar_input_points 供表單送出），且外掛內部 CSS
+                // 用 display:none !important 強制隱藏 —— 搬到 .yangsheep-coupon-point
+                // 只會複製一份不可見的元素，沒視覺效果反而有 duplicate DOM 風險。
+                // 真正供顯示的訊息在 #yith-par-message-cart。
                 'selectors' => apply_filters( 'yangsheep_yith_points_selectors', array(
                     '#yith-par-message-cart',
-                    '#yith-par-message-reward-cart',
                 ) ),
             )
         );

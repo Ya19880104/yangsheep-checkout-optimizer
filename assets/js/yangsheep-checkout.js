@@ -109,24 +109,30 @@ jQuery(function ($) {
     // 注意：如果啟用了 WPLoyalty 整合（yangsheep_wployalty 變數存在且 enabled），
     //       會完全交由 yangsheep-wployalty.js 處理，這裡不再干預
     function initPointRedeemBlock() {
-        // 如果 WPLoyalty 整合已啟用，完全交由 yangsheep-wployalty.js 處理
-        if (typeof yangsheep_wployalty !== 'undefined' && yangsheep_wployalty.enabled) {
-            console.log('[YS Checkout] WPLoyalty integration enabled, skipping point block management');
+        // v1.6.30：拿掉「WPLoyalty enabled 就整個 return」的行為
+        // 舊版 early return 造成同時啟用 WPLoyalty 整合與 YITH Points 時 YITH selector 不會執行
+        // 改為條件式收集 selector：
+        //   - WPLoyalty 整合啟用 → 交由 yangsheep-wployalty.js 處理 WLR，這裡跳過 WLR selector
+        //   - YITH Points 整合啟用 → 這裡照樣搬 YITH selector
+        //   - 兩者並存 → 只搬 YITH（WPLoyalty 由 wployalty.js 全權處理）
+        var wployaltyEnabled = (typeof yangsheep_wployalty !== 'undefined' && yangsheep_wployalty.enabled);
+        var yithEnabled      = (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.enabled);
+
+        var selectors = [];
+        if (!wployaltyEnabled) {
+            selectors.push('.wlr_point_redeem_message');
+        }
+        if (yithEnabled && Array.isArray(yangsheep_yith_points.selectors)) {
+            selectors = selectors.concat(yangsheep_yith_points.selectors);
+        }
+
+        if (selectors.length === 0) {
+            console.log('[YS Checkout] no source selectors, skip point block management');
             return;
         }
 
-        var $pointBlock = $('.yangsheep-coupon-point');
+        var $pointBlock  = $('.yangsheep-coupon-point');
         var $couponBlock = $('.yangsheep-coupon-block');
-
-        // v1.6.29：支援多來源購物金訊息（WPLoyalty + YITH Points and Rewards）
-        // 原本只抓 WLR .wlr_point_redeem_message；現在若 YSYithPointsIntegration
-        // 已啟用（yangsheep_yith_points.enabled = true），也一併搬 YITH selectors
-        var selectors = ['.wlr_point_redeem_message'];
-        if (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.enabled) {
-            if (Array.isArray(yangsheep_yith_points.selectors)) {
-                selectors = selectors.concat(yangsheep_yith_points.selectors);
-            }
-        }
         var $pointMessages = $(selectors.join(', ')).not('.yangsheep-coupon-point *');
 
         // 如果有購物金訊息且不在購物金區塊內，移入
