@@ -198,11 +198,13 @@ class YSCheckoutSidebar {
             <div class="yangsheep-cart-items" id="yangsheep-cart-items">
                 <?php foreach ( $cart_items as $cart_item_key => $cart_item ) :
                     $product = $cart_item['data'];
-                    $product_name = $product->get_name();
+                    // v1.6.26：走 WC 標準 filter，允許變體屬性 <span> 等安全 HTML 正確渲染
+                    // （變體名稱由 wc_get_formatted_variation() 產生，本身包含 <span> 標籤）
+                    $product_name = apply_filters( 'woocommerce_cart_item_name', $product->get_name(), $cart_item, $cart_item_key );
                     $quantity = $cart_item['quantity'];
                 ?>
                 <div class="yangsheep-cart-item">
-                    <span class="yangsheep-item-name"><?php echo esc_html( $product_name ); ?></span>
+                    <span class="yangsheep-item-name"><?php echo wp_kses_post( $product_name ); ?></span>
                     <span class="yangsheep-item-qty"><?php printf( esc_html__( '數量：%d', 'yangsheep-checkout-optimization' ), $quantity ); ?></span>
                 </div>
                 <?php endforeach; ?>

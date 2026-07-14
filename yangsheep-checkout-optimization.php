@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.6.26
+ * Version:           1.6.27
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.26' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.27' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -304,7 +304,8 @@ function yangsheep_render_order_items() {
         $quantity = $cart_item['quantity'];
         $max_qty = $_product->get_max_purchase_quantity();
         $thumbnail = $_product->get_image(array(50, 50));
-        $product_name = $_product->get_name();
+        // v1.6.26：走 WC 標準 filter，允許變體屬性 <span> 等安全 HTML 正確渲染
+        $product_name = apply_filters( 'woocommerce_cart_item_name', $_product->get_name(), $cart_item, $cart_item_key );
         $price = WC()->cart->get_product_price($_product);
         $subtotal = WC()->cart->get_product_subtotal($_product, $quantity);
         ?>
@@ -313,7 +314,7 @@ function yangsheep_render_order_items() {
             <div class="yangsheep-item-content">
                 <div class="yangsheep-item-image"><?php echo $thumbnail; ?></div>
                 <div class="yangsheep-item-info">
-                    <div class="yangsheep-item-name"><a href="<?php echo esc_url($_product->get_permalink()); ?>"><?php echo esc_html($product_name); ?></a></div>
+                    <div class="yangsheep-item-name"><a href="<?php echo esc_url($_product->get_permalink()); ?>"><?php echo wp_kses_post($product_name); ?></a></div>
                     <div class="yangsheep-item-price"><?php echo $price; ?></div>
                 </div>
                 <div class="yangsheep-item-qty">

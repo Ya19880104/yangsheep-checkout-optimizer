@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.26
+**當前版本**：1.6.27
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,16 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.27 (2026-07-11)
+
+#### 修復（購物車商品名稱變體屬性顯示為 raw HTML tag）
+- **症狀**：Sidebar 購物車內容 + 結帳頁下方訂單明細，變體商品名稱顯示成 `Tritan™ Renew 隨行杯<span> -</span>莫蘭迪粉`，`<span>` 標籤露出成文字
+- **Root cause**：WC 變體名稱由 `wc_get_formatted_variation()` 產生，本身含 `<span>` 標籤，但外掛用 `esc_html()` 全部 escape 掉
+- **修法**（兩處）：
+  1. `src/Checkout/YSCheckoutSidebar.php::render_cart_contents()` — 商品名稱走 `woocommerce_cart_item_name` filter，output 改用 `wp_kses_post()`
+  2. `yangsheep-checkout-optimization.php::yangsheep_render_order_items()` — 同上
+- **副作用**：也允許第三方外掛（如 Product Add-ons、WPC Product Bundles）掛 `woocommerce_cart_item_name` filter 注入額外標記正確顯示
 
 ### v1.6.26 (2026-07-11)
 
