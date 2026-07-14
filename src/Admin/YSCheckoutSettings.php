@@ -370,6 +370,8 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         // v1.6.20：電話驗證開關
         'yangsheep_validate_phone_billing',
         'yangsheep_validate_phone_shipping',
+        // v1.6.28：YITH coupon 友善顯示
+        'yangsheep_yith_coupon_friendly_label',
     );
 
     public function settings_init() {
@@ -418,6 +420,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             // v1.6.20 Phone Validation
             'yangsheep_validate_phone_billing',
             'yangsheep_validate_phone_shipping',
+
+            // v1.6.28 YITH coupon 友善顯示
+            'yangsheep_yith_coupon_friendly_label',
 
             // My Account UI
             'yangsheep_myaccount_visual',
@@ -469,6 +474,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         // v1.6.20：台灣手機號碼驗證（09 開頭 + 10 碼）
         $this->add_checkbox_field( 'yangsheep_validate_phone_shipping', __( '收件人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，收件人電話必須為 09 開頭的 10 碼台灣手機號碼（自動忽略空白、連字號）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_validate_phone_billing', __( '訂購人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，訂購人電話也必須為 09 開頭的 10 碼台灣手機號碼。預設關閉以允許市話或國際號碼', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+
+        // v1.6.28：YITH 折扣代碼顯示友善名稱
+        $this->add_checkbox_field( 'yangsheep_yith_coupon_friendly_label', __( 'YITH 折扣代碼顯示中文名稱', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points & Rewards / Subscriptions / Gift Cards 等外掛產生的系統代碼（如 ywpar_discount_1）會顯示為「購物金折抵」「YITH 訂閱折扣」等友善名稱', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // 超取物流方式設定
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );

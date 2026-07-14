@@ -236,21 +236,33 @@
 }
 
 .yangsheep-cart-item .yangsheep-item-name {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0; /* 允許 flex 子元素縮到內容以下，避免溢出 */
     text-align: left;
 }
 
 .yangsheep-cart-item .yangsheep-item-qty {
+    flex: 0 0 auto;
     flex-shrink: 0;
     text-align: right;
+    white-space: nowrap;
 }
 
-/* 購物車商品名稱 */
+/* 購物車商品名稱（v1.6.28：加 word-break 讓長字/HTML 標籤不擠成多行）*/
 .yangsheep-item-name {
     font-size: 14px;
     font-weight: 500;
     color: var(--ys-text-primary, #3d4852);
-    line-height: 1.4;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+/* 變體屬性 <span> 空 span 若仍露出時淡化樣式（保險） */
+.yangsheep-item-name > span:empty,
+.yangsheep-item-name > span[class=""] {
+    display: none;
 }
 
 /* 購物車數量 */

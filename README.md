@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.27
+**當前版本**：1.6.28
 **最後更新**：2026-05-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -231,6 +231,25 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.28 (2026-07-11)
+
+#### 修復（Sidebar 商品名寬度擠壓）
+- `.yangsheep-item-name` 加 `word-break: break-word` + `overflow-wrap: anywhere` + `hyphens: auto`
+- `.yangsheep-cart-item .yangsheep-item-name` 加 `min-width: 0` 讓 flex 子元素能縮到內容以下（否則 flex intrinsic size 不允許 wrap）
+- 加保險規則：空 `<span>` 不佔位（`display: none`）避免萬一有第三方 escape 疏漏
+
+#### 新增（YITH 折扣代碼相容顯示）
+- 新增 `src/Compat/YSYithCouponDisplay.php` — 攔截 `woocommerce_cart_totals_coupon_label` filter
+- **內建 prefix 對照表**（可 filter 擴充）：
+  - `ywpar_discount_*` → **購物金折抵**（YITH Points & Rewards）
+  - `ywpar_earn_*` → **YITH 賺取點數**
+  - `ywsbs_*` → **YITH 訂閱折扣**
+  - `yith_ywgc_*` → **禮物卡折抵**
+  - `yith_wcac_*` → **購物車回訪優惠**
+  - `yith_ywraq_*` → **報價折扣**
+- **後台開關** `yangsheep_yith_coupon_friendly_label`（電商工具箱 → 結帳強化 → 結帳頁面 → 欄位設定），預設啟用
+- 第三方擴充：`apply_filters( 'yangsheep_yith_coupon_label_map', $map )` 允許擴充其他 prefix
 
 ### v1.6.27 (2026-07-11)
 

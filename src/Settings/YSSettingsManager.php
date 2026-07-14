@@ -61,6 +61,8 @@ class YSSettingsManager {
         // 電話驗證（v1.6.20）
         'yangsheep_validate_phone_billing',
         'yangsheep_validate_phone_shipping',
+        // YITH coupon 友善顯示（v1.6.28）
+        'yangsheep_yith_coupon_friendly_label',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text',
@@ -143,6 +145,8 @@ class YSSettingsManager {
         // 電話驗證（v1.6.20）：帳單預設關閉、運送預設開啟
         'yangsheep_validate_phone_billing'    => 'no',
         'yangsheep_validate_phone_shipping'   => 'yes',
+        // YITH coupon 友善顯示（v1.6.28，預設啟用）
+        'yangsheep_yith_coupon_friendly_label' => 'yes',
 
         // 文字設定
         'yangsheep_checkout_login_welcome_text' => '',
