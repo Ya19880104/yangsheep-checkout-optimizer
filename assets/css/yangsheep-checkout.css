@@ -641,8 +641,14 @@ a.woocommerce-remove-coupon {
     margin-bottom: 0;
 }
 
-#yith-par-message-reward-cart {
+/* YITH reward-cart 在原位置可能被外掛插到 coupon 區塊外，先隱藏避免重複；
+   v1.6.32：搬進 .yangsheep-coupon-point 後必須顯示，wecoware 的可見折抵 UI 在這個 wrapper。 */
+body.woocommerce-checkout #yith-par-message-reward-cart {
     display: none !important;
+}
+
+body.woocommerce-checkout .yangsheep-coupon-point #yith-par-message-reward-cart {
+    display: block !important;
 }
 
 #yith-par-message-cart {

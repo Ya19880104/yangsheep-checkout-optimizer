@@ -6,19 +6,17 @@
  * 和 yangsheep-checkout.css（line 609-650）的舊 YITH 相容碎片
  * 整理成正式 Compat 模組。
  *
- * v1.6.30：預設 selectors 從
- *   [ '#yith-par-message-cart', '#yith-par-message-reward-cart' ]
- * 收斂為只 `#yith-par-message-cart`；`#yith-par-message-reward-cart`
- * 是 YITH 的 hidden submit target（內含 ywpar_input_points 供表單送出），
- * 且外掛內部 CSS 用 display:none !important 強制隱藏，搬到
- * `.yangsheep-coupon-point` 只複製一份不可見 DOM，沒視覺效果反而
- * duplicate DOM 風險。真正供顯示的訊息在 `#yith-par-message-cart`。
+ * v1.6.32：wecoware 的 YITH Premium 實際把可見折抵表單放在
+ * `#yith-par-message-reward-cart`，不是 `#yith-par-message-cart`。因此
+ * default selectors 同時支援兩者；CSS 只在原位置隱藏 reward-cart，
+ * 搬進 `.yangsheep-coupon-point` 後必須顯示。
  *
  * 職責：
  * 1. 檢測 YITH Points & Rewards 外掛啟用
  * 2. 提供設定開關（yangsheep_yith_points_integration，預設 yes）
  * 3. wp_localize_script 傳 flag → JS 端擴充 `initPointRedeemBlock`
- *    讓它搬移 YITH 的 `#yith-par-message-cart` 到 `.yangsheep-coupon-point`
+ *    讓它搬移 YITH 的 `#yith-par-message-cart` 或
+ *    `#yith-par-message-reward-cart` 到 `.yangsheep-coupon-point`
  *    區塊；WPLoyalty `.wlr_point_redeem_message` 走 yangsheep-wployalty.js
  *    的獨立流程
  * 4. 提供 apply_filters( 'yangsheep_yith_points_selectors', $arr ) 供
@@ -90,13 +88,11 @@ class YSYithPointsIntegration {
             'yangsheep_yith_points',
             array(
                 'enabled'  => true,
-                // v1.6.30：拿掉 #yith-par-message-reward-cart。它是 YITH 的 hidden
-                // submit target（內含 ywpar_input_points 供表單送出），且外掛內部 CSS
-                // 用 display:none !important 強制隱藏 —— 搬到 .yangsheep-coupon-point
-                // 只會複製一份不可見的元素，沒視覺效果反而有 duplicate DOM 風險。
-                // 真正供顯示的訊息在 #yith-par-message-cart。
+                // v1.6.32：YITH Premium 不同版本會把可見 UI 放在不同 wrapper。
+                // wecoware 實測 reward-cart 是可見折抵表單，所以兩者都要支援。
                 'selectors' => apply_filters( 'yangsheep_yith_points_selectors', array(
                     '#yith-par-message-cart',
+                    '#yith-par-message-reward-cart',
                 ) ),
             )
         );

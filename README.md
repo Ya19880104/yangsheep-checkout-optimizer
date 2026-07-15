@@ -232,6 +232,16 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+### v1.6.32 (2026-07-15)
+
+#### 修 YITH Points reward-cart 實際可見 UI 未搬移
+**問題**：v1.6.30 誤判 `#yith-par-message-reward-cart` 一律只是 hidden submit target，因此從 default selectors 移除；但 wecoware 的 YITH Points Premium 4.27.0 實際把可見折抵表單放在 `#yith-par-message-reward-cart`。結果沒有自動搬到 `.yangsheep-coupon-point`，且主 CSS 仍以 `display:none !important` 隱藏原始區塊。
+
+**修法**：
+- `YSYithPointsIntegration` default selectors 同時支援 `#yith-par-message-cart` 與 `#yith-par-message-reward-cart`
+- CSS 改為：原位置的 `#yith-par-message-reward-cart` 隱藏；搬進 `.yangsheep-coupon-point` 後 `display:block!important`
+- 保留 `#yith-par-message-reward-cart input[name="ywpar_input_points"]` 作為 YITH 表單提交目標，不再把可見 UI 誤殺
+
 ### v1.6.31 (2026-07-14)
 
 回應獨立 review P1 / P3。
