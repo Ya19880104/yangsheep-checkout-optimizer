@@ -196,10 +196,6 @@ form.checkout {
     width: 100%;
 }
 
-.woocommerce-form-login__submit {
-    width: 100px;
-}
-
 .yangsheep-login .lost_password p {
     font-size: 16px !important;
 }
@@ -639,20 +635,6 @@ a.woocommerce-remove-coupon {
     font-size: 16px;
     line-height: 16px;
     margin-bottom: 0;
-}
-
-/* YITH reward-cart 在原位置可能被外掛插到 coupon 區塊外，先隱藏避免重複；
-   v1.6.32：搬進 .yangsheep-coupon-point 後必須顯示，wecoware 的可見折抵 UI 在這個 wrapper。 */
-body.woocommerce-checkout #yith-par-message-reward-cart {
-    display: none !important;
-}
-
-body.woocommerce-checkout .yangsheep-coupon-point #yith-par-message-reward-cart {
-    display: block !important;
-}
-
-#yith-par-message-cart {
-    display: block !important;
 }
 
 /* 智慧折扣券 */

@@ -138,8 +138,12 @@ jQuery(function ($) {
         // 如果有購物金訊息且不在購物金區塊內，移入
         if ($pointMessages.length && $pointBlock.length) {
             $pointMessages.each(function() {
-                if (!$(this).closest('.yangsheep-coupon-point').length) {
-                    $(this).detach().appendTo($pointBlock);
+                var $message = $(this);
+                if (!$message.closest('.yangsheep-coupon-point').length) {
+                    $message.detach().appendTo($pointBlock);
+                }
+                if ($message.is('#yith-par-message-cart, #yith-par-message-reward-cart')) {
+                    $message.addClass('ys-yith-points-mounted');
                 }
             });
         }
@@ -1003,4 +1007,3 @@ jQuery(function ($) {
 
     console.log('[YS Checkout] 初始化完成');
 });
-

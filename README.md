@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.31
-**最後更新**：2026-05-25
+**當前版本**：1.6.34
+**最後更新**：2026-07-15
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -231,6 +231,15 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.6.34 (2026-07-15)
+
+#### 結帳第三方整合 hotfix
+- `YSShippingCards` fragment 改為 priority 5，先執行標準 shipping hooks，再讓 RY/ECPay、PayNow、PAYUNI 的 priority 10 fragment reader 取得資料；修正綠界選店送出空 POST、`LogisticsType Is Not Match`。
+- YITH Points 搬移改為 fail-open：整合關閉或前端 JS 失效時保留原生折抵 UI；不再以伺服器 body class 或 CSS 強制控制，只有成功搬入 `.yangsheep-coupon-point` 的節點才標記 mounted。
+- Sidebar coupon label 改走 `woocommerce_cart_totals_coupon_label`，讓 `ywpar_discount_*` 顯示友善名稱。
+- 移除全站 `woocommerce_shipping_show_shipping_calculator` 強制關閉，避免影響原生購物車頁。
+- 移除互相矛盾的 `.woocommerce-form-login__submit { width: 100px; }` 死規則，保留既有全寬樣式。
 
 ### v1.6.32 (2026-07-15)
 

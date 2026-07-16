@@ -6,10 +6,13 @@
  * 和 yangsheep-checkout.css（line 609-650）的舊 YITH 相容碎片
  * 整理成正式 Compat 模組。
  *
- * v1.6.32：wecoware 的 YITH Premium 實際把可見折抵表單放在
- * `#yith-par-message-reward-cart`，不是 `#yith-par-message-cart`。因此
- * default selectors 同時支援兩者；CSS 只在原位置隱藏 reward-cart，
- * 搬進 `.yangsheep-coupon-point` 後必須顯示。
+ * v1.6.32：不同 YITH 設定可能輸出 `#yith-par-message-reward-cart` 與
+ * `#yith-par-message-cart`，因此 default selectors 同時支援兩者。
+ *
+ * v1.6.34：YITH 搬移改為 fail-open。PHP 只提供 selector 與 enabled flag，
+ * 不再於伺服器端加 body class 或以 CSS 強制控制 YITH display。JS 成功搬入
+ * 目標容器後才標記 mounted；若 JS、selector 或目標容器失敗，原生 YITH
+ * 留在原位置。
  *
  * 職責：
  * 1. 檢測 YITH Points & Rewards 外掛啟用
@@ -59,6 +62,7 @@ class YSYithPointsIntegration {
         // 傳 flag 到前端 JS（yangsheep-checkout.js 讀 `yangsheep_yith_points.enabled`
         // 決定是否把 YITH `#yith-par-message-cart` 一併搬進 `.yangsheep-coupon-point`）
         add_action( 'wp_enqueue_scripts', array( $this, 'localize_flag' ), 20 );
+
     }
 
     /**
@@ -97,4 +101,5 @@ class YSYithPointsIntegration {
             )
         );
     }
+
 }

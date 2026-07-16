@@ -42,8 +42,9 @@ class YSShippingCards {
         // 註冊自訂 action hook
         add_action( 'yangsheep_shipping_cards', [ $this, 'render_shipping_cards' ] );
 
-        // 註冊 AJAX Fragment
-        add_filter( 'woocommerce_update_order_review_fragments', [ $this, 'register_fragment' ] );
+        // 必須早於 RY/ECPay、PayNow、PAYUNI 的 priority 10 fragment reader。
+        // render_shipping_cards() 會執行標準 shipping hooks，讓第三方先準備 fragment data。
+        add_filter( 'woocommerce_update_order_review_fragments', [ $this, 'register_fragment' ], 5 );
 
         // 移除原訂單表格中的物流 HTML（關鍵：避免 radio name 衝突）
         // 已改用 JS 方式處理，不再使用 label filter
@@ -52,8 +53,6 @@ class YSShippingCards {
         add_action( 'yangsheep_before_shipping_cards', [ $this, 'do_before_shipping_hooks' ] );
         add_action( 'yangsheep_after_shipping_cards', [ $this, 'do_after_shipping_hooks' ] );
 
-        // 替換原訂單表格中的 shipping 方法輸出為空（關鍵：避免 radio name 衝突）
-        add_filter( 'woocommerce_shipping_show_shipping_calculator', '__return_false' );
         add_action( 'wp_footer', [ $this, 'add_hide_shipping_script' ] );
     }
 

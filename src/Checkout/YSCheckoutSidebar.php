@@ -136,9 +136,14 @@ class YSCheckoutSidebar {
                     foreach ( $applied_coupons as $coupon_code ) :
                         $coupon = new \WC_Coupon( $coupon_code );
                         $discount_amount = $cart->get_coupon_discount_amount( $coupon_code, $cart->display_cart_ex_tax );
+                        $coupon_label = apply_filters(
+                            'woocommerce_cart_totals_coupon_label',
+                            esc_html( $coupon_code ),
+                            $coupon
+                        );
                         ?>
                         <div class="yangsheep-summary-row yangsheep-coupon-row">
-                            <span class="yangsheep-summary-label"><?php echo esc_html( $coupon_code ); ?></span>
+                            <span class="yangsheep-summary-label"><?php echo wp_kses_post( $coupon_label ); ?></span>
                             <span class="yangsheep-summary-value yangsheep-discount-value">
                                 -<?php echo wc_price( $discount_amount ); ?>
                                 <a href="<?php echo esc_url( add_query_arg( 'remove_coupon', rawurlencode( $coupon_code ), wc_get_checkout_url() ) ); ?>"
