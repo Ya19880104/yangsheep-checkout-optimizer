@@ -42,113 +42,9 @@ class YSShippingCards {
         // 註冊自訂 action hook
         add_action( 'yangsheep_shipping_cards', [ $this, 'render_shipping_cards' ] );
 
-        // 必須早於 RY/ECPay、PayNow、PAYUNI 的 priority 10 fragment reader。
-        // render_shipping_cards() 會執行標準 shipping hooks，讓第三方先準備 fragment data。
+        // 早於常見物流外掛的 priority 10 fragment filters 註冊視覺卡片 fragment。
+        // Woo 核心 review-order 仍負責標準 shipping hooks 與原生 radio fragment。
         add_filter( 'woocommerce_update_order_review_fragments', [ $this, 'register_fragment' ], 5 );
-
-        // 移除原訂單表格中的物流 HTML（關鍵：避免 radio name 衝突）
-        // 已改用 JS 方式處理，不再使用 label filter
-
-        // 確保物流 hooks 在自訂區塊執行
-        add_action( 'yangsheep_before_shipping_cards', [ $this, 'do_before_shipping_hooks' ] );
-        add_action( 'yangsheep_after_shipping_cards', [ $this, 'do_after_shipping_hooks' ] );
-
-        add_action( 'wp_footer', [ $this, 'add_hide_shipping_script' ] );
-    }
-
-    /**
-     * 添加 JS 腳本隱藏/移除原始 shipping radios
-     */
-    public function add_hide_shipping_script() {
-        if ( ! is_checkout() || is_wc_endpoint_url() ) {
-            return;
-        }
-        ?>
-        <script>
-        jQuery(function($) {
-            // 處理原訂單表格中的 shipping 區塊
-            function processOriginalShipping() {
-                // 選取原訂單表格中的 shipping 行
-                var $shippingRows = $('#order_review tr.shipping, .woocommerce-checkout-review-order-table tr.shipping, tr.woocommerce-shipping-totals');
-
-                console.log('[YS Shipping] Found shipping rows:', $shippingRows.length);
-
-                $shippingRows.each(function() {
-                    var $row = $(this);
-                    var $ul = $row.find('ul#shipping_method, ul.woocommerce-shipping-methods');
-                    var $thLabel = $row.find('th');
-                    var $tdValue = $row.find('td[data-title], td:last');
-
-                    console.log('[YS Shipping] Processing row, ul found:', $ul.length);
-
-                    if ($ul.length) {
-                        // 找到選中的物流方式 - 從我們的卡片區塊讀取
-                        var $ourCardRadio = $('.yangsheep-shipping-cards input.shipping_method:checked');
-                        var shippingName = '';
-                        var shippingCost = '';
-
-                        if ($ourCardRadio.length) {
-                            // 從我們的卡片讀取名稱
-                            var $card = $ourCardRadio.closest('.yangsheep-shipping-card');
-                            shippingName = $card.find('.yangsheep-shipping-label').text().trim();
-                            shippingCost = $card.find('.yangsheep-shipping-price').text().trim();
-
-                            // 移除 label 中的價格部分
-                            shippingName = shippingName.replace(/NT\$[\d,]+/g, '').replace(/\$[\d,]+/g, '').trim();
-                            // 移除尾部冒號
-                            shippingName = shippingName.replace(/:$/, '').trim();
-                        } else {
-                            // 備用：從原始 ul 讀取
-                            var $checkedInput = $ul.find('input.shipping_method:checked');
-                            if ($checkedInput.length) {
-                                var $label = $ul.find('label[for="' + $checkedInput.attr('id') + '"]');
-                                if ($label.length) {
-                                    var $clone = $label.clone();
-                                    $clone.find('.woocommerce-Price-amount, .amount, bdi, span').remove();
-                                    shippingName = $clone.text().trim().replace(/:$/, '');
-                                }
-                            }
-                        }
-
-                        console.log('[YS Shipping] Shipping name:', shippingName, 'Cost:', shippingCost);
-
-                        // 隱藏原始 ul
-                        $ul.hide();
-
-                        // 移除原本的 radios name 避免衝突
-                        $ul.find('input.shipping_method').removeAttr('name').prop('disabled', true);
-
-                        // 清空 td 並顯示運費與名稱
-                        var $display = $tdValue.find('.yangsheep-selected-shipping-display');
-                        if (!$display.length) {
-                            $tdValue.html('<span class="yangsheep-selected-shipping-display"></span>');
-                            $display = $tdValue.find('.yangsheep-selected-shipping-display');
-                        }
-
-                        // 顯示格式：物流名稱 + 運費（右對齊）
-                        if (shippingName && shippingCost) {
-                            $display.html(shippingName + ' <span style="float:right;">' + shippingCost + '</span>');
-                        } else if (shippingName) {
-                            $display.text(shippingName);
-                        }
-                    }
-                });
-            }
-
-            // 頁面載入時執行
-            setTimeout(processOriginalShipping, 200);
-
-            // AJAX 更新後重新執行
-            $(document.body).on('updated_checkout', function() {
-                setTimeout(processOriginalShipping, 200);
-
-                // 內容為空就隱藏
-                $('.yangsheep-shipping-cards-wrapper').toggle($('.yangsheep-shipping-cards-container').children().length > 0);
-                $('.woocommerce-shipping-fields').toggle($('.woocommerce-shipping-fields').children().length > 0);
-            });
-        });
-        </script>
-        <?php
     }
 
     /**
@@ -193,22 +89,6 @@ class YSShippingCards {
         $fragments['.yangsheep-shipping-cards-container'] = ob_get_clean();
 
         return $fragments;
-    }
-
-    /**
-     * 執行物流前的標準 hooks
-     * 確保第三方外掛相容性
-     */
-    public function do_before_shipping_hooks() {
-        do_action( 'woocommerce_review_order_before_shipping' );
-    }
-
-    /**
-     * 執行物流後的標準 hooks
-     * 確保第三方外掛相容性
-     */
-    public function do_after_shipping_hooks() {
-        do_action( 'woocommerce_review_order_after_shipping' );
     }
 
     /**

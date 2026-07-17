@@ -194,9 +194,28 @@
     /* 不需要 margin-bottom，因為 yangsheep-checkout-sidebar-wrapper 本身有 margin */
 }
 
+/* 摺疊控制是 <button>（a11y：鍵盤 + aria-expanded），外觀延用標題樣式 */
 .yangsheep-collapsible {
     cursor: pointer;
     user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ys-text-heading, #2d3748);
+    text-align: left;
+}
+
+.yangsheep-collapsible:focus-visible {
+    outline: 2px solid var(--theme-button-background-initial-color, #6b7a95);
+    outline-offset: 2px;
 }
 
 .yangsheep-toggle-icon {

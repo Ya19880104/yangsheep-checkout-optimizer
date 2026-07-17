@@ -7,18 +7,20 @@
  */
 
 /* ===== 物流卡片容器 ===== */
+/* 外框在 wrapper：卡片 + 第三方選店（#order_review 移入此 wrapper）
+   共用同一個「選擇運送方式」視覺區塊（參考設計＝單一運送區塊） */
 .yangsheep-shipping-cards-wrapper {
     margin-bottom: 20px;
-}
-
-/* 外層容器：邊框和背景 */
-.yangsheep-shipping-cards-container {
-    width: 100%;
     border: 2px solid var(--theme-section-border-color, #e0e0e0);
     background-color: var(--section-bg-color, #ffffff);
     border-radius: var(--block-border-radius, 8px);
     /* padding 由 RWD 區塊統一控制 */
     overflow: hidden;
+}
+
+/* 內層容器：不再帶外框（外框已上移到 wrapper） */
+.yangsheep-shipping-cards-container {
+    width: 100%;
 }
 
 /* 內層卡片區：無邊框 */
@@ -42,24 +44,24 @@
 
 /* ===== 單張物流卡片 ===== */
 .yangsheep-shipping-card {
-    display: block;
+    display: flex;
     position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
     cursor: pointer;
     transition: all 0.2s ease;
     background: transparent !important;
+    color: inherit;
+    font: inherit;
+    text-align: left;
 }
 
-.yangsheep-shipping-card input[type="radio"] {
-    /* 視覺隱藏但保持可點擊 */
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
+.yangsheep-shipping-card:focus-visible {
+    outline: 2px solid var(--theme-button-background-initial-color, #6b7a95);
+    outline-offset: 3px;
 }
 
 .yangsheep-shipping-card-inner {
@@ -156,8 +158,7 @@
 /* ===== 選中狀態 ===== */
 .yangsheep-shipping-card.selected .yangsheep-shipping-card-inner {
     border-color: var(--yangsheep-shipping-border-active, #6b7a95);
-    border-width: 3px;
-    background: linear-gradient(135deg, rgba(107, 122, 149, 0.08) 0%, rgba(107, 122, 149, 0.03) 100%);
+    background: #f5f7f9;
     box-shadow: 0 4px 16px rgba(107, 122, 149, 0.25);
 }
 
@@ -180,20 +181,6 @@
     font-size: 14px;
 }
 
-/* ===== 處理原訂單表格中的物流區塊 ===== */
-/* 隱藏原始 shipping 區塊的 radio 選項，但保留運費行顯示 */
-.woocommerce-checkout-review-order-table tr.shipping ul#shipping_method,
-#order_review tr.shipping ul#shipping_method,
-.ct-order-review tr.shipping ul#shipping_method,
-.test tr.shipping ul#shipping_method {
-    display: none !important;
-}
-
-/* 隱藏單獨的 shipping 選擇區塊 */
-.woocommerce-shipping-totals.shipping ul#shipping_method {
-    display: none !important;
-}
-
 /* 超取相容性規則已移至 yangsheep-compatibility.css */
 
 /* ===== RWD: 響應式網格排列 ===== */
@@ -201,7 +188,7 @@
 /* 大桌機版 >=1400px：根據數量自動排列 */
 @media (min-width: 1400px) {
     /* padding: 20px - 與其他區塊統一 */
-    .yangsheep-shipping-cards-container {
+    .yangsheep-shipping-cards-wrapper {
         padding: 20px;
     }
 
@@ -234,7 +221,7 @@
 /* ===== RWD: 筆電/中桌機版 1000px-1399px ===== */
 @media (min-width: 1000px) and (max-width: 1399.9px) {
     /* padding: 20px - 與其他區塊統一 */
-    .yangsheep-shipping-cards-container {
+    .yangsheep-shipping-cards-wrapper {
         padding: 20px;
     }
 
@@ -248,7 +235,7 @@
 /* ===== RWD: 平板版 768px-999px ===== */
 @media (min-width: 768px) and (max-width: 999.9px) {
     /* padding: 20px 15px - 與其他區塊統一 */
-    .yangsheep-shipping-cards-container {
+    .yangsheep-shipping-cards-wrapper {
         padding: 20px 15px;
     }
 
@@ -261,7 +248,7 @@
 /* ===== RWD: 手機版 <768px ===== */
 @media (max-width: 767.9px) {
     /* padding: 20px 15px - 與其他區塊統一 */
-    .yangsheep-shipping-cards-container {
+    .yangsheep-shipping-cards-wrapper {
         padding: 20px 15px;
     }
 
@@ -317,7 +304,6 @@
 
 .yangsheep-shipping-card {
     display: flex;
-    height: 100%;
 }
 
 .yangsheep-shipping-card-inner {

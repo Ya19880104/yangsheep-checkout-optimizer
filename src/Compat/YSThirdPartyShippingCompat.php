@@ -37,6 +37,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
+
 class YSThirdPartyShippingCompat {
 
     /**
@@ -87,6 +89,9 @@ class YSThirdPartyShippingCompat {
      * 只有在啟用對應的第三方物流外掛時才載入
      */
     private function __construct() {
+        // woomp 3.5.14 enqueues WooCommerce cart.js on checkout. Both cart.js
+        // and checkout.js bind coupon removal, causing duplicate requests.
+        add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_cart_script_on_checkout' ), 100 );
         // 檢查是否有任一支援的物流外掛啟用
         if ( ! self::is_ecpay_shipping_active() && ! self::is_paynow_shipping_active() ) {
             return; // 沒有啟用任何支援的物流外掛，不載入
@@ -98,6 +103,20 @@ class YSThirdPartyShippingCompat {
 
         // 修正電話欄位位置（最高優先級，在第三方外掛之後執行）
         add_filter( 'woocommerce_checkout_fields', array( $this, 'fix_shipping_phone_priority' ), 99999 );
+    }
+
+    /**
+     * Keep cart.js off classic checkout; checkout.js owns coupon actions.
+     */
+    public function dequeue_cart_script_on_checkout() {
+        if (
+            function_exists( 'is_checkout' )
+            && is_checkout()
+            && ! is_wc_endpoint_url()
+            && ( ! function_exists( 'is_cart' ) || ! is_cart() )
+        ) {
+            wp_dequeue_script( 'wc-cart' );
+        }
     }
 
     /**
@@ -151,6 +170,9 @@ class YSThirdPartyShippingCompat {
         // 將 PHP 陣列轉為 JSON 供 JavaScript 使用
         $ecpay_methods_json = wp_json_encode( $this->ecpay_cvs_methods );
         $paynow_methods_json = wp_json_encode( $this->paynow_cvs_methods );
+        $validate_shipping_phone_json = wp_json_encode(
+            YSSettingsManager::get( 'yangsheep_validate_phone_shipping', 'yes' ) === 'yes'
+        );
         ?>
         <script>
         /**
@@ -166,6 +188,11 @@ class YSThirdPartyShippingCompat {
 
             // PayNow CVS 物流方法列表
             var paynowCvsMethods = <?php echo $paynow_methods_json; ?>;
+            var validateShippingPhone = <?php echo $validate_shipping_phone_json; ?>;
+
+            function isEnhancedCheckout() {
+                return $('form.checkout').hasClass('ys-checkout-enhanced');
+            }
 
             /**
              * 檢查當前選擇的物流是否為指定類型
@@ -287,7 +314,8 @@ class YSThirdPartyShippingCompat {
                 var $paynowFields = $('#paynow_storename_field, #paynow_storeid_field, #paynow_storeaddress_field');
 
                 // PayNow 選擇超商按鈕
-                var $paynowChooseCvs = $('#choose-cvs-btn, #choose-cvs-btn-field, .paynow-choose-cvs, .paynow-choose-cvs-wrapper, tr.choose_cvs, .ys-cvs-choose-row');
+                var $paynowChooseCvs = $('#choose-cvs-btn, #choose-cvs-btn-field, .paynow-choose-cvs, .paynow-choose-cvs-wrapper');
+                $paynowChooseCvs = $paynowChooseCvs.add($('#choose-cvs-btn').closest('tr.choose_cvs'));
 
                 // PayNow 服務類型欄位
                 var $paynowService = $('#paynow_service_field');
@@ -310,6 +338,10 @@ class YSThirdPartyShippingCompat {
              * 同時處理綠界與 PayNow
              */
             function updateCvsFieldsVisibility() {
+                if (!isEnhancedCheckout()) {
+                    return;
+                }
+
                 // 先樣式化 CVS 標籤
                 styleCvsLabels();
                 // 再切換顯示狀態
@@ -325,7 +357,7 @@ class YSThirdPartyShippingCompat {
                 setTimeout(updateCvsFieldsVisibility, 300);
             });
 
-            // 物流選擇變更時執行（包含我們的卡片區塊）
+            // 原生物流選擇變更時執行；YS 卡片只代理這個 change。
             $(document.body).on('change', 'input.shipping_method', function() {
                 updateCvsFieldsVisibility();
             });
@@ -333,11 +365,6 @@ class YSThirdPartyShippingCompat {
             // WooCommerce AJAX 更新後執行
             $(document.body).on('updated_checkout', function() {
                 setTimeout(updateCvsFieldsVisibility, 300);
-            });
-
-            // 監聽我們自己的物流卡片區塊
-            $(document.body).on('change', '.yangsheep-shipping-cards input.shipping_method', function() {
-                updateCvsFieldsVisibility();
             });
 
             // ===== 收件人電話驗證（台灣手機：09 開頭，10 位數字） =====
@@ -350,6 +377,7 @@ class YSThirdPartyShippingCompat {
              * @return {boolean} - 是否驗證通過
              */
             function validateMobilePhone($input, showError) {
+                if (!validateShippingPhone) return true;
                 if (!$input || !$input.length) return true;
 
                 showError = showError || false;
@@ -482,43 +510,43 @@ class YSThirdPartyShippingCompat {
         /* ===== 1. 綠界 CVS 欄位 - Grid 2 欄排版 ===== */
 
         /* 綠界 CVS 欄位 - 使用 grid-column: span 1 讓每個欄位佔一格 */
-        #CVSStoreName_field,
-        #CVSAddress_field,
-        #CVSTelephone_field {
+        body.ys-checkout-enhanced #CVSStoreName_field,
+        body.ys-checkout-enhanced #CVSAddress_field,
+        body.ys-checkout-enhanced #CVSTelephone_field {
             grid-column: span 1 !important;
         }
 
         /* ===== 2. PayNow CVS 欄位 - Grid 2 欄排版 ===== */
 
         /* PayNow CVS 欄位 - 使用 grid-column: span 1 讓每個欄位佔一格 */
-        #paynow_storename_field,
-        #paynow_storeid_field,
-        #paynow_storeaddress_field {
+        body.ys-checkout-enhanced #paynow_storename_field,
+        body.ys-checkout-enhanced #paynow_storeid_field,
+        body.ys-checkout-enhanced #paynow_storeaddress_field {
             grid-column: span 1 !important;
         }
 
         /* ===== 3. PayNow「選擇超商」按鈕樣式 ===== */
 
         /* PayNow 選擇超商按鈕的父容器 - 全寬置中 */
-        #choose-cvs-btn-field {
+        body.ys-checkout-enhanced #choose-cvs-btn-field {
             grid-column: 1 / -1 !important;
             text-align: center !important;
             margin-top: 20px !important;
         }
 
         /* PayNow 選擇超商按鈕 */
-        #choose-cvs-btn,
-        .paynow-choose-cvs,
-        button[name="paynow_choose_cvs"] {
+        body.ys-checkout-enhanced #choose-cvs-btn,
+        body.ys-checkout-enhanced .paynow-choose-cvs,
+        body.ys-checkout-enhanced button[name="paynow_choose_cvs"] {
             font-weight: bold !important;
         }
 
         /* ===== 4. 「選擇超商」「超商門市」標籤樣式 ===== */
 
         /* 綠界選擇超商按鈕/連結 - 全寬置中 */
-        .choose_cvs,
-        a.choose_cvs,
-        button.choose_cvs {
+        body.ys-checkout-enhanced .choose_cvs,
+        body.ys-checkout-enhanced a.choose_cvs,
+        body.ys-checkout-enhanced button.choose_cvs {
             display: block !important;
             text-align: center !important;
             font-weight: bold !important;
@@ -526,22 +554,22 @@ class YSThirdPartyShippingCompat {
         }
 
         /* PayNow 選擇超商表格行 (tr.choose_cvs) */
-        tr.choose_cvs,
-        tr.ys-cvs-choose-row {
+        body.ys-checkout-enhanced tr.choose_cvs,
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row {
             margin-top: 20px !important;
         }
 
-        tr.choose_cvs th,
-        tr.choose_cvs td,
-        tr.ys-cvs-choose-row th,
-        tr.ys-cvs-choose-row td {
+        body.ys-checkout-enhanced tr.choose_cvs th,
+        body.ys-checkout-enhanced tr.choose_cvs td,
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row th,
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row td {
             text-align: center !important;
             font-weight: bold !important;
             padding-top: 20px !important;
         }
 
         /* 動態偵測到的「選擇超商」「超商門市」標籤 */
-        .ys-cvs-choose-label {
+        body.ys-checkout-enhanced .ys-cvs-choose-label {
             display: block !important;
             text-align: center !important;
             font-weight: bold !important;
@@ -550,16 +578,16 @@ class YSThirdPartyShippingCompat {
         }
 
         /* PayNow 選擇超商按鈕樣式 */
-        .ys-cvs-choose-btn,
-        #choose-cvs-btn {
+        body.ys-checkout-enhanced .ys-cvs-choose-btn,
+        body.ys-checkout-enhanced #choose-cvs-btn {
             font-weight: bold !important;
         }
 
         /* 綠界 CVS 區塊標題 */
-        .cvs-info-title,
-        .ecpay-cvs-title,
-        .woocommerce-shipping-fields .cvs-info h3,
-        .woocommerce-shipping-fields .cvs-info h4 {
+        body.ys-checkout-enhanced .cvs-info-title,
+        body.ys-checkout-enhanced .ecpay-cvs-title,
+        body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info h3,
+        body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info h4 {
             margin-top: 20px !important;
             text-align: center !important;
             font-weight: bold !important;
@@ -572,53 +600,14 @@ class YSThirdPartyShippingCompat {
          * 這裡移除可能干擾 Grid 排版的設定
          * 實際的 span 值由主 CSS 控制（2欄Grid用span 1，6欄Grid用span 3）
          */
-        #shipping_phone_field.cvs-info {
+        body.ys-checkout-enhanced #shipping_phone_field.cvs-info {
             /* 移除綠界可能加上的樣式 */
             width: auto !important;
             float: none !important;
             display: block !important;
         }
 
-        /* ===== 6. CVS 欄位顯示控制（由 JS 加入 class 控制） ===== */
-
-        /*
-         * 使用 :not(.ys-cvs-shown) 選擇器初始隱藏欄位
-         * JS 會在選擇對應物流時加入 .ys-cvs-shown class 來顯示
-         */
-
-        /* 綠界 CVS 欄位初始隱藏 */
-        #CVSStoreName_field:not(.ys-cvs-shown),
-        #CVSAddress_field:not(.ys-cvs-shown),
-        #CVSTelephone_field:not(.ys-cvs-shown),
-        #CVSStoreID_field:not(.ys-cvs-shown) {
-            display: none !important;
-        }
-
-        /* 綠界選擇超商按鈕初始隱藏 */
-        .choose_cvs:not(.ys-cvs-shown),
-        a.choose_cvs:not(.ys-cvs-shown),
-        button.choose_cvs:not(.ys-cvs-shown),
-        tr.choose_cvs:not(.ys-cvs-shown) {
-            display: none !important;
-        }
-
-        /* PayNow CVS 欄位初始隱藏 */
-        #paynow_storename_field:not(.ys-cvs-shown),
-        #paynow_storeid_field:not(.ys-cvs-shown),
-        #paynow_storeaddress_field:not(.ys-cvs-shown),
-        #paynow_service_field:not(.ys-cvs-shown) {
-            display: none !important;
-        }
-
-        /* PayNow 選擇超商按鈕初始隱藏 */
-        #choose-cvs-btn-field:not(.ys-cvs-shown),
-        #choose-cvs-btn:not(.ys-cvs-shown),
-        .paynow-choose-cvs:not(.ys-cvs-shown),
-        .paynow-choose-cvs-wrapper:not(.ys-cvs-shown) {
-            display: none !important;
-        }
-
-        /* ===== 7. 內部欄位強制隱藏（Reserved NO, Ship Date, LogisticsSubType 等）===== */
+        /* ===== 6. 內部欄位強制隱藏（Reserved NO, Ship Date, LogisticsSubType 等）===== */
 
         /*
          * 這些欄位是物流外掛內部使用（冷藏配送等），用戶不需要看到
@@ -633,12 +622,12 @@ class YSThirdPartyShippingCompat {
          */
 
         /* PayNow 內部欄位 - 強制隱藏 */
-        #paynow_reservedno_field,
-        #paynow_shipdate_field,
-        p#paynow_reservedno_field,
-        p#paynow_shipdate_field,
-        [id="paynow_reservedno_field"],
-        [id="paynow_shipdate_field"] {
+        body.ys-checkout-enhanced #paynow_reservedno_field,
+        body.ys-checkout-enhanced #paynow_shipdate_field,
+        body.ys-checkout-enhanced p#paynow_reservedno_field,
+        body.ys-checkout-enhanced p#paynow_shipdate_field,
+        body.ys-checkout-enhanced [id="paynow_reservedno_field"],
+        body.ys-checkout-enhanced [id="paynow_shipdate_field"] {
             display: none !important;
             position: absolute !important;
             visibility: hidden !important;
@@ -652,12 +641,12 @@ class YSThirdPartyShippingCompat {
         }
 
         /* 綠界內部欄位 - 強制隱藏 */
-        #LogisticsSubType_field,
-        p#LogisticsSubType_field,
-        [id="LogisticsSubType_field"],
-        #CVSStoreID_field,
-        p#CVSStoreID_field,
-        [id="CVSStoreID_field"] {
+        body.ys-checkout-enhanced #LogisticsSubType_field,
+        body.ys-checkout-enhanced p#LogisticsSubType_field,
+        body.ys-checkout-enhanced [id="LogisticsSubType_field"],
+        body.ys-checkout-enhanced #CVSStoreID_field,
+        body.ys-checkout-enhanced p#CVSStoreID_field,
+        body.ys-checkout-enhanced [id="CVSStoreID_field"] {
             display: none !important;
             position: absolute !important;
             visibility: hidden !important;
@@ -670,19 +659,19 @@ class YSThirdPartyShippingCompat {
             pointer-events: none !important;
         }
 
-        /* ===== 8. 隱藏綠界 CVS 表格中的特定欄位（Reserved NO, Ship Date）===== */
+        /* ===== 7. 隱藏綠界 CVS 表格中的特定欄位（Reserved NO, Ship Date）===== */
 
         /*
          * 綠界動態載入的表格使用 class="cvs-info"
          * 表格內有：門市名稱、門市地址、門市電話、Reserved NO、Ship Date
          * 需要隱藏 Reserved NO 和 Ship Date 這兩欄（第4、5欄）
          */
-        .cvs-info th:nth-child(n+4),
-        .cvs-info td:nth-child(n+4),
-        table.cvs-info th:nth-child(n+4),
-        table.cvs-info td:nth-child(n+4),
-        .woocommerce-shipping-fields .cvs-info th:nth-child(n+4),
-        .woocommerce-shipping-fields .cvs-info td:nth-child(n+4) {
+        body.ys-checkout-enhanced .cvs-info th:nth-child(n+4),
+        body.ys-checkout-enhanced .cvs-info td:nth-child(n+4),
+        body.ys-checkout-enhanced table.cvs-info th:nth-child(n+4),
+        body.ys-checkout-enhanced table.cvs-info td:nth-child(n+4),
+        body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info th:nth-child(n+4),
+        body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info td:nth-child(n+4) {
             display: none !important;
         }
         </style>

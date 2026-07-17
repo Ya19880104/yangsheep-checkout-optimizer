@@ -56,11 +56,6 @@
     text-decoration: none;
 }
 
-/* ===== 隱藏原始 WLR 訊息 ===== */
-.wlr_point_redeem_message {
-    display: none !important;
-}
-
 /* ===== RWD: 手機版 ===== */
 @media (max-width: 767.9px) {
     .ys-points-available {

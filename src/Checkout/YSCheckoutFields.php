@@ -211,7 +211,10 @@ class YSCheckoutFields {
             }
         }
 
-        if ( isset( $fields['shipping']['shipping_company'] ) ) {
+        if (
+            YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes'
+            && isset( $fields['shipping']['shipping_company'] )
+        ) {
             unset( $fields['shipping']['shipping_company'] );
         }
 
@@ -305,7 +308,10 @@ class YSCheckoutFields {
         } else {
             $fields['shipping_phone']['required'] = true;
         }
-        if ( isset( $fields['shipping_company'] ) ) {
+        if (
+            YSSettingsManager::get( 'yangsheep_checkout_tw_fields', 'no' ) === 'yes'
+            && isset( $fields['shipping_company'] )
+        ) {
             unset( $fields['shipping_company'] );
         }
         return $fields;

@@ -63,20 +63,24 @@ class YSCheckoutSidebar {
 
     /**
      * 渲染運輸方式顯示
+     *
+     * 根節點「永遠」輸出：此節點是 AJAX fragment 的替換目標（#yangsheep-shipping-display），
+     * 若空狀態不輸出根節點，一次空 fragment 就會把目標從 DOM 移除，
+     * 之後的 fragment 再也找不到 selector 可替換（CODEX P2）。
      */
     public function render_shipping_display() {
-        if ( ! WC()->cart || ! WC()->cart->needs_shipping() ) {
-            return;
+        $shipping_name = '';
+        if ( WC()->cart && WC()->cart->needs_shipping() ) {
+            $shipping_name = $this->get_chosen_shipping_name();
         }
-
-        $shipping_name = $this->get_chosen_shipping_name();
-        if ( empty( $shipping_name ) ) {
-            return;
-        }
+        $is_empty = empty( $shipping_name );
         ?>
-        <div class="yangsheep-shipping-display" id="yangsheep-shipping-display">
-            <span class="yangsheep-shipping-display-label"><?php esc_html_e( '運輸方式', 'yangsheep-checkout-optimization' ); ?></span>
-            <span class="yangsheep-shipping-display-name"><?php echo esc_html( $shipping_name ); ?></span>
+        <div class="yangsheep-shipping-display<?php echo $is_empty ? ' ys-shipping-display-empty' : ''; ?>"
+             id="yangsheep-shipping-display"<?php echo $is_empty ? ' hidden' : ''; ?>>
+            <?php if ( ! $is_empty ) : ?>
+                <span class="yangsheep-shipping-display-label"><?php esc_html_e( '運輸方式', 'yangsheep-checkout-optimization' ); ?></span>
+                <span class="yangsheep-shipping-display-name"><?php echo esc_html( $shipping_name ); ?></span>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -196,9 +200,13 @@ class YSCheckoutSidebar {
         $item_count = WC()->cart->get_cart_contents_count();
         ?>
         <div class="yangsheep-cart-contents" id="yangsheep-cart-contents">
-            <h3 class="yangsheep-sidebar-title yangsheep-collapsible" data-target="yangsheep-cart-items">
-                <?php esc_html_e( '購物車內容', 'yangsheep-checkout-optimization' ); ?>
-                <span class="yangsheep-toggle-icon">▼</span>
+            <h3 class="yangsheep-sidebar-title">
+                <?php // a11y：可鍵盤操作的 button + aria-expanded（fragment 重繪回預設展開） ?>
+                <button type="button" class="yangsheep-collapsible" data-target="yangsheep-cart-items"
+                        aria-expanded="true" aria-controls="yangsheep-cart-items">
+                    <?php esc_html_e( '購物車內容', 'yangsheep-checkout-optimization' ); ?>
+                    <span class="yangsheep-toggle-icon" aria-hidden="true">▼</span>
+                </button>
             </h3>
             <div class="yangsheep-cart-items" id="yangsheep-cart-items">
                 <?php foreach ( $cart_items as $cart_item_key => $cart_item ) :

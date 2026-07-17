@@ -110,7 +110,7 @@ class YSWPLoyaltyIntegration {
      * 載入前端腳本
      */
     public function enqueue_scripts() {
-        if ( ! is_checkout() || ! self::is_enabled() || ! self::is_wployalty_active() ) {
+        if ( ! is_checkout() || is_wc_endpoint_url() || ! self::is_enabled() || ! self::is_wployalty_active() ) {
             return;
         }
 
@@ -119,7 +119,7 @@ class YSWPLoyaltyIntegration {
             'yangsheep-wployalty-integration',
             YANGSHEEP_CHECKOUT_URL . 'assets/js/yangsheep-wployalty.js',
             array( 'jquery' ),
-            YANGSHEEP_CHECKOUT_VERSION,
+            yangsheep_checkout_asset_version( 'assets/js/yangsheep-wployalty.js' ),
             true
         );
 
@@ -147,7 +147,7 @@ class YSWPLoyaltyIntegration {
             'yangsheep-wployalty-integration',
             YANGSHEEP_CHECKOUT_URL . 'assets/css/yangsheep-wployalty.css',
             array(),
-            YANGSHEEP_CHECKOUT_VERSION
+            yangsheep_checkout_asset_version( 'assets/css/yangsheep-wployalty.css' )
         );
     }
 
