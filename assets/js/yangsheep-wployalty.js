@@ -122,6 +122,16 @@ jQuery(function($) {
 
             console.log('[YS WPLoyalty] Processing, found WLR messages:', $wlrMessage.length);
 
+            // P1 fail-open gate：主結帳 JS 未成功增強（被擋/失敗/尚未執行）時，
+            // YS 容器仍是 hidden — 不得建立替代介面、更不得隱藏原生 WLR。
+            // 若先前已建過替代介面（增強後又失效的邊緣情境），還原原生顯示。
+            if (!$('form.checkout').hasClass('ys-checkout-enhanced')) {
+                $couponPoint.find('.ys-wployalty-block').remove();
+                $wlrMessage.removeClass('ys-wployalty-source-mounted').show();
+                console.log('[YS WPLoyalty] checkout not enhanced; native WLR message stays visible');
+                return;
+            }
+
             // 如果沒有目標容器，直接返回
             if (!$couponPoint.length) {
                 return;
@@ -152,13 +162,11 @@ jQuery(function($) {
 
             if (!pointsData) {
                 console.log('[YS WPLoyalty] Could not parse WLR message');
+                $wlrMessage.removeClass('ys-wployalty-source-mounted').show();
                 return;
             }
 
             this.state.pointsData = pointsData;
-
-            // 隱藏原始 WLR 訊息
-            $wlrMessage.hide();
 
             // 建立美化的購物金區塊
             var $customBlock = this.createCustomPointsBlock(pointsData);
@@ -169,11 +177,20 @@ jQuery(function($) {
             $couponPoint.find('.ys-wployalty-block').remove();
             $couponPoint.append($customBlock);
 
-            // 顯示購物金區塊
+            // 先顯示容器，再實際確認替代介面可見，最後才隱藏原生（fail-open）
             $couponPoint.addClass('has-content').show();
             $couponBlock.addClass('has-point');
 
-            console.log('[YS WPLoyalty] Custom points block created (additive, preserves 3rd-party children)');
+            if ($customBlock.is(':visible')) {
+                $wlrMessage.addClass('ys-wployalty-source-mounted');
+                $wlrMessage.hide();
+                console.log('[YS WPLoyalty] Custom points block created (additive, preserves 3rd-party children)');
+            } else {
+                // 替代介面不可見（容器被外部隱藏等）→ 撤回替代、保留原生
+                $customBlock.remove();
+                $wlrMessage.removeClass('ys-wployalty-source-mounted').show();
+                console.warn('[YS WPLoyalty] replacement not visible; keeping native WLR message');
+            }
         },
 
         /**

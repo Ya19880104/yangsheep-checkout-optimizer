@@ -20,8 +20,6 @@ if ( empty( $packages ) ) {
     return;
 }
 
-// 執行物流前 hooks（相容第三方外掛）
-do_action( 'yangsheep_before_shipping_cards' );
 ?>
 
 <div class="yangsheep-shipping-cards" id="yangsheep-shipping-cards">
@@ -53,41 +51,27 @@ do_action( 'yangsheep_before_shipping_cards' );
                         $card_class .= ' selected';
                     }
                 ?>
-                    <label class="<?php echo esc_attr( $card_class ); ?>" for="shipping_method_<?php echo esc_attr( $i . '_' . sanitize_title( $method_id ) ); ?>">
-                        <input 
-                            type="radio" 
-                            name="shipping_method[<?php echo esc_attr( $i ); ?>]" 
-                            id="shipping_method_<?php echo esc_attr( $i . '_' . sanitize_title( $method_id ) ); ?>"
-                            value="<?php echo esc_attr( $method_id ); ?>"
-                            class="shipping_method"
-                            data-index="<?php echo esc_attr( $i ); ?>"
-                            <?php checked( $method_id, $chosen_method ); ?>
-                        >
+                    <button type="button"
+                            class="<?php echo esc_attr( $card_class ); ?>"
+                            role="radio"
+                            aria-checked="<?php echo $is_selected ? 'true' : 'false'; ?>"
+                            data-package-index="<?php echo esc_attr( $i ); ?>"
+                            data-method-id="<?php echo esc_attr( $method_id ); ?>">
                         <span class="yangsheep-shipping-card-inner">
                             <span class="yangsheep-shipping-radio-indicator"></span>
                             <span class="yangsheep-shipping-info">
                                 <span class="yangsheep-shipping-label">
-                                    <?php 
-                                    // 移除物流標籤中的冒號
-                                    $label = wc_cart_totals_shipping_method_label( $method );
-                                    $label = str_replace( ':', '', $label );
-                                    echo wp_kses_post( $label ); 
-                                    ?>
+                                    <?php echo esc_html( $method->get_label() ); ?>
                                 </span>
                             </span>
                             <span class="yangsheep-shipping-price">
-                                <?php echo YSShippingCards::format_shipping_cost( $method ); ?>
+                                <?php echo wp_kses_post( YSShippingCards::format_shipping_cost( $method ) ); ?>
                             </span>
                         </span>
-                    </label>
+                    </button>
                 <?php endforeach; ?>
             </div>
             
         <?php endif; ?>
     <?php endforeach; ?>
 </div>
-
-<?php
-// 執行物流後 hooks（相容第三方外掛）
-do_action( 'yangsheep_after_shipping_cards' );
-?>

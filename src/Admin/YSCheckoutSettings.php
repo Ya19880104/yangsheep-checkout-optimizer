@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
+use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
 
 class YSCheckoutSettings {
 
@@ -485,6 +486,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
 
         // v1.6.29：YITH Points and Rewards 結帳頁整合
         $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( 'YITH 購物金結帳頁整合', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points and Rewards 的購物金折抵訊息（#yith-par-message-cart 等）會自動搬移到結帳頁購物金區塊；僅在網站已安裝並啟用 YITH Points and Rewards 時實際生效', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+        add_settings_field( 'ys_yith_points_diagnostics', __( 'YITH 購物金整合狀態', 'yangsheep-checkout-optimization' ), array( $this, 'yith_points_diagnostics_callback' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // 超取物流方式設定
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );
@@ -752,6 +754,39 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             echo '</div>';
             echo '<a href="' . esc_url( $url ) . '" class="button button-secondary" target="_blank" style="margin-top:8px;">' . __( '前往設置', 'yangsheep-checkout-optimization' ) . '</a>';
         }
+    }
+
+    public function yith_points_diagnostics_callback() {
+        $active   = YSYithPointsIntegration::is_yith_par_active();
+        $enabled  = YSSettingsManager::get( 'yangsheep_yith_points_integration', 'yes' ) === 'yes';
+        $version  = YSYithPointsIntegration::get_detected_version();
+        $selectors = YSYithPointsIntegration::get_selectors();
+        $rewards_enabled = YSYithPointsIntegration::is_rewards_redemption_enabled();
+        $active_rules = YSYithPointsIntegration::get_active_redeeming_rule_count();
+        $rules_url = admin_url( 'edit.php?post_type=ywpar-redeeming-rule' );
+
+        echo '<div class="ys-yith-diagnostics">';
+        echo '<p><strong>' . esc_html__( '外掛偵測：', 'yangsheep-checkout-optimization' ) . '</strong> ';
+        echo $active
+            ? '<span class="ys-status-badge ys-status-success">' . esc_html__( 'YITH Points and Rewards 已啟用', 'yangsheep-checkout-optimization' ) . ( $version ? ' ' . esc_html( $version ) : '' ) . '</span>'
+            : '<span class="ys-status-badge ys-status-warning">' . esc_html__( '未偵測到 YITH Points and Rewards', 'yangsheep-checkout-optimization' ) . '</span>';
+        echo '</p>';
+        echo '<p><strong>' . esc_html__( 'YS 整合開關：', 'yangsheep-checkout-optimization' ) . '</strong> ' . esc_html( $enabled ? __( '啟用', 'yangsheep-checkout-optimization' ) : __( '停用（保留 YITH 原生顯示）', 'yangsheep-checkout-optimization' ) ) . '</p>';
+        echo '<p><strong>' . esc_html__( 'YITH 購物金兌換：', 'yangsheep-checkout-optimization' ) . '</strong> ';
+        if ( true === $rewards_enabled ) {
+            echo '<span class="ys-status-badge ys-status-success">' . esc_html__( '全域兌換已啟用', 'yangsheep-checkout-optimization' ) . '</span>';
+        } elseif ( false === $rewards_enabled ) {
+            echo '<span class="ys-status-badge ys-status-warning">' . esc_html__( '全域兌換未啟用', 'yangsheep-checkout-optimization' ) . '</span>';
+        } else {
+            echo '<span class="ys-status-badge ys-status-warning">' . esc_html__( '無法讀取 YITH 設定', 'yangsheep-checkout-optimization' ) . '</span>';
+        }
+        echo '</p>';
+        echo '<p><strong>' . esc_html__( '啟用中的兌換規則：', 'yangsheep-checkout-optimization' ) . '</strong> ';
+        echo '<span class="ys-status-badge ' . esc_attr( $active_rules > 0 ? 'ys-status-success' : 'ys-status-warning' ) . '">' . esc_html( (string) $active_rules ) . '</span> ';
+        echo '<a href="' . esc_url( $rules_url ) . '" class="button button-secondary" target="_blank">' . esc_html__( '管理兌換規則', 'yangsheep-checkout-optimization' ) . '</a></p>';
+        echo '<p><strong>' . esc_html__( '偵測節點：', 'yangsheep-checkout-optimization' ) . '</strong> <code>' . esc_html( implode( ', ', array_map( 'strval', (array) $selectors ) ) ) . '</code></p>';
+        echo '<p class="description">' . esc_html__( '前台需使用 WooCommerce 經典結帳、登入具有點數的顧客，並在 YITH 啟用購物金兌換規則。找不到可見兌換介面時，YS 不會隱藏或複製 YITH 原始內容。', 'yangsheep-checkout-optimization' ) . '</p>';
+        echo '</div>';
     }
 
     public function login_welcome_text_callback() {

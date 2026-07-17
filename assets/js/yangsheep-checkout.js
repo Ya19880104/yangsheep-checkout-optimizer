@@ -6,22 +6,214 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.6.26';
+    window.__ysCheckoutOptimizerBuild = '1.7.0';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
         ? yangsheep_checkout_params.nonce
         : '';
 
-    // ===== 1. DOM 初始化移動 =====
-    if ($("#order_country_heading").length && $("#shipping_country_field").length) {
-        $("#shipping_country_field").insertAfter($("#order_country_heading"));
+    // ===== 0. Progressive layout enhancement =====
+    // WooCommerce remains the source of truth. Only rearrange the checkout after
+    // every required native node and YS target exists; otherwise leave the native
+    // form untouched and fully usable.
+    var ENHANCED_STYLESHEETS = [
+        ['yangsheep-checkout-optimization-css', 'yangsheep-checkout.css'],
+        ['yangsheep-shipping-cards-css', 'yangsheep-shipping-cards.css'],
+        ['yangsheep-sidebar-css', 'yangsheep-sidebar.css'],
+        ['yangsheep-compatibility-css', 'yangsheep-compatibility.css']
+    ];
+
+    // 主要用 WP 預設 style id；若被 CSS 優化外掛改寫 id，退回以 href 尋找
+    function findEnhancedStylesheet(pair) {
+        return document.getElementById(pair[0]) ||
+            document.querySelector('link[rel="stylesheet"][href*="' + pair[1] + '"]');
     }
+
+    // P1 fail-open：在搬動任何原生節點「之前」原子化確認四支核心樣式表
+    // 都已載入且可讀（link.sheet 存在且有規則）。任何一支失敗（被優化外掛
+    // 合併移除、網路失敗、CSP 擋掉、尚未載完）→ 本次放棄增強、原生結帳不動；
+    // updated_checkout / window.load 會再重試。
+    function enhancedStylesheetsReady() {
+        return ENHANCED_STYLESHEETS.every(function (pair) {
+            var link = findEnhancedStylesheet(pair);
+            if (!link) {
+                return false;
+            }
+            try {
+                var sheet = link.sheet;
+                return !!sheet && !!sheet.cssRules && sheet.cssRules.length > 0;
+            } catch (e) {
+                return false;
+            }
+        });
+    }
+
+    function enableEnhancedStyles() {
+        ENHANCED_STYLESHEETS.forEach(function (pair) {
+            var stylesheet = findEnhancedStylesheet(pair);
+            if (stylesheet) {
+                stylesheet.media = 'all';
+            }
+        });
+    }
+
+    function ensureCheckoutLayout() {
+        var $form = $('form.checkout.woocommerce-checkout').first();
+
+        if (!$form.length || $form.hasClass('ys-checkout-enhanced')) {
+            return $form.hasClass('ys-checkout-enhanced');
+        }
+
+        // P1 fail-open：樣式表沒到位就「完全不動」原生 DOM。
+        // （media 翻轉在最後；但搬移/隱藏若先做、CSS 又載入失敗，
+        // 頁面會停在無樣式的重排結構 — 故障注入實證。）
+        if (!enhancedStylesheetsReady()) {
+            console.warn('[YS Checkout] enhanced stylesheets unavailable; using WooCommerce checkout');
+            return false;
+        }
+
+        var $regions = $form.find('.yangsheep-enhancement-regions');
+        var $sidebarWrapper = $form.find('.yangsheep-checkout-sidebar-wrapper');
+        var $sidebar = $sidebarWrapper.children('.yangsheep-checkout-sidebar');
+        var $reviewHeading = $form.find('#order_review_heading');
+        var $orderReview = $form.find('#order_review');
+        var $shippingWrapper = $regions.children('.yangsheep-shipping-cards-wrapper');
+        var $paymentSection = $form.find('.yangsheep-payment');
+        var $paymentTarget = $paymentSection.find('.yangsheep-payment-block');
+        var $payment = $orderReview.find('#payment');
+
+        if ($regions.length !== 1 || $sidebarWrapper.length !== 1 || $sidebar.length !== 1 ||
+            $reviewHeading.length !== 1 || $orderReview.length !== 1 ||
+            $shippingWrapper.length !== 1 || $paymentSection.length !== 1 ||
+            $paymentTarget.length !== 1 || $payment.length !== 1) {
+            console.warn('[YS Checkout] native layout contract incomplete; using WooCommerce checkout');
+            return false;
+        }
+
+        var $reviewHost = $reviewHeading.parent();
+        var reviewHostIsForm = $reviewHost.is($form);
+
+        // 原生 #payment 移入帳單資訊後方的付款區
+        $payment.detach().appendTo($paymentTarget);
+
+        // #order_review（持久 wrapper）移入「選擇運送方式」容器內、卡片之後：
+        // 核心列（商品/小計/運費/總計）由 gated CSS 隱藏 — YS 卡片與側邊欄取代其顯示；
+        // 第三方掛在標準 review hooks 的內容（超商選店等）就顯示在物流區塊內，
+        // 與原始設計一致（選店 UI 屬於運送方式區，不是獨立區塊）。
+        // Woo AJAX 只替換 wrapper 內的 table/payment fragment，
+        // wrapper 本身與其位置不受影響 — 不依賴任何會被 fragment 洗掉的標記。
+        $orderReview.detach().appendTo($shippingWrapper);
+
+        $sidebarWrapper.detach();
+
+        var $mainColumn = $('<div class="yangsheep-form-column"></div>');
+        $form.children().each(function () {
+            if (!reviewHostIsForm && this === $reviewHost[0]) {
+                $reviewHost.children().appendTo($mainColumn);
+                return;
+            }
+            $(this).appendTo($mainColumn);
+        });
+        if (!reviewHostIsForm) {
+            $reviewHost.remove();
+        }
+        $form.append($mainColumn, $sidebarWrapper);
+
+        if (!$form.parent().hasClass('yangsheep-design-checkout-page')) {
+            $form.wrap('<div class="yangsheep-design-checkout-page"></div>');
+        }
+
+        // Woo 原生折扣入口是 no-JS/fail-open 後備。只有 YS layout 已完整
+        // 建立時才隱藏，避免與自訂 AJAX 折扣入口重複。
+        $('.woocommerce-form-coupon-toggle, form.checkout_coupon')
+            .addClass('ys-native-coupon-superseded')
+            .attr('aria-hidden', 'true')
+            .hide();
+
+        // 增強成功後才把國家欄位 / 智慧折扣券移入 YS 區塊 —
+        // 未增強時這些區塊是 hidden 的，移入會讓原生控制項憑空消失（fail-open 違規）
+        if ($('#order_country_heading').length && $('#shipping_country_field').length) {
+            $('#shipping_country_field').insertAfter($('#order_country_heading'));
+        }
+        if ($('#coupons_list').length && $regions.children('.yangsheep-smart-coupon').length) {
+            $('#coupons_list').detach().appendTo($regions.children('.yangsheep-smart-coupon'));
+        }
+
+        $regions.removeAttr('hidden');
+        $sidebarWrapper.removeAttr('hidden');
+        $paymentSection.removeAttr('hidden');
+        $form.addClass('yangsheep-checkout-layout ys-checkout-enhanced');
+        $('body').addClass('ys-checkout-enhanced');
+        $form.find('.yangsheep-same-as-billing, .yangsheep-order-notes-toggle')
+            .removeAttr('hidden');
+        enableEnhancedStyles();
+        syncSidebarPlacement();
+
+        return true;
+    }
+
+    function syncCorePaymentPlacement() {
+        var $form = $('form.checkout.woocommerce-checkout.ys-checkout-enhanced');
+        var $paymentTarget = $form.find('.yangsheep-payment-block');
+        var $payment = $form.find('#payment');
+
+        if ($paymentTarget.length === 1 && $payment.length === 1 && !$payment.parent().is($paymentTarget)) {
+            $payment.detach().appendTo($paymentTarget);
+        }
+    }
+
+    // 手機版（<1000px）側邊欄移到付款區前；桌機版移回 form 直屬子元素供 grid 佈局
+    function syncSidebarPlacement() {
+        var $form = $('form.checkout.woocommerce-checkout.ys-checkout-enhanced');
+        var $sidebarWrapper = $form.find('.yangsheep-checkout-sidebar-wrapper');
+        var $paymentSection = $form.find('.yangsheep-payment');
+
+        if (!$sidebarWrapper.length || !$paymentSection.length) {
+            return;
+        }
+
+        if (window.innerWidth < 1000) {
+            if (!$sidebarWrapper.next().is($paymentSection)) {
+                $sidebarWrapper.detach().insertBefore($paymentSection);
+            }
+        } else if (!$sidebarWrapper.parent().is($form)) {
+            $sidebarWrapper.detach().appendTo($form);
+        }
+    }
+
+    ensureCheckoutLayout();
+
+    // CSS 於 DOM ready 可能尚未載完（readiness 會擋下）→ window.load 時
+    // 所有樣式表已定案，做最終重試；已增強時直接 early-return
+    $(window).on('load', function () {
+        ensureCheckoutLayout();
+    });
+
+    $(document.body).on('updated_checkout', function () {
+        // 首次載入若 form 尚未就緒（主題延後渲染），在 AJAX 更新後重試；
+        // 已增強時 ensureCheckoutLayout 會直接 early-return
+        ensureCheckoutLayout();
+        syncCorePaymentPlacement();
+        syncSidebarPlacement();
+    });
+
+    $(window).on('resize', syncSidebarPlacement);
+
+    // 側邊欄「購物車內容」摺疊（委派事件 — fragment 重繪後依然有效；
+    // 重繪後回到預設展開狀態，與 v1.6.x 行為一致；button + aria-expanded 供鍵盤/AT）
+    $(document).on('click', '.yangsheep-collapsible', function () {
+        var $toggle = $(this);
+        var $content = $('#' + $toggle.data('target'));
+        var expanded = $toggle.attr('aria-expanded') !== 'false';
+        $toggle.toggleClass('collapsed', expanded)
+            .attr('aria-expanded', expanded ? 'false' : 'true');
+        $content.slideToggle(200);
+    });
+
+    // ===== 1. DOM 初始化移動 =====
     if ($("#account_password").length && $("#nsl-custom-login-form-6").length) {
         $("#nsl-custom-login-form-6").insertAfter($("#account_password"));
-    }
-    if ($("#coupons_list").length && $(".yangsheep-smart-coupon").length) {
-        $("#coupons_list").detach().appendTo('.yangsheep-smart-coupon');
     }
 
     // ===== 1.1 國家選擇區塊：無國家欄位時隱藏 =====
@@ -108,61 +300,326 @@ jQuery(function ($) {
     // 移動 WooCommerce Loyalty Rewards (WLR) 購物金訊息到購物金區塊
     // 注意：如果啟用了 WPLoyalty 整合（yangsheep_wployalty 變數存在且 enabled），
     //       會完全交由 yangsheep-wployalty.js 處理，這裡不再干預
+    function eachYithPreservableCheckoutField(callback) {
+        $('form.checkout')
+            .first()
+            .find('#customer_details :input, .woocommerce-additional-fields :input')
+            .each(function () {
+                var $field = $(this);
+                var name   = $field.attr('name');
+                var type   = String($field.attr('type') || '').toLowerCase();
+
+                if (
+                    !name
+                    || $field.prop('disabled')
+                    || $field.closest('.woocommerce-checkout-payment').length
+                    || ['button', 'file', 'hidden', 'password', 'reset', 'submit'].indexOf(type) !== -1
+                ) {
+                    return;
+                }
+
+                callback($field, name, type);
+            });
+    }
+
+    /**
+     * YITH can intentionally use a normal POST instead of its AJAX endpoint.
+     * Mirror customer-entered checkout values into that POST so WooCommerce can
+     * repopulate them through its native checkout value handling after reload.
+     * Payment controls and hidden credentials/nonces are deliberately excluded.
+     */
+    function mirrorCheckoutFieldsIntoYithForm(redeemForm) {
+        var $redeemForm  = $(redeemForm);
+        var $checkoutForm = $('form.checkout').first();
+
+        if (!$redeemForm.length || !$checkoutForm.length) {
+            return;
+        }
+
+        $redeemForm.find('.ys-yith-checkout-field-mirror').remove();
+        eachYithPreservableCheckoutField(function ($field, name, type) {
+            if ((type === 'checkbox' || type === 'radio') && !$field.prop('checked')) {
+                return;
+            }
+
+            $('<input>', {
+                type: 'hidden',
+                name: 'ys_yith_checkout_field_names[]',
+                value: name,
+                class: 'ys-yith-checkout-field-mirror'
+            }).appendTo($redeemForm);
+
+            var values = $field.val();
+            if (!Array.isArray(values)) {
+                values = [values];
+            }
+
+            values.forEach(function (value) {
+                $('<input>', {
+                    type: 'hidden',
+                    name: name,
+                    value: value == null ? '' : value,
+                    class: 'ys-yith-checkout-field-mirror'
+                }).appendTo($redeemForm);
+            });
+        });
+    }
+
+    $(document).on('submit.ysCheckoutYithPreserve', 'form.ywpar_apply_discounts', function () {
+        mirrorCheckoutFieldsIntoYithForm(this);
+    });
+
+    // Capture the click before YITH's handler decides between AJAX and form POST.
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest && event.target.closest('#ywpar_apply_discounts');
+        var form   = button && button.closest('form.ywpar_apply_discounts');
+
+        if (form) {
+            mirrorCheckoutFieldsIntoYithForm(form);
+        }
+    }, true);
+
+    var yithCheckoutFieldRestoreTimer = null;
+    var yithCheckoutFieldRestoreCompleted = false;
+
+    function restoreYithCheckoutFields() {
+        if (yithCheckoutFieldRestoreCompleted) {
+            return;
+        }
+        if (
+            typeof yangsheep_yith_points === 'undefined'
+            || !yangsheep_yith_points.preservedFields
+            || typeof yangsheep_yith_points.preservedFields !== 'object'
+        ) {
+            yithCheckoutFieldRestoreCompleted = true;
+            return;
+        }
+
+        var $fields = $('form.checkout')
+            .first()
+            .find('#customer_details :input, .woocommerce-additional-fields :input');
+        Object.keys(yangsheep_yith_points.preservedFields).forEach(function (name) {
+            var value = yangsheep_yith_points.preservedFields[name];
+            var $matching = $fields.filter(function () {
+                return $(this).attr('name') === name;
+            });
+
+            if (!$matching.length || $matching.closest('.woocommerce-checkout-payment').length) {
+                return;
+            }
+
+            var type = String($matching.first().attr('type') || '').toLowerCase();
+            if (type === 'radio') {
+                $matching.prop('checked', false).filter(function () {
+                    return String($(this).val()) === String(value);
+                }).prop('checked', true);
+            } else if (type === 'checkbox') {
+                $matching.prop('checked', String(value) !== '' && String(value) !== '0');
+            } else {
+                $matching.val(value);
+            }
+        });
+
+        yithCheckoutFieldRestoreCompleted = true;
+    }
+
+    function scheduleYithCheckoutFieldRestore(delay) {
+        if (yithCheckoutFieldRestoreCompleted) {
+            return;
+        }
+        clearTimeout(yithCheckoutFieldRestoreTimer);
+        yithCheckoutFieldRestoreTimer = setTimeout(restoreYithCheckoutFields, delay);
+    }
+
+    scheduleYithCheckoutFieldRestore(2500);
+    $(document.body).on('updated_checkout.ysYithFieldRestore', function () {
+        scheduleYithCheckoutFieldRestore(300);
+    });
+
+    function selectVisibleYithMessage(selectors) {
+        var $candidates = $();
+
+        (selectors || []).forEach(function (selector) {
+            $candidates = $candidates.add($(selector));
+        });
+
+        // AJAX 後重新評估。只還原先前由 YS 標記的 duplicate，不碰
+        // YITH 自己原本隱藏的 submit target。
+        $candidates.filter('.ys-yith-points-duplicate').each(function () {
+            $(this)
+                .removeClass('ys-yith-points-duplicate')
+                .removeAttr('aria-hidden')
+                .css('display', '');
+        });
+
+        var $visible = $candidates.filter(function () {
+            var $message = $(this);
+            var hasUsefulContent = $.trim($message.text()).length > 0;
+
+            return $message.is(':visible') && hasUsefulContent;
+        });
+
+        // `#yith-par-message-cart` 可能只是「本次可賺取點數」提示；只把
+        // 真正含可見互動控制的兌換 surface 納入搬移與去重。
+        var $redeemSurfaces = $visible.filter(function () {
+            return $(this).find('input:visible:not([type="hidden"]), button:visible, a:visible, select:visible, textarea:visible').length > 0;
+        });
+
+        var $selected = $redeemSurfaces.first();
+
+        return {
+            selected: $selected,
+            duplicates: $redeemSurfaces.not($selected)
+        };
+    }
+
+    /**
+     * P0 防線：任何含 <form> 的第三方節點都「不得」被移入 form.checkout。
+     * Woo/YITH fragment 以 HTML 字串重繪節點時，若節點位於 form.checkout 內，
+     * HTML fragment parser 會因外層已有 form 而丟棄內層 <form> 標籤 —
+     * 兌換按鈕的 form owner 變成 checkout form，按「套用折抵」會直接觸發
+     * checkout_place_order / 建立付款（實測證實）。
+     *
+     * 因此 YITH 兌換介面改走「視覺 proxy」（與物流卡片同一模式）：
+     * 原生介面留在 form 外原位置（= 提交事實源，fragment 重繪保有 <form>），
+     * coupon 區內放淨化後的視覺代理；代理按鈕只同步點數值並觸發原生按鈕。
+     */
+    function buildYithProxy($source, $pointBlock) {
+        var $old = $pointBlock.children('.ys-yith-proxy');
+        var typedValue = $old.find('.ys-yith-proxy-points').val();
+        $old.remove();
+
+        var $clone = $source.clone(false);
+
+        // 淨化：拆掉 <form>（改 div）、移除 hidden 欄位與所有 id/name，
+        // 讓代理節點放在 form.checkout 內也絕不參與任何提交
+        $clone.find('input[type="hidden"]').remove();
+        $clone.find('form').each(function () {
+            var $f = $(this);
+            var $div = $('<div class="ywpar_apply_discounts"></div>').append($f.contents());
+            $f.replaceWith($div);
+        });
+        $clone.find('[id]').addBack('[id]').removeAttr('id');
+
+        var $pointsInput = $clone.find('input[name="ywpar_input_points"]');
+        $pointsInput.removeAttr('name').addClass('ys-yith-proxy-points');
+        if (typedValue) {
+            $pointsInput.val(typedValue);
+        }
+
+        var $applyBtn = $clone.find('button[name="ywpar_apply_discounts"], button.ywpar_apply_discounts');
+        $applyBtn
+            .attr('type', 'button')
+            .removeAttr('name')
+            .removeClass('ywpar_apply_discounts ywpar-fixed-discount')
+            .addClass('ys-yith-proxy-apply');
+        $clone.find('input, button, select, textarea').removeAttr('name');
+
+        var $proxy = $('<div class="ys-yith-proxy"></div>').append($clone.contents());
+        $pointBlock.append($proxy);
+
+        // 原生介面隱藏（僅在代理掛載成功後；JS 失效時原生介面維持可見 = fail-open）
+        $source.addClass('ys-yith-points-proxied').attr('aria-hidden', 'true').hide();
+        $source.data('ysYithProxied', true);
+
+        return $proxy;
+    }
+
+    // 代理按鈕 → 同步點數值到原生輸入 → 觸發原生按鈕（document capture 的
+    // mirrorCheckoutFieldsIntoYithForm 會先執行，欄位快照照常運作）
+    $(document).on('click', '.ys-yith-proxy-apply', function () {
+        var $proxy = $(this).closest('.ys-yith-proxy');
+        var $source = $('.ys-yith-points-proxied').first();
+        if (!$source.length && typeof yangsheep_yith_points !== 'undefined' && Array.isArray(yangsheep_yith_points.selectors)) {
+            // fragment 剛替換、rebuild 尚未跑的空窗：直接找含原生 form 的候選
+            $source = $(yangsheep_yith_points.selectors.join(', ')).filter(function () {
+                return $(this).find('form.ywpar_apply_discounts').length > 0;
+            }).first();
+        }
+        if (!$source.length) {
+            console.warn('[YS Checkout] YITH proxy source missing');
+            return;
+        }
+        var $realInput = $source.find('input[name="ywpar_input_points"]');
+        var $realBtn = $source.find('button[name="ywpar_apply_discounts"], #ywpar_apply_discounts').first();
+        var val = $proxy.find('.ys-yith-proxy-points').val();
+        if ($realInput.length && typeof val !== 'undefined') {
+            $realInput.val(val);
+        }
+        if ($realBtn.length) {
+            $realBtn[0].click();
+        } else {
+            var realForm = $source.find('form.ywpar_apply_discounts')[0];
+            if (realForm && realForm.requestSubmit) {
+                realForm.requestSubmit();
+            }
+        }
+    });
+
     function initPointRedeemBlock() {
+        // fail-open gate：未增強時 coupon 區是 hidden 的，任何搬移都會讓
+        // 原生購物金介面憑空消失 — 增強成功前一律不動第三方節點
+        if (!$('form.checkout').hasClass('ys-checkout-enhanced')) {
+            return;
+        }
+
         // v1.6.30：拿掉「WPLoyalty enabled 就整個 return」的行為
-        // 舊版 early return 造成同時啟用 WPLoyalty 整合與 YITH Points 時 YITH selector 不會執行
-        // 改為條件式收集 selector：
-        //   - WPLoyalty 整合啟用 → 交由 yangsheep-wployalty.js 處理 WLR，這裡跳過 WLR selector
-        //   - YITH Points 整合啟用 → 這裡照樣搬 YITH selector
-        //   - 兩者並存 → 只搬 YITH（WPLoyalty 由 wployalty.js 全權處理）
+        //   - WPLoyalty 整合啟用 → 交由 yangsheep-wployalty.js 處理 WLR
+        //   - YITH Points 整合啟用 → 這裡以 proxy 呈現 YITH selector
         var wployaltyEnabled = (typeof yangsheep_wployalty !== 'undefined' && yangsheep_wployalty.enabled);
         var yithEnabled      = (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.enabled);
 
-        var selectors = [];
-        if (!wployaltyEnabled) {
-            selectors.push('.wlr_point_redeem_message');
-        }
-        if (yithEnabled && Array.isArray(yangsheep_yith_points.selectors)) {
-            selectors = selectors.concat(yangsheep_yith_points.selectors);
-        }
-
-        if (selectors.length === 0) {
+        if (wployaltyEnabled && !yithEnabled) {
             console.log('[YS Checkout] no source selectors, skip point block management');
             return;
         }
 
         var $pointBlock  = $('.yangsheep-coupon-point');
         var $couponBlock = $('.yangsheep-coupon-block');
-        var $pointMessages = $(selectors.join(', ')).not('.yangsheep-coupon-point *');
 
-        // 如果有購物金訊息且不在購物金區塊內，移入
-        if ($pointMessages.length && $pointBlock.length) {
-            $pointMessages.each(function() {
-                var $message = $(this);
-                if (!$message.closest('.yangsheep-coupon-point').length) {
-                    $message.detach().appendTo($pointBlock);
+        if (!$pointBlock.length) {
+            return;
+        }
+
+        var pointBlockInsideForm = $pointBlock.closest('form.checkout').length > 0;
+
+        if (!wployaltyEnabled) {
+            var $wlrMessage = $('.wlr_point_redeem_message:visible').first();
+            // P0 防線：含 <form> 的節點不得移入 form.checkout（見 buildYithProxy 註解）
+            if ($wlrMessage.length && !$wlrMessage.closest($pointBlock).length) {
+                if (pointBlockInsideForm && ($wlrMessage.is('form') || $wlrMessage.find('form').length)) {
+                    console.warn('[YS Checkout] WLR block contains a form; leaving it at its native position');
+                } else {
+                    $wlrMessage.detach().appendTo($pointBlock);
                 }
-                if ($message.is('#yith-par-message-cart, #yith-par-message-reward-cart')) {
-                    $message.addClass('ys-yith-points-mounted');
-                }
-            });
+            }
+        }
+
+        if (yithEnabled && Array.isArray(yangsheep_yith_points.selectors)) {
+            var yithMessages = selectVisibleYithMessage(yangsheep_yith_points.selectors);
+            var $yithMessage = yithMessages.selected;
+            if ($yithMessage.length) {
+                // YITH 介面含 <form>：留在原位（事實源），coupon 區放視覺 proxy
+                buildYithProxy($yithMessage, $pointBlock);
+                yithMessages.duplicates
+                    .addClass('ys-yith-points-duplicate')
+                    .attr('aria-hidden', 'true')
+                    .hide();
+            }
         }
 
         // 根據購物金區塊是否有內容決定顯示/隱藏
-        if ($pointBlock.length) {
-            // 檢查是否有實際內容（排除空白和註解）
-            var hasContent = $pointBlock.children().length > 0;
+        var hasContent = $pointBlock.children().length > 0;
 
-            if (hasContent) {
-                $pointBlock.addClass('has-content').css('display', 'block');
-                $couponBlock.addClass('has-point');
-            } else {
-                $pointBlock.removeClass('has-content').css('display', 'none');
-                $couponBlock.removeClass('has-point');
-            }
-
-            console.log('[YS Checkout] Point block initialized, hasContent:', hasContent);
+        if (hasContent) {
+            $pointBlock.addClass('has-content').css('display', 'block');
+            $couponBlock.addClass('has-point');
+        } else {
+            $pointBlock.removeClass('has-content').css('display', 'none');
+            $couponBlock.removeClass('has-point');
         }
+
+        console.log('[YS Checkout] Point block initialized, hasContent:', hasContent);
     }
 
     // 初始執行（延遲確保 DOM 載入完成）
@@ -179,17 +636,8 @@ jQuery(function ($) {
     });
 
     // YITH Points and Rewards 同步
-    $('input[name="ywpar_input_points"]').on('change', function () {
+    $(document).on('change', 'input[name="ywpar_input_points"]', function () {
         $('#yith-par-message-reward-cart input[name="ywpar_input_points"]').val(this.value || 0);
-    });
-
-    // ===== 4. 移除 coupon 時強制 reload =====
-    $('.woocommerce-checkout').on('click', '.woocommerce-remove-coupon', function () {
-        $(document).one('ajaxSuccess', function (event, xhr, settings) {
-            if (settings.url && settings.url.includes('wc-ajax=remove_coupon')) {
-                location.reload();
-            }
-        });
     });
 
     // ===== 5. 建立帳號 checkbox =====
@@ -213,18 +661,30 @@ jQuery(function ($) {
     $(document.body).on('updated_checkout', syncAccountFields);
 
     // ===== 6. 訂單備註 checkbox =====
-    $('#yangsheep_show_order_notes').on('change', function () {
-        if (this.checked) {
-            $('.woocommerce-additional-fields__field-wrapper').slideDown(200);
-        } else {
-            $('.woocommerce-additional-fields__field-wrapper').slideUp(200);
-        }
-    });
+    function syncOrderCommentsVisibility(animate) {
+        var $toggle = $('#yangsheep_show_order_notes');
+        var $field  = $('#order_comments_field');
 
-    // 初始狀態
-    if ($('#yangsheep_show_order_notes').length && !$('#yangsheep_show_order_notes').is(':checked')) {
-        $('.woocommerce-additional-fields__field-wrapper').hide();
+        if (
+            !$('form.checkout').hasClass('ys-checkout-enhanced')
+            || !$toggle.length
+            || !$field.length
+        ) {
+            return;
+        }
+
+        $field.stop(true, true);
+        if ($toggle.is(':checked')) {
+            animate ? $field.slideDown(200) : $field.show();
+        } else {
+            animate ? $field.slideUp(200) : $field.hide();
+        }
     }
+
+    $(document).on('change', '#yangsheep_show_order_notes', function () {
+        syncOrderCommentsVisibility(true);
+    });
+    syncOrderCommentsVisibility(false);
 
     // ===== 7. 台灣地址 Twzipcode 模組 =====
     /**

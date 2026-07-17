@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.6.34
-**最後更新**：2026-07-15
+**當前版本**：1.7.0
+**最後更新**：2026-07-16
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -14,7 +14,7 @@
 ## 功能特色
 
 ### 1. 結帳頁面優化
-- **結帳頁面重新佈局** - 透過自訂 Hook 重新排列結帳流程
+- **結帳頁面漸進式重新佈局** - 保留 WooCommerce 標準 Hook/模板，前端契約完整時才啟用 YS 版面
 - **桌機版 Flex 佈局** - sidebar 20% + form 80%
 - **TWzipcode 整合** - 台灣地址選擇器自動帶入郵遞區號
 
@@ -26,7 +26,7 @@
 - **訂單備註開關** - 用戶需勾選「我需要填寫訂單備註」才顯示備註欄位
 
 ### 3. 物流卡片選擇
-- 將物流選項從訂單明細表分離，採用卡片式 Radio 選擇
+- 以卡片式 proxy 操作 WooCommerce 原生物流 Radio；原生欄位仍是唯一提交來源
 - AJAX 即時更新，地址變更時自動重新計算可用物流
 - 虛擬商品自動隱藏物流選擇區塊與收件人欄位
 
@@ -92,8 +92,8 @@ yangsheep-checkout-optimizer/
 │   └── js/
 │       ├── jquery.twzipcode.min.js        # TWzipcode 套件
 │       ├── yangsheep-checkout.js          # 結帳頁面 JS
-│       ├── yangsheep-sidebar.js           # 側邊欄 JS
 │       ├── yangsheep-shipping-cards.js    # 物流卡片 JS
+│       ├── yangsheep-wployalty.js          # WPLoyalty 整合 JS
 │       ├── yangsheep-order-enhancer.js    # 訂單強化 JS
 │       └── color-picker-init.js           # 後台顏色選擇器初始化
 ├── src/                                   # PSR-4 自動載入（命名空間：YangSheep\CheckoutOptimizer）
@@ -102,11 +102,14 @@ yangsheep-checkout-optimizer/
 │   ├── Checkout/
 │   │   ├── YSCheckoutCustomizer.php       # 自訂器（Color Picker enqueue）
 │   │   ├── YSCheckoutFields.php           # 結帳欄位設置
-│   │   ├── YSCheckoutSidebar.php          # 側邊欄類別
+│   │   ├── YSCheckoutLayout.php           # 標準 Hook 區塊與漸進式版面目標
+│   │   ├── YSCheckoutSidebar.php          # 側邊欄三盒（結帳金額/運輸方式/購物車內容，id fragment 更新）
 │   │   └── YSShippingCards.php            # 物流卡片類別
 │   ├── Compat/
 │   │   ├── YSThirdPartyShippingCompat.php # 第三方物流相容性
-│   │   └── YSWPLoyaltyIntegration.php     # WPLoyalty 購物金整合
+│   │   ├── YSWPLoyaltyIntegration.php     # WPLoyalty 購物金整合
+│   │   ├── YSYithCouponDisplay.php        # YITH 折扣標籤整合
+│   │   └── YSYithPointsIntegration.php    # YITH Points 搬移與診斷
 │   ├── Order/
 │   │   └── YSOrderEnhancer.php            # 訂單頁面強化
 │   └── Settings/
@@ -116,14 +119,13 @@ yangsheep-checkout-optimizer/
 │       └── YSSettingsMigrator.php         # 設定資料遷移
 ├── templates/
 │   ├── checkout/
-│   │   ├── form-checkout.php              # 結帳表單佈局
-│   │   ├── form-billing.php               # 帳單表單
-│   │   ├── form-shipping.php              # 運送表單
-│   │   ├── form-login.php                 # 登入表單
-│   │   ├── review-order.php               # 訂單明細
-│   │   └── shipping-cards.php             # 物流卡片模板
-│   └── myaccount/                         # 我的帳號模板覆寫
-├── DEVELOPMENT.md                         # 開發文件
+│   │   └── shipping-cards.php             # 直接 include 的視覺 proxy partial
+│   ├── myaccount/                         # 「我的帳號視覺」配對模板（設定開啟才覆寫）
+│   │   ├── my-account.php / my-address.php / form-login.php
+│   │   ├── form-edit-address.php / view-order.php / view-subscription.php
+│   └── order/                             # 同上（與 yangsheep-order.css 配對）
+│       ├── order-details.php
+│       └── order-details-customer.php
 ├── README.md                              # 本檔案
 └── yangsheep-checkout-optimization.php    # 主外掛檔案（含 PSR-4 自動載入器）
 ```
@@ -224,13 +226,50 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 - 保留標準 Action Hooks 以相容第三方外掛
 - 維持 `shipping_method[...]` input name 結構
 - CSS Grid 排版，使用 `grid-column` 控制欄位寬度
-- 第三方物流欄位使用 CSS `:not(.ys-cvs-shown)` 選擇器控制顯示
+- 第三方物流欄位由各物流外掛原生節點作為資料來源，YS 只在已辨識的節點上做漸進式排版與顯示同步
 
 ---
 
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.0 (2026-07-16)
+
+#### 原始設計版面回歸（CYBERBIZ 參考設計）
+- 主欄順序回歸原始設計：**運送國家 → 商品明細 → 折扣代碼 → 選擇運送方式 → 帳單資訊 → 選擇支付方式**（付款區改掛 `woocommerce_checkout_after_customer_details`）。
+- 側邊欄回歸三盒設計：**結帳金額**（商品小計/運費/應付總額）、**運輸方式**（已選名稱）、**購物車內容**（可摺疊、預設展開）。由 `YSCheckoutSidebar` 伺服器端渲染，內容以 `#id` fragment 隨每次 `update_checkout` 重繪 — **不在會被 Woo fragment 替換的節點上放自訂標記**（根治 AJAX 後樣式/toggle 失效）。
+- 原生 `#order_review`（持久 wrapper）移到運送卡片下方：核心列（商品/小計/運費/總計）由 gated CSS 隱藏，**第三方掛標準 review hooks 的內容（超商選店等）就地顯示**，位置與原始設計一致、無表格框線。
+- 折扣區視覺位置回到主欄（商品明細與運送方式之間）。**YITH 兌換介面改走「視覺 proxy」**（與物流卡片同一模式）：原生介面留在 `form.checkout` 外原位置作為提交事實源，coupon 區內只放淨化後的代理（無 name/id/`<form>`，代理按鈕同步點數值後觸發原生按鈕）。**原因（P0）**：Woo/YITH fragment 以 HTML 字串重繪節點時，位於 `form.checkout` 內的巢狀 `<form>` 會被 parser 丟棄，兌換按鈕的 form owner 變成 checkout form — 按「套用折抵」會同時觸發 `checkout_place_order` 與付款請求（瀏覽器實證）。含 `<form>` 的第三方節點一律不得移入 checkout form（JS 有防線檢查）。非 AJAX POST 的欄位遺失由既有快照機制還原。
+- 超商選店等第三方 review-hook 內容顯示於「選擇運送方式」**容器內**（`#order_review` appendTo 物流 wrapper），不再是獨立區塊。
+- `initPointRedeemBlock` 加增強 gate：未增強時不搬移任何第三方購物金節點（避免移入 hidden 區塊消失）。
+- 側邊欄「運輸方式」fragment 根節點**空狀態也輸出**（否則一次空 fragment 會讓後續 AJAX 找不到替換目標）；摺疊控制改為 `<button aria-expanded aria-controls>`（鍵盤可操作）。
+- 修 fail-open 漏洞：`#shipping_country_field` 與 `#coupons_list` 改為**增強成功後**才移入 YS 區塊（先前未增強也搬 → 原生控制項會消失在 hidden 區塊內）。
+- 樣式啟用加入 href fallback（style id 被 CSS 優化外掛改寫時仍可啟用；完全找不到則維持原生結帳）；增強初始化改為可在 `updated_checkout` 重試。
+- 手機版側邊欄移至付款區前、桌機還原為 grid 欄（同 v1.6.x 行為）。
+
+#### 我的帳號視覺修復
+- **恢復 6 份 myaccount + 2 份 order 模板**與其設定 gate（`yangsheep_myaccount_visual=yes` 才覆寫）：模板與 `yangsheep-myaccount.css`/`yangsheep-order.css` 是配對系統，先前只刪模板留 CSS 造成我的帳號原生 markup 大跑版。checkout/* 維持零覆寫。
+- **`order/*` 覆寫僅限「我的帳號」頁面**（`is_account_page()`）：order-received / order-pay 一律用 Woo 核心模板 — 這些端點不載入配對 CSS，套陳舊模板會裸樣式 + 隱藏訪客訂單明細。
+
+#### WooCommerce progressive enhancement 架構
+- 移除 `woocommerce_locate_template` 的**無條件**攔截與 10 份過期 checkout 模板覆寫（form-checkout / form-pay / review-order / thankyou / payment 等），checkout 完整交還 WooCommerce 核心模板及標準 hooks；模板攔截只剩「我的帳號視覺」這組 opt-in 配對。
+- 新增 `YSCheckoutLayout`，只透過標準 checkout hooks 插入 YS 區塊；前端確認原生 form、order review、payment 與所有目標容器完整後才重排。
+- 主題若以額外 wrapper 包住 order review，重排時會保留 wrapper 內其他第三方節點，只移除搬空後的容器。
+- 主結帳 CSS 預設以 `media="not all"` 停用，只有重排成功才啟用；初始化失敗時保留未受 YS 樣式影響的 Woo 原生結帳。
+- order-pay、order-received 不再套用過期模板；使用 WooCommerce 當前版本輸出（My Account 視覺模板保留為 opt-in，見上）。
+- 透過 `woocommerce_before_checkout_shipping_form` 與 `woocommerce_before_order_notes` 恢復「同訂購人姓名電話」和選用式訂單備註，不再依賴複製模板；JS 失效時控制項保持隱藏、Woo 原生欄位保持可用。
+- 移除舊模板遺留的帳單國家、運送至不同地址與付款圖示硬隱藏，也不再讓備註開關誤隱藏其他第三方 additional fields。
+
+#### 物流、折扣與第三方相容
+- 物流卡片改為純視覺 proxy；原生 `shipping_method[...]` 保留 name、enabled、checked，卡片只觸發原生 radio 的一次 `change`，消除雙重 `update_checkout`。
+- 不再重播 `woocommerce_review_order_before_shipping/after_shipping`；標準 hook 僅由 Woo 核心執行一次。
+- 取消折扣券不再強制整頁 reload，避免使用者已填欄位遺失。
+- YITH Points 只搬移第一個可見且有內容的折抵介面（重複介面標記 `ys-yith-points-duplicate` 隱藏）。
+- YITH 非 AJAX 折抵 POST 會以短效 Woo session 快照保存顧客已填欄位，重新載入後還原；不保存付款控制、nonce、密碼或檔案欄位。
+- checkout 會移除 woomp 誤載入的 Woo `wc-cart` handler，避免折扣券取消被送出兩次；不影響購物車頁。
+- 後台新增 YITH 版本、整合開關、selector 與前台必要條件診斷；整合失敗或關閉時保留 YITH 原生介面。
+- 綠界、PayNow、PAYUNI 各自只操作所屬選店節點；第三方物流 CSS 僅限定已知選店按鈕，不再強制改寫物流區所有按鈕或預先隱藏第三方標籤。
 
 ### v1.6.34 (2026-07-15)
 

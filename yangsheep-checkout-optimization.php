@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.6.34
+ * Version:           1.7.0
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.6.34' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.0' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -20,6 +20,21 @@ define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
 // 定義常數供其他類別使用
 define( 'YANGSHEEP_CHECKOUT_URL', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL );
 define( 'YANGSHEEP_CHECKOUT_VERSION', YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+
+/**
+ * Return a cache-busting asset version tied to the deployed file.
+ *
+ * @param string $relative_path Plugin-relative asset path.
+ * @return string
+ */
+function yangsheep_checkout_asset_version( $relative_path ) {
+    $path  = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . ltrim( (string) $relative_path, '/\\' );
+    $mtime = is_file( $path ) ? filemtime( $path ) : false;
+
+    return false === $mtime
+        ? YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION
+        : YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION . '.' . (string) $mtime;
+}
 
 // WooCommerce 未啟用提示
 function yangsheep_checkout_optimizer_wc_missing_notice() {
@@ -70,6 +85,7 @@ use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
 use YangSheep\CheckoutOptimizer\Admin\YSCheckoutSettings;
 use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutCustomizer;
 use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutFields;
+use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutLayout;
 use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutSidebar;
 use YangSheep\CheckoutOptimizer\Checkout\YSShippingCards;
 use YangSheep\CheckoutOptimizer\Order\YSOrderEnhancer;
@@ -124,6 +140,7 @@ add_action( 'init', function(){
     YSCheckoutCustomizer::get_instance();
     YSCheckoutFields::get_instance();
     YSShippingCards::get_instance();
+    YSCheckoutLayout::get_instance();
     YSCheckoutSidebar::get_instance();
     YSOrderEnhancer::get_instance();
     YSThirdPartyShippingCompat::get_instance();
@@ -143,10 +160,10 @@ add_action( 'wp_enqueue_scripts', function(){
     }
 
     // 結帳頁面專用 CSS/JS
-    if ( is_checkout() ) {
-        wp_enqueue_style( 'yangsheep-checkout-optimization', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-checkout.css', [], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
+    if ( is_checkout() && ! is_wc_endpoint_url() ) {
+        wp_enqueue_style( 'yangsheep-checkout-optimization', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-checkout.css', [], yangsheep_checkout_asset_version( 'assets/css/yangsheep-checkout.css' ), 'not all' );
         wp_enqueue_script( 'jquery-twzipcode', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/jquery.twzipcode.min.js', [ 'jquery' ], '1.7.12', true );
-        wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode', 'wc-checkout' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+        wp_enqueue_script( 'yangsheep-checkout-custom', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-checkout.js', [ 'jquery', 'jquery-twzipcode', 'wc-checkout' ], yangsheep_checkout_asset_version( 'assets/js/yangsheep-checkout.js' ), true );
 
         // 傳遞超取物流方式清單到前端
         $cvs_methods = YSSettingsManager::get( 'yangsheep_cvs_shipping_methods', array() );
@@ -155,18 +172,15 @@ add_action( 'wp_enqueue_scripts', function(){
             'nonce'                => wp_create_nonce( 'yangsheep_checkout_nonce' ),
         ) );
 
-        // 物流卡片 CSS/JS（僅結帳頁主表單，非端點頁）
-        if ( ! is_wc_endpoint_url() ) {
-            wp_enqueue_style( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-shipping-cards.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-            wp_enqueue_script( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-shipping-cards.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+        // 物流卡片 CSS/JS（僅結帳頁主表單）
+        wp_enqueue_style( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-shipping-cards.css', [ 'yangsheep-checkout-optimization' ], yangsheep_checkout_asset_version( 'assets/css/yangsheep-shipping-cards.css' ), 'not all' );
+        wp_enqueue_script( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-shipping-cards.js', [ 'jquery' ], yangsheep_checkout_asset_version( 'assets/js/yangsheep-shipping-cards.js' ), true );
 
-            // 側邊欄 CSS/JS
-            wp_enqueue_style( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-sidebar.css', [ 'yangsheep-checkout-optimization' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-            wp_enqueue_script( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-sidebar.js', [ 'jquery' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION, true );
+        // 側邊欄樣式（版面重排由主要 checkout 腳本負責）
+        wp_enqueue_style( 'yangsheep-sidebar', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-sidebar.css', [ 'yangsheep-checkout-optimization' ], yangsheep_checkout_asset_version( 'assets/css/yangsheep-sidebar.css' ), 'not all' );
 
-            // 第三方外掛相容 CSS
-            wp_enqueue_style( 'yangsheep-compatibility', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-compatibility.css', [ 'yangsheep-shipping-cards' ], YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION );
-        }
+        // 第三方外掛相容 CSS
+        wp_enqueue_style( 'yangsheep-compatibility', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-compatibility.css', [ 'yangsheep-shipping-cards' ], yangsheep_checkout_asset_version( 'assets/css/yangsheep-compatibility.css' ), 'not all' );
     }
 
     // 我的帳號頁面及訂單明細（根據設定決定是否載入視覺樣式）
@@ -185,51 +199,68 @@ add_action( 'wp_enqueue_scripts', function(){
     }
 });
 
-// 覆寫 WooCommerce 模板，支持 checkout, myaccount, order
-add_filter( 'woocommerce_locate_template', function( $template, $template_name, $template_path ){
-    // 插件模板根目錄
-    $plugin_path = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'templates/';
-
-    // myaccount 模板：只在啟用「我的帳號視覺」時才覆寫
-    if ( strpos( $template_name, 'myaccount/' ) === 0 ) {
-        if ( YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) !== 'yes' ) {
-            return $template; // 未啟用時使用原始模板
-        }
+// 「我的帳號視覺」模板（v1.7.0 保留的唯一模板覆寫，且必須設定開啟才生效）。
+// checkout/* 一律走 Woo 核心模板 — 不做任何無條件覆寫。
+// myaccount/* 與 order/* 是與 yangsheep-myaccount.css / yangsheep-order.css 配對的
+// 選用視覺系統；沒有模板只掛 CSS 會讓原生 markup 大跑版，因此兩者同開同關。
+add_filter( 'woocommerce_locate_template', function( $template, $template_name, $template_path ) {
+    if ( strpos( $template_name, 'myaccount/' ) !== 0 && strpos( $template_name, 'order/' ) !== 0 ) {
+        return $template; // checkout 等其他模板永遠用 Woo 核心
     }
 
-    // 若插件有該檔案，直接使用
-    if ( file_exists( $plugin_path . $template_name ) ) {
-        return $plugin_path . $template_name;
+    if ( YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) !== 'yes' ) {
+        return $template;
     }
-    return $template;
+
+    // order/* 只在「我的帳號」頁面覆寫（view-order 等，與 yangsheep-order.css 配對載入）。
+    // order-received / order-pay 等結帳端點不是帳號頁：用 Woo 核心模板，
+    // 避免陳舊模板 + 無配對 CSS 的裸樣式（CODEX P1：真單 #12148 實證）。
+    if (
+        strpos( $template_name, 'order/' ) === 0
+        && ( ! function_exists( 'is_account_page' ) || ! is_account_page() )
+    ) {
+        return $template;
+    }
+
+    $plugin_template = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'templates/' . $template_name;
+    return file_exists( $plugin_template ) ? $plugin_template : $template;
 }, 10, 3 );
 
-// 主要 Hook 移動
-remove_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment', 20 );
-add_action( 'yangsheep_payment', 'woocommerce_checkout_payment', 20 );
+// 保留 WooCommerce 原生模板、標準 checkout hooks、付款與折扣入口。
+// YS 只有在前端 layout 初始化成功後才隱藏原生折扣入口；JS 失敗時仍可使用 Woo 原生流程。
+add_action( 'woocommerce_before_checkout_form', 'yangsheep_checkout_native_coupon_fallback', 9 );
+function yangsheep_checkout_native_coupon_fallback() {
+    if ( ! function_exists( 'woocommerce_checkout_coupon_form' ) ) {
+        return;
+    }
 
-// 不再覆寫 order review，使用 woocommerce_cart_item_name filter 注入控制項
-remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_login_form', 10 );
-add_action( 'yangsheep_loginform', 'woocommerce_checkout_login_form', 10 );
-remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form', 10 );
-remove_action( 'woocommerce_before_checkout_form', 'woocommerce_output_all_notices', 10 );
+    // 部分主題會移除 Woo 的 callback。此時補回同一個核心表單；
+    // callback 仍存在時不輸出，避免與 Woo priority 10 的原生入口重複。
+    if ( false === has_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form' ) ) {
+        woocommerce_checkout_coupon_form();
+    }
+}
+
 add_action( 'yangsheep_coupon', 'yangsheep_checkout_coupon_form_custom' );
 function yangsheep_checkout_coupon_form_custom(){
+    // id/name 用 ys_ 前綴：Woo 原生 coupon 表單（隱藏但保留在 DOM 作 fail-open 後備）
+    // 已占用 #coupon_code / name=coupon_code，重複 id 會影響 label 與第三方 selector
     echo '<div class="yangsheep_checkout_coupon coupon-form">'
        . '<div class="yangsheep-inputform form-row woocommerce-validated">'
-       . '<input type="text" name="coupon_code" class="input-text" placeholder="'.esc_attr__('Coupon','yangsheep-checkout-optimization').'" id="coupon_code" value="">'
+       . '<label class="screen-reader-text" for="ys_coupon_code">'.esc_html__('Coupon','yangsheep-checkout-optimization').'</label>'
+       . '<input type="text" name="ys_coupon_code" class="input-text" placeholder="'.esc_attr__('Coupon','yangsheep-checkout-optimization').'" id="ys_coupon_code" value="">'
        . '</div>'
        . '<div class="yangsheep-coupon-button form-row">'
        . '<button type="button" class="button" name="apply_coupon" value="'.esc_attr__('使用折扣代碼','yangsheep-checkout-optimization').'">'.esc_html__('使用折扣代碼','yangsheep-checkout-optimization').'</button>'
        . '</div><div class="clear"></div></div>';
 }
-// Ajax 優惠券
+// Ajax 優惠券（selector 全部限定在 .yangsheep_checkout_coupon 範圍內）
 add_action( 'wp_footer', function(){
     if ( ! function_exists( 'is_checkout' ) ) {
         return;
     }
     if ( is_checkout() && ! is_wc_endpoint_url() ) { ?>
-<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';$('input[name=coupon_code]').on('input',function(){cc=$(this).val();});$('button[name=apply_coupon]').click(function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$('input[name=coupon_code]').val('');$('.woocommerce-notices-wrapper').html(r);});});});</script>
+<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';var $scope=$('.yangsheep_checkout_coupon');$scope.on('input','#ys_coupon_code',function(){cc=$(this).val();});$scope.on('click','button[name=apply_coupon]',function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$scope.find('#ys_coupon_code').val('');cc='';$('.woocommerce-notices-wrapper').html(r);});});});</script>
 <?php } } );
 add_action('wp_ajax_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
 add_action('wp_ajax_nopriv_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
@@ -341,13 +372,6 @@ function yangsheep_render_order_items() {
     echo '</div>';
 }
 
-// 自訂訂單總計輸出（不再呼叫 woocommerce_order_review 避免重複渲染商品項目）
-add_action('yangsheep_order_totals', 'yangsheep_render_order_totals');
-function yangsheep_render_order_totals() {
-    // 直接輸出必要的 totals，不再使用 woocommerce_order_review()
-    // 這樣可以避免主題 hook 插入額外的商品項目
-}
-
 // 註冊 AJAX Fragment 更新自訂商品項目
 add_filter('woocommerce_update_order_review_fragments', 'yangsheep_order_items_fragment');
 function yangsheep_order_items_fragment($fragments) {
@@ -363,6 +387,9 @@ function yangsheep_order_items_fragment($fragments) {
 
 // 動態 CSS 變數與套用
 add_action('wp_head',function(){
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url() ) {
+        return;
+    }
     /**
      * 莫蘭迪配色方案
      * 主色：淡藍色 #8fa8b8 (按鈕、選中狀態)
@@ -404,7 +431,7 @@ add_action('wp_head',function(){
 
     echo '<style>';
     // CSS 變數定義
-    echo ':root{';
+    echo 'body.ys-checkout-enhanced{';
     echo "--theme-button-background-initial-color:{$btn_bg};";
     echo "--theme-button-text-initial-color:{$btn_txt};";
     echo "--theme-button-hover-bg:{$btn_hover_bg};";
@@ -521,45 +548,6 @@ add_action('wp_head',function(){
     echo "background-color:{$btn_hover_bg};";
     echo "color:{$btn_hover_txt};";
     echo '}';
-
-    // Checkbox 容器 - 簡潔樣式（無外框、無背景）
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle,';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing {';
-    echo 'display:flex;align-items:center;gap:10px;';
-    echo 'cursor:pointer;padding:8px 0;margin-bottom:5px;}';
-
-    // 內層 label 隱藏
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle label,';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing label {';
-    echo 'display:none;}';
-
-    // 自訂 checkbox 樣式 - 與運送方式卡片一致 (22x22px)
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"],';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"] {';
-    echo 'appearance:none;-webkit-appearance:none;';
-    echo 'width:22px;height:22px;min-width:22px;';
-    echo 'border:2px solid var(--theme-form-field-border-initial-color, #d0d0d0);border-radius:4px;';
-    echo 'background:#fff;cursor:pointer;';
-    echo 'position:relative;transition:all 0.2s ease;';
-    echo 'margin:0;flex-shrink:0;}';
-
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked,';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"]:checked {';
-    echo "background:{$btn_bg};border-color:{$btn_bg};}";
-
-    // Checkbox 打勾圖示 - 調整位置配合 22px（與運送方式卡片一致）
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle input[type=\"checkbox\"]:checked::after,';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing input[type=\"checkbox\"]:checked::after {';
-    echo 'content:\"\";position:absolute;';
-    echo 'left:6px;top:3px;width:6px;height:11px;';
-    echo 'border:solid #fff;border-width:0 2px 2px 0;';
-    echo 'transform:rotate(45deg);}';
-
-    // Checkbox 文字樣式 - 與 checkbox 垂直置中
-    echo '.yangsheep-design-checkout-page .yangsheep-order-notes-toggle > span,';
-    echo '.yangsheep-design-checkout-page .yangsheep-same-as-billing > span {';
-    echo 'font-size:14px;color:#333;line-height:22px;';
-    echo 'cursor:pointer;}';
 
     // 台灣化欄位：隱藏 address_2（需要 !important 覆蓋 WooCommerce 內建樣式）
     echo '.yangsheep-design-checkout-page .woocommerce-shipping-fields .hidden,';
