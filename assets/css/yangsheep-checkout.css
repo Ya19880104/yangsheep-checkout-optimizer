@@ -561,7 +561,7 @@ a.woocommerce-remove-coupon {
     margin: 0 !important;
 }
 
-.yangsheep_checkout_coupon #coupon_code {
+.yangsheep_checkout_coupon #ys_coupon_code {
     width: 100%;
     height: 56px;
     min-height: 56px;
@@ -621,25 +621,41 @@ a.woocommerce-remove-coupon {
     display: none !important;
 }
 
-.yangsheep-coupon-point .ywpar_apply_discounts_container {
-    margin: 10px 0 0 !important;
-    display: block !important;
-    width: 100% !important;
-    color: var(--ys-text-secondary) !important;
+/* YITH proxy（v1.7.1）：只樣式 YS 自有 proxy 結構，不硬改第三方
+   .ywpar_apply_discounts —— 舊的 flex-direction:column 會把直接文字節點
+   拆成獨立 flex item（You have / 1800 / 點數 逐行碎裂、手機高度爆增）。
+   訊息文字自然流排、點數輸入框行內、套用按鈕全寬。 */
+.yangsheep-coupon-point .ys-yith-proxy {
+    display: block;
+    color: var(--ys-text-secondary);
 }
 
-.yangsheep-coupon-point .ywpar_apply_discounts {
-    display: flex;
-    flex-direction: column !important;
-    gap: 5px;
+.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-form {
+    display: block;
+    margin-top: 8px;
+    line-height: 1.9;
 }
 
-.yangsheep-coupon-point #ywpar-points-max {
-    width: 100%;
-    max-width: 100% !important;
+.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-form > span {
+    display: inline;
+}
+
+.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-points {
+    display: inline-block;
+    width: 96px;
+    height: 40px;
+    padding: 0 10px !important;
+    box-sizing: border-box;
     background: #fff;
-    padding: 0 15px !important;
-    text-align: left;
+    text-align: center;
+    margin: 0 4px;
+    vertical-align: middle;
+}
+
+.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-apply {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .yangsheep-coupon-point .button {

@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.0
-**最後更新**：2026-07-16
+**當前版本**：1.7.1
+**最後更新**：2026-07-18
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -233,6 +233,13 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.1 (2026-07-18)
+
+#### 發布品質關卡與視覺收尾（發布後 REVIEW 三項）
+- **契約測試跨平台修正（P1 release gate）**：`tests/contract-v1.7.0.php` 的 `source()` 讀檔統一將 CRLF 正規化為 LF。Windows 乾淨 checkout（`core.autocrlf=true`）工作樹為 CRLF，固定 LF 字串斷言會誤判 1 條（shipping company Taiwan-fields gate）；正規化後 74/74 在 LF/CRLF 工作樹皆可重現。
+- **折扣碼輸入框 CSS 同步（P2）**：`.yangsheep_checkout_coupon #coupon_code` → `#ys_coupon_code`（v1.7.0 改唯一 id 後樣式成死碼，依賴主題樣式）。
+- **YITH proxy 版面（P2）**：flatten 容器改用 proxy 專屬 class `ys-yith-proxy-form`，移除對第三方 `.ywpar_apply_discounts` 的 `flex-direction: column !important` 硬改——該規則會把直接文字節點拆成獨立 flex item（訊息逐行碎裂、手機高度爆增）。新樣式：訊息自然流排、點數輸入框行內、套用按鈕全寬。
 
 ### v1.7.0 (2026-07-16)
 

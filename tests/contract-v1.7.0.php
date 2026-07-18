@@ -10,7 +10,10 @@ function source(string $path): string
     if ($contents === false) {
         throw new RuntimeException("Unable to read {$path}");
     }
-    return $contents;
+    // 跨平台：Windows checkout（core.autocrlf=true）工作樹為 CRLF，
+    // 固定字串斷言以 LF 撰寫 — 讀檔時統一正規化，讓全部 74 條斷言
+    // 在 LF/CRLF 工作樹皆可重現（v1.7.1 P1 release-gate 修正）
+    return str_replace("\r\n", "\n", $contents);
 }
 
 function executable_php(string $source): string
@@ -265,6 +268,20 @@ check(
     str_contains($bootstrap, "strpos( \$template_name, 'order/' ) === 0")
     && str_contains($bootstrap, 'is_account_page()'),
     'order/* template override is limited to My Account pages (order-received stays core)'
+);
+// v1.7.1：coupon 輸入樣式與唯一 id 同步（v1.7.0 改 id 後 CSS 曾成死碼）
+check(
+    str_contains($checkoutCss, '.yangsheep_checkout_coupon #ys_coupon_code')
+    && !str_contains($checkoutCss, '.yangsheep_checkout_coupon #coupon_code'),
+    'custom coupon input styling targets the unique ys_coupon_code id'
+);
+// v1.7.1：YITH proxy 版面只作用於 YS 自有結構，不硬改第三方 class
+check(
+    str_contains($checkoutJs, 'ys-yith-proxy-form')
+    && str_contains($checkoutCss, '.ys-yith-proxy .ys-yith-proxy-form')
+    && str_contains($checkoutCss, '.ys-yith-proxy .ys-yith-proxy-points')
+    && !preg_match('/\.yangsheep-coupon-point\s+\.ywpar_apply_discounts\s*\{/', $checkoutCss),
+    'YITH proxy layout styles its own structure without forcing third-party classes'
 );
 // 第三輪 P2：自訂 coupon 輸入不得重複 Woo 原生 #coupon_code
 check(

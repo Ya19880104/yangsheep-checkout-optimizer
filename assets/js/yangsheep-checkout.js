@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.0';
+    window.__ysCheckoutOptimizerBuild = '1.7.1';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -496,7 +496,9 @@ jQuery(function ($) {
         $clone.find('input[type="hidden"]').remove();
         $clone.find('form').each(function () {
             var $f = $(this);
-            var $div = $('<div class="ywpar_apply_discounts"></div>').append($f.contents());
+            // 用 proxy 專屬 class（不借用第三方 .ywpar_apply_discounts）：
+            // 版面樣式只作用於 YS 自有結構，不硬改 YITH 原始 class（v1.7.1 P2）
+            var $div = $('<div class="ys-yith-proxy-form"></div>').append($f.contents());
             $f.replaceWith($div);
         });
         $clone.find('[id]').addBack('[id]').removeAttr('id');
