@@ -1453,15 +1453,10 @@ a.woocommerce-remove-coupon {
 }
 
 /* ===== 超取模式：隱藏地址欄位 ===== */
-/* 透過 body class 控制，避免被 WooCommerce AJAX 覆蓋 */
-body.yangsheep-cvs-mode #shipping_postcode_field,
-body.yangsheep-cvs-mode #shipping_state_field,
-body.yangsheep-cvs-mode #shipping_city_field,
-body.yangsheep-cvs-mode #shipping_address_1_field,
-body.yangsheep-cvs-mode #shipping_address_2_field,
-body.yangsheep-cvs-mode #shipping-zipcode-fields {
-    display: none !important;
-}
+/* v1.7.2：隱藏規則已移至「永遠載入」的 yangsheep-cvs-mode.css，
+   避免 v1.7.0 主 CSS 改 media="not all" gate 後，enhancement 未套用時
+   欄位不隱藏（body.yangsheep-cvs-mode 由 JS 加、CSS 卻沒生效）。
+   以下純視覺 grid 排版仍留在此 gated CSS，只在增強後生效。 */
 
 /* ===== 超取模式：確保收件人欄位保持並排 ===== */
 /* 當 Grid 只剩姓名和電話時，確保它們保持在同一行 */

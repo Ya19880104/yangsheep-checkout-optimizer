@@ -67,44 +67,149 @@ class YSCheckoutFields {
         }
         // phpcs:enable WordPress.Security.NonceVerification.Missing
 
-        if ( empty( $shipping_methods ) || ! is_array( $shipping_methods ) ) {
+        if ( ! is_array( $shipping_methods ) ) {
             return false;
         }
 
         $cvs_methods = YSSettingsManager::get( 'yangsheep_cvs_shipping_methods', array() );
-        $use_manual_settings = ! empty( $cvs_methods ) && is_array( $cvs_methods );
+        if ( ! is_array( $cvs_methods ) ) {
+            $cvs_methods = array();
+        }
+
+        return self::all_methods_cvs( $shipping_methods, $cvs_methods );
+    }
+
+    /**
+     * 全域地址是否可免必填/隱藏 = 「所有已選包裹的物流都是超商」。
+     *
+     * 🔴 多包裹（WC 分裝，shipping_method[0]、[1]…）語意：CVS + 宅配 混合時，
+     * 宅配包裹仍需收件地址，故只要有任一非超商包裹即回傳 false（fail-safe，
+     * 避免宅配訂單缺地址）。順序無關。純函式供 tests/cvs-match-matrix.php 回歸。
+     *
+     * @param array $shipping_methods 各 package 已選 method（可能含 :instance_id）
+     * @param array $cvs_methods      後台設定清單（空=走自動偵測）
+     * @return bool
+     */
+    public static function all_methods_cvs( array $shipping_methods, array $cvs_methods ) {
+        if ( empty( $shipping_methods ) ) {
+            return false;
+        }
 
         foreach ( $shipping_methods as $method ) {
-            if ( empty( $method ) ) {
-                continue;
+            $method = trim( (string) $method );
+            // 任一 package 還沒有解析出物流方式時一律保留地址；
+            // 不得濾掉空值後把「CVS + 未知」誤判為全 CVS。
+            if ( '' === $method ) {
+                return false;
             }
-            if ( $use_manual_settings ) {
-                foreach ( $cvs_methods as $cvs_method ) {
-                    if ( $method === $cvs_method ) {
-                        return true;
-                    }
-                    $method_base = strstr( $method, ':', true ) ?: $method;
-                    $cvs_base = strstr( $cvs_method, ':', true ) ?: $cvs_method;
-                    if ( $method_base === $cvs_base && strpos( $method, $cvs_method ) === 0 ) {
-                        return true;
-                    }
-                }
-            } else {
-                $method_id = strstr( $method, ':', true ) ?: $method;
-                if ( strpos( $method_id, 'payuni_' ) === 0 &&
-                     ( strpos( $method_id, '711' ) !== false ||
-                       strpos( $method_id, 'fami' ) !== false ||
-                       strpos( $method_id, 'hilife' ) !== false ) ) {
-                    return true;
-                }
-                if ( strpos( $method_id, 'ecpay' ) !== false && strpos( $method_id, 'cvs' ) !== false ) {
-                    return true;
-                }
-                if ( strpos( $method_id, 'ys_paynow_shipping_' ) === 0 && strpos( $method_id, 'tcat' ) === false ) {
-                    return true;
-                }
+            if ( ! self::is_single_method_cvs( $method, $cvs_methods ) ) {
+                return false;
             }
         }
+
+        return true;
+    }
+
+    /**
+     * 單一 package 的物流是否為超商（後台指定優先，否則自動偵測）。純函式。
+     *
+     * @param string $method      單一 chosen shipping method
+     * @param array  $cvs_methods 後台設定清單（空=自動偵測）
+     * @return bool
+     */
+    public static function is_single_method_cvs( $method, array $cvs_methods ) {
+        $method = (string) $method;
+        if ( '' === $method ) {
+            return false;
+        }
+
+        // 後台指定清單優先
+        if ( ! empty( $cvs_methods ) ) {
+            return self::method_matches_cvs_list( $method, $cvs_methods );
+        }
+
+        // 自動偵測 allowlist（規則須與 JS isSingleMethodCvs() 完全一致；
+        // 比對 base = 去掉 :instance_id 的部分，小寫）
+        $base = strstr( $method, ':', true );
+        if ( false === $base ) {
+            $base = $method;
+        }
+        $base = strtolower( $base );
+
+        // PayUni 超取
+        if ( false !== strpos( $base, 'payuni' ) &&
+             ( false !== strpos( $base, '711' ) ||
+               false !== strpos( $base, 'fami' ) ||
+               false !== strpos( $base, 'hilife' ) ) ) {
+            return true;
+        }
+        // 綠界 ECPay 超取
+        if ( false !== strpos( $base, 'ecpay' ) && false !== strpos( $base, 'cvs' ) ) {
+            return true;
+        }
+        // YS PayNow 超取（711 / family / hilife；黑貓宅配 tcat 不在清單）
+        if ( false !== strpos( $base, 'ys_paynow_shipping' ) &&
+             ( false !== strpos( $base, '711' ) ||
+               false !== strpos( $base, 'family' ) ||
+               false !== strpos( $base, 'hilife' ) ) ) {
+            return true;
+        }
+        // 好用版（woomp）PayNow 已知 C2C 超商方法。限定明確 prefix，
+        // 避免把 B2C、宅配或其他未知方法誤判為超商而移除地址要求。
+        if ( ( 0 === strpos( $base, 'paynow_shipping_c2c_' ) ||
+               0 === strpos( $base, 'woomp_paynow_shipping_c2c_' ) ) &&
+             ( false !== strpos( $base, '711' ) ||
+               false !== strpos( $base, 'family' ) ||
+               false !== strpos( $base, 'hilife' ) ) ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 判斷單一 chosen shipping method 是否落在後台指定的超商清單。
+     *
+     * 🔴 後台儲存的是完整 rate id（method_id:instance_id，來自 get_rate_id()）。
+     * 含 ":" 的設定值只做「完整相等」比對 — 避免 `flat_rate:1` 前綴誤中
+     * `flat_rate:10`（會讓宅配單被當超商、地址免必填 → 可能缺收件地址成單）。
+     * 不含 ":" 的設定值視為舊版 base id，才允許 method base 相等。
+     *
+     * 純函式（無 WC 依賴），供 tests/cvs-match-matrix.php 直接回歸。
+     *
+     * @param string $method      chosen shipping method（可能含 :instance_id）
+     * @param array  $cvs_methods 後台設定清單
+     * @return bool
+     */
+    public static function method_matches_cvs_list( $method, array $cvs_methods ) {
+        $method = (string) $method;
+        if ( '' === $method ) {
+            return false;
+        }
+
+        foreach ( $cvs_methods as $cvs_method ) {
+            $cvs_method = (string) $cvs_method;
+            if ( '' === $cvs_method ) {
+                continue;
+            }
+            // 完整相等永遠命中
+            if ( $method === $cvs_method ) {
+                return true;
+            }
+            // 含 ":" = 完整 rate id，只能完整相等（不做前綴/base 比對）
+            if ( false !== strpos( $cvs_method, ':' ) ) {
+                continue;
+            }
+            // 不含 ":" = 舊版 base id，允許 method base 相等
+            $method_base = strstr( $method, ':', true );
+            if ( false === $method_base ) {
+                $method_base = $method;
+            }
+            if ( $method_base === $cvs_method ) {
+                return true;
+            }
+        }
+
         return false;
     }
 

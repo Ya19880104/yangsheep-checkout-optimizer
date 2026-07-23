@@ -134,12 +134,25 @@ check(
     'CVS compatibility scopes PayNow ownership and keeps third-party store rows fail-open'
 );
 check(
+    str_contains($shippingCompat, "\$('input.shipping_method')")
+    && str_contains($shippingCompat, "this.type === 'hidden' || this.checked")
+    && str_contains($shippingCompat, 'selectedMethods.some(function(selectedValue)')
+    && str_contains($shippingCompat, "selectedValue.split(':')[0] === methodList[i]"),
+    'third-party CVS controls inspect every selected package including hidden rates with exact base-id matching'
+);
+check(
     str_contains($shippingCompat, 'function isEnhancedCheckout()')
     && str_contains($shippingCompat, 'if (!isEnhancedCheckout())')
     && str_contains($shippingCompat, 'body.ys-checkout-enhanced #CVSStoreName_field')
     && str_contains($shippingCompat, 'body.ys-checkout-enhanced #paynow_reservedno_field')
     && str_contains($shippingCompat, 'body.ys-checkout-enhanced .cvs-info th:nth-child'),
     'third-party logistics behavior and CSS only run after YS enhancement succeeds'
+);
+check(
+    !str_contains($shippingCompat, 'body.ys-checkout-enhanced #paynow_storename_field,')
+    && !str_contains($shippingCompat, 'body.ys-checkout-enhanced #paynow_storeid_field,')
+    && !str_contains($shippingCompat, 'body.ys-checkout-enhanced #paynow_storeaddress_field {'),
+    'legacy inline CSS no longer forces PayNow native source fields into narrow grid columns'
 );
 check(
     str_contains($shippingCompat, "YSSettingsManager::get( 'yangsheep_validate_phone_shipping', 'yes' )")
@@ -165,7 +178,56 @@ check(
 );
 check(str_contains($checkoutJs, 'selectVisibleYithMessage'), 'YITH relocation chooses one visible redeem surface');
 check(str_contains($settings, 'yith_points_diagnostics_callback'), 'admin exposes YITH integration diagnostics');
+check(
+    str_contains($settings, '完整 rate ID')
+    && str_contains($settings, '混合包裹')
+    && str_contains($settings, '非輸入式門市摘要')
+    && !str_contains($settings, '所有超取欄位自動設為 2 欄排版'),
+    'admin CVS guidance documents exact instances, mixed-package safety, and the non-input PayNow summary'
+);
+check(
+    str_contains($settings, 'array_filter( $methods, \'strlen\' )')
+    && str_contains($settings, 'array_unique( $methods )')
+    && str_contains($settings, 'in_array( $method_id, $saved_methods, true )'),
+    'admin CVS settings discard empty duplicates and compare saved full rate ids strictly'
+);
 check(!str_contains($compatCss, '.yangsheep-shipping-cards-container button[type="button"]:not(.yangsheep-qty-btn)'), 'third-party button CSS is scoped to known store selectors');
+check(
+    preg_match('/body\.ys-checkout-enhanced\s+tr\.ys-paynow-store-selector\s*\{[^}]*display:\s*block\s*!important;[^}]*width:\s*100%\s*!important;/s', $compatCss) === 1
+    && preg_match('/tr\.ys-paynow-store-selector\s*>\s*td\.ys-cvs-store-panel\s*\{[^}]*display:\s*block\s*!important;[^}]*width:\s*100%\s*!important;/s', $compatCss) === 1
+    && !str_contains($compatCss, 'body.ys-checkout-enhanced tr.choose_cvs,'),
+    'enhanced PayNow store row gives its full-width button a full-width table cell'
+);
+check(
+    substr_count($compatCss, '!important') <= 9
+    && preg_match('/ys-cvs-store-title[^}]*border-top:[^;]+!important;/s', $compatCss) === 1
+    && preg_match('/ys-cvs-store-panel[^}]*border:[^;]+!important;[^}]*background:[^;]+!important;/s', $compatCss) === 1
+    && str_contains($shippingCompat, 'tr.choose_cvs:not(.ys-paynow-store-selector)')
+    && str_contains($shippingCompat, 'tr.ys-cvs-choose-row:not(.ys-paynow-store-selector)'),
+    'PayNow compatibility forces only measured table-contract properties and excludes legacy generic row styling'
+);
+check(
+    str_contains($shippingCompat, 'function enhancePaynowStoreSelector')
+    && str_contains($shippingCompat, "addClass('ys-paynow-store-selector')")
+    && str_contains($shippingCompat, "addClass('ys-cvs-source-field').hide()")
+    && str_contains($shippingCompat, 'ys-cvs-store-status')
+    && !str_contains($shippingCompat, "prop('disabled', true)"),
+    'PayNow keeps native store values submit-capable but replaces readonly input boxes with a status surface'
+);
+check(
+    preg_match('/tr\.ys-paynow-store-selector\s*>\s*td\.ys-cvs-store-panel\s*\{[^}]*width:\s*100%\s*!important;[^}]*border:\s*1px\s+dashed/s', $compatCss) === 1
+    && str_contains($compatCss, '.ys-cvs-store-status')
+    && str_contains($compatCss, 'tr.ys-paynow-store-selector #choose-cvs-btn'),
+    'PayNow chooser uses the same full-width title, status, and dashed-panel visual contract as other CVS providers'
+);
+check(
+    str_contains($shippingCompat, "'woocommerce_order_formatted_shipping_address'")
+    && str_contains($shippingCompat, "'woocommerce_localisation_address_formats'")
+    && str_contains($shippingCompat, "'woocommerce_formatted_address_replacements'")
+    && str_contains($shippingCompat, "'YS_PAYNOW_CVS'")
+    && str_contains($shippingCompat, 'reconcile_paynow_order_address'),
+    'PayNow order addresses use a provider-unique format key that cannot be overwritten by PAYUNi PNCVS'
+);
 check(
     str_contains($bootstrap, "wp_enqueue_style( 'yangsheep-checkout-optimization'")
     && substr_count($bootstrap, "'not all' );") >= 4
@@ -274,6 +336,93 @@ check(
     str_contains($checkoutCss, '.yangsheep_checkout_coupon #ys_coupon_code')
     && !str_contains($checkoutCss, '.yangsheep_checkout_coupon #coupon_code'),
     'custom coupon input styling targets the unique ys_coupon_code id'
+);
+// v1.7.2：超取隱藏地址欄位不受漸進增強 gate 影響（回歸修復）
+$cvsModeCss = is_file($root . '/assets/css/yangsheep-cvs-mode.css')
+    ? source($root . '/assets/css/yangsheep-cvs-mode.css')
+    : '';
+check(
+    $cvsModeCss !== ''
+    && str_contains($cvsModeCss, 'body.yangsheep-cvs-mode #shipping_address_1_field')
+    && preg_match('/body\.yangsheep-cvs-mode[^{]*#shipping_address_1_field[^}]*display:\s*none\s*!important/s', $cvsModeCss) === 1,
+    'CVS-mode address hiding lives in the dedicated always-on stylesheet'
+);
+check(
+    preg_match("/wp_enqueue_style\(\s*'yangsheep-cvs-mode',(?:(?!\)\s*;).)*\)\s*;/s", $bootstrap) === 1
+    && preg_match("/wp_enqueue_style\(\s*'yangsheep-cvs-mode',(?:(?!\)\s*;).)*'not all'(?:(?!\)\s*;).)*\)\s*;/s", $bootstrap) !== 1,
+    'CVS-mode stylesheet is enqueued without the not-all enhancement gate'
+);
+check(
+    preg_match('/body\.yangsheep-cvs-mode\s+#shipping_address_1_field[^}]*display:\s*none/s', $checkoutCss) !== 1,
+    'gated main stylesheet no longer owns the CVS address-hiding rules'
+);
+// v1.7.2 P1：完整 rate id（含 ":"）只能完整相等，避免 flat_rate:1 誤中 flat_rate:10
+check(
+    str_contains($checkoutFields, 'public static function method_matches_cvs_list')
+    && str_contains($checkoutFields, "false !== strpos( \$cvs_method, ':' )")
+    && str_contains($checkoutFields, 'self::method_matches_cvs_list( $method, $cvs_methods )')
+    && !str_contains($checkoutFields, "strpos( \$method, \$cvs_method ) === 0"),
+    'PHP CVS matcher requires exact match for full rate ids (no prefix false-positive)'
+);
+check(
+    str_contains($checkoutJs, "if (cvsMethod.indexOf(':') !== -1) return false;")
+    && !str_contains($checkoutJs, 'methodId.indexOf(cvsMethod) === 0'),
+    'JS CVS matcher requires exact match for full rate ids (no prefix false-positive)'
+);
+// v1.7.2 P1：多包裹全域地址免必填 = 「所有包裹都超商」（CVS+宅配 → 保留地址）
+check(
+    str_contains($checkoutFields, 'public static function all_methods_cvs')
+    && str_contains($checkoutFields, 'public static function is_single_method_cvs')
+    && str_contains($checkoutFields, 'self::all_methods_cvs( $shipping_methods, $cvs_methods )')
+    && preg_match('/if \(\s*!\s*self::is_single_method_cvs\([^)]*\)\s*\)\s*\{\s*return false;/s', $checkoutFields) === 1,
+    'PHP global address hides only when every selected package is CVS (multi-package fail-safe)'
+);
+check(
+    str_contains($checkoutJs, "$('#order_review input.shipping_method').filter(")
+    && str_contains($checkoutJs, "this.type === 'hidden' || this.checked")
+    && str_contains($checkoutJs, 'methodIds.length > 0 && methodIds.every(isSingleMethodCvs)')
+    && str_contains($checkoutJs, 'var signature = methodIds.join(')
+    // 不得再用 :checked-only 收集（會漏 WooCommerce 單一物流的 hidden input）
+    && !str_contains($checkoutJs, "input[name^=\"shipping_method\"]:checked').map("),
+    'JS collects every package incl. single-method hidden input, requires all-CVS via every()'
+);
+// v1.7.2 P1: PAYUNi only reads package 0 and can leave inline display:none on a
+// mixed checkout. Reconcile after all synchronous shipping handlers, but only
+// when the current all-package signature is still mixed PAYUNi CVS + delivery.
+check(
+    str_contains($checkoutJs, 'function schedulePayuniMixedAddressRestore')
+    && str_contains($checkoutJs, 'methodIds.some(isPayuniCvsMethod)')
+    && str_contains($checkoutJs, 'methodIds.some(function(methodId)')
+    && str_contains($checkoutJs, '!isSingleMethodCvs(methodId)')
+    && str_contains($checkoutJs, 'window.PayuniStoreSelector.showAddressFields()')
+    && str_contains($checkoutJs, "this.style.removeProperty('display')")
+    && !str_contains($checkoutJs, ".removeAttr('style')"),
+    'mixed PAYUNi packages restore shipping address through the provider public API'
+);
+check(
+    str_contains($checkoutJs, 'payuniAddressRestoreTimer = setTimeout(function ()')
+    && str_contains($checkoutJs, 'collectSelectedShippingMethodIds().join(')
+    && str_contains($checkoutJs, 'currentSignature !== expectedSignature')
+    && str_contains($checkoutJs, "$('body').hasClass('yangsheep-cvs-mode')"),
+    'PAYUNi reconciliation is delayed, signature-guarded, and cannot override all-CVS state'
+);
+// v1.7.2 P2：PHP/JS 自動偵測 allowlist 規則一致（base、小寫、payuni/ecpay-cvs/ys_paynow）
+check(
+    str_contains($checkoutFields, "false !== strpos( \$base, 'payuni' )")
+    && str_contains($checkoutFields, "false !== strpos( \$base, 'ecpay' ) && false !== strpos( \$base, 'cvs' )")
+    && str_contains($checkoutFields, "false !== strpos( \$base, 'ys_paynow_shipping' )")
+    && str_contains($checkoutFields, "0 === strpos( \$base, 'paynow_shipping_c2c_' )")
+    && str_contains($checkoutFields, "0 === strpos( \$base, 'woomp_paynow_shipping_c2c_' )")
+    && !str_contains($checkoutFields, "strpos( \$method_id, 'ys_paynow_shipping_' ) === 0 && strpos( \$method_id, 'tcat' ) === false"),
+    'PHP auto-detect uses the shared CVS allowlist (aligned with JS, no broad ys_paynow-except-tcat)'
+);
+check(
+    str_contains($checkoutJs, "base.indexOf('payuni') !== -1")
+    && str_contains($checkoutJs, "base.indexOf('ecpay') !== -1 && base.indexOf('cvs') !== -1")
+    && str_contains($checkoutJs, "base.indexOf('ys_paynow_shipping') !== -1")
+    && str_contains($checkoutJs, "base.indexOf('paynow_shipping_c2c_') === 0")
+    && str_contains($checkoutJs, "base.indexOf('woomp_paynow_shipping_c2c_') === 0"),
+    'JS auto-detect uses the shared CVS allowlist (aligned with PHP)'
 );
 // v1.7.1：YITH proxy 版面只作用於 YS 自有結構，不硬改第三方 class
 check(
@@ -412,7 +561,9 @@ check(
 check(
     is_string($readmeTree)
     && !str_contains($readmeTree, 'yangsheep-sidebar.js')
-    && !str_contains($readmeTree, 'form-checkout.php'),
+    && !str_contains($readmeTree, 'form-checkout.php')
+    // v1.7.2 P3：檔案樹須列出實際存在的新 CSS
+    && str_contains($readmeTree, 'yangsheep-cvs-mode.css'),
     'README current file tree matches the progressive-enhancement architecture'
 );
 check(

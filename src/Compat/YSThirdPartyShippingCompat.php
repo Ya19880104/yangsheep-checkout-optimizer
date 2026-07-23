@@ -12,16 +12,16 @@
  *    - 欄位設為 2 欄排版（桌機與手機）
  *
  * 2. PayNow 超取欄位（paynow_storename, paynow_storeid, paynow_storeaddress）
- *    - 僅當選擇 PayNow 超商物流時顯示
- *    - 欄位設為 2 欄排版（桌機與手機）
+ *    - 保留原生欄位作為提交資料源
+ *    - 增強成功後以不可編輯的門市摘要取代 input 外觀
  *
  * 3. 樣式調整
- *    - 「選擇超商」按鈕（PayNow）：margin-top 20px、置中、粗體
+ *    - PayNow 選店列：標題、狀態、白底虛線面板與全寬按鈕
  *    - 「超商門市」標題（綠界）：margin-top 20px、置中、粗體
  *    - 修正電話欄位位置被第三方外掛影響的問題
  *
  * @package YANGSHEEP_Checkout_Optimization
- * @version 1.0.0
+ * @version 1.7.2
  * @since 2026-01-12
  *
  * 實作說明：
@@ -103,6 +103,101 @@ class YSThirdPartyShippingCompat {
 
         // 修正電話欄位位置（最高優先級，在第三方外掛之後執行）
         add_filter( 'woocommerce_checkout_fields', array( $this, 'fix_shipping_phone_priority' ), 99999 );
+
+        // woomp PayNow and WPBR PAYUNi both register PNCVS with incompatible
+        // placeholders. Use a provider-specific key after both plugins run.
+        add_filter( 'woocommerce_order_formatted_shipping_address', array( $this, 'reconcile_paynow_order_address' ), 999, 2 );
+        add_filter( 'woocommerce_localisation_address_formats', array( $this, 'add_paynow_address_format' ), 999 );
+        add_filter( 'woocommerce_formatted_address_replacements', array( $this, 'add_paynow_address_replacements' ), 999, 2 );
+    }
+
+    /**
+     * Keep woomp PayNow order addresses independent from PAYUNi's PNCVS key.
+     *
+     * @param array    $raw_address Raw shipping address.
+     * @param WC_Order $order       Order instance.
+     * @return array
+     */
+    public function reconcile_paynow_order_address( $raw_address, $order ) {
+        if (
+            ! is_object( $order )
+            || ! method_exists( $order, 'get_shipping_methods' )
+            || ! method_exists( $order, 'get_meta' )
+        ) {
+            return $raw_address;
+        }
+
+        $store_id = (string) $order->get_meta( '_shipping_paynow_storeid' );
+        if ( '' === $store_id || ! $this->order_uses_woomp_paynow_cvs( $order ) ) {
+            return $raw_address;
+        }
+
+        $raw_address['paynow_storeid']      = $store_id;
+        $raw_address['paynow_storename']    = (string) $order->get_meta( '_shipping_paynow_storename' );
+        $raw_address['paynow_storeaddress'] = (string) $order->get_meta( '_shipping_paynow_storeaddress' );
+        $shipping_phone = method_exists( $order, 'get_shipping_phone' )
+            ? (string) $order->get_shipping_phone()
+            : '';
+        if ( '' !== $shipping_phone || ! isset( $raw_address['phone'] ) ) {
+            $raw_address['phone'] = $shipping_phone;
+        }
+        $raw_address['country']             = 'YS_PAYNOW_CVS';
+
+        return $raw_address;
+    }
+
+    /**
+     * Register the provider-unique formatted address contract.
+     *
+     * @param array $formats WooCommerce address formats.
+     * @return array
+     */
+    public function add_paynow_address_format( $formats ) {
+        $format = "{paynow_storename} ({paynow_storeid})\n{paynow_storeaddress}\n{last_name} {first_name}";
+        if ( ! is_admin() ) {
+            $format .= "\n" . '<p class="woocommerce-customer-details--phone">{phone}</p>';
+        }
+
+        $formats['YS_PAYNOW_CVS'] = $format;
+        return $formats;
+    }
+
+    /**
+     * Fill placeholders for the provider-unique PayNow address format.
+     *
+     * @param array $replacements Existing replacements.
+     * @param array $args         Raw address arguments.
+     * @return array
+     */
+    public function add_paynow_address_replacements( $replacements, $args ) {
+        foreach ( array( 'paynow_storeid', 'paynow_storename', 'paynow_storeaddress', 'phone' ) as $key ) {
+            if ( isset( $args[ $key ] ) ) {
+                $replacements[ '{' . $key . '}' ] = $args[ $key ];
+            }
+        }
+
+        return $replacements;
+    }
+
+    /**
+     * Check whether an order uses the woomp PayNow CVS family.
+     *
+     * @param WC_Order $order Order instance.
+     * @return bool
+     */
+    private function order_uses_woomp_paynow_cvs( $order ) {
+        foreach ( $order->get_shipping_methods() as $shipping_item ) {
+            $method_id = strtolower( (string) $shipping_item->get_method_id() );
+            if (
+                0 === strpos( $method_id, 'paynow_shipping_c2c_' )
+                || 0 === strpos( $method_id, 'paynow_shipping_b2c_' )
+                || 0 === strpos( $method_id, 'woomp_paynow_shipping_c2c_' )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -201,26 +296,26 @@ class YSThirdPartyShippingCompat {
              * @return {boolean}
              */
             function isMethodSelected(methodList) {
-                var $selectedMethod = $('input.shipping_method:checked');
-                if (!$selectedMethod.length) {
-                    // 如果沒有 radio，可能只有一個物流方式（hidden input）
-                    $selectedMethod = $('input.shipping_method[type="hidden"]');
-                }
+                var selectedMethods = $('input.shipping_method')
+                    .filter(function() {
+                        return this.type === 'hidden' || this.checked;
+                    })
+                    .map(function() {
+                        return $.trim(String(this.value || '')).toLowerCase();
+                    })
+                    .get()
+                    .filter(function(selectedValue) {
+                        return selectedValue !== '';
+                    });
 
-                if (!$selectedMethod.length) {
-                    return false;
-                }
-
-                var selectedValue = $selectedMethod.val();
-
-                // 檢查是否匹配任一方法（前綴匹配）
-                for (var i = 0; i < methodList.length; i++) {
-                    if (selectedValue && selectedValue.indexOf(methodList[i]) === 0) {
-                        return true;
+                return selectedMethods.some(function(selectedValue) {
+                    for (var i = 0; i < methodList.length; i++) {
+                        if (selectedValue.split(':')[0] === methodList[i]) {
+                            return true;
+                        }
                     }
-                }
-
-                return false;
+                    return false;
+                });
             }
 
             /**
@@ -252,7 +347,8 @@ class YSThirdPartyShippingCompat {
                     }
                 });
 
-                // 特別處理 PayNow 的 tr.choose_cvs 表格行
+                // 標記物流外掛的通用 tr.choose_cvs 表格行；
+                // PayNow 完成 DOM 契約後會再加專屬 class 並排除舊樣式。
                 $('tr.choose_cvs').addClass('ys-cvs-label-styled ys-cvs-choose-row');
 
                 // 特別處理 PayNow 選擇超商按鈕
@@ -303,6 +399,68 @@ class YSThirdPartyShippingCompat {
             }
 
             /**
+             * Replace PayNow's readonly text boxes with a non-interactive store summary.
+             * Native inputs remain enabled and in the form as the provider's submit source.
+             *
+             * @return {boolean} Whether the enhanced selector mounted successfully.
+             */
+            function enhancePaynowStoreSelector() {
+                var $button = $('#choose-cvs-btn');
+                var $row = $button.closest('tr.choose_cvs');
+
+                if (!$button.length || !$row.length) {
+                    return false;
+                }
+
+                var $title = $row.children('th');
+                var $panel = $row.children('td');
+                if (!$title.length || !$panel.length) {
+                    return false;
+                }
+
+                $row.addClass('ys-paynow-store-selector');
+                $title.addClass('ys-cvs-store-title').text('\u8d85\u5546\u9580\u5e02');
+                $panel.addClass('ys-cvs-store-panel');
+
+                var $status = $panel.children('.ys-cvs-store-status');
+                if (!$status.length) {
+                    $status = $('<div class="ys-cvs-store-status" role="status" aria-live="polite"></div>');
+                    $button.before($status);
+                }
+
+                var storeName = $.trim($('#paynow_storename').val() || '');
+                var storeId = $.trim($('#paynow_storeid').val() || '');
+                var storeAddress = $.trim($('#paynow_storeaddress').val() || '');
+                var hasStore = !!(storeName || storeId || storeAddress);
+
+                $status.empty().toggleClass('has-store', hasStore);
+                if (hasStore) {
+                    var $primary = $('<span class="ys-cvs-store-primary"></span>');
+                    $primary.text(storeName || '\u5df2\u9078\u64c7\u53d6\u8ca8\u9580\u5e02');
+                    $status.append($primary);
+
+                    if (storeId) {
+                        $('<span class="ys-cvs-store-meta"></span>')
+                            .text('\u9580\u5e02\u7de8\u865f ' + storeId)
+                            .appendTo($status);
+                    }
+                    if (storeAddress) {
+                        $('<span class="ys-cvs-store-address"></span>')
+                            .text(storeAddress)
+                            .appendTo($status);
+                    }
+                    $button.text('\u91cd\u65b0\u9078\u64c7\u9580\u5e02');
+                } else {
+                    $('<span class="ys-cvs-store-empty"></span>')
+                        .text('\u5c1a\u672a\u9078\u64c7\u53d6\u8ca8\u9580\u5e02')
+                        .appendTo($status);
+                    $button.text('\u9078\u64c7\u9580\u5e02');
+                }
+
+                return $row.is(':visible') && $panel.is(':visible') && $status.is(':visible');
+            }
+
+            /**
              * 切換 PayNow CVS 欄位顯示狀態
              *
              * 欄位：paynow_storename, paynow_storeid, paynow_storeaddress
@@ -321,12 +479,18 @@ class YSThirdPartyShippingCompat {
                 var $paynowService = $('#paynow_service_field');
 
                 if (show) {
-                    $paynowFields.addClass('ys-cvs-shown').show();
                     $paynowChooseCvs.addClass('ys-cvs-shown').show();
                     $paynowService.addClass('ys-cvs-shown').show();
-                    console.log('[YS Compat] PayNow CVS fields shown');
+                    if (enhancePaynowStoreSelector()) {
+                        $paynowFields.removeClass('ys-cvs-shown').addClass('ys-cvs-source-field').hide();
+                        console.log('[YS Compat] PayNow store selector enhanced; native value fields preserved');
+                    } else {
+                        // Fail open when the provider changes its chooser markup.
+                        $paynowFields.removeClass('ys-cvs-source-field').addClass('ys-cvs-shown').show();
+                        console.warn('[YS Compat] PayNow selector contract missing; native fields remain visible');
+                    }
                 } else {
-                    $paynowFields.removeClass('ys-cvs-shown').hide();
+                    $paynowFields.removeClass('ys-cvs-shown ys-cvs-source-field').hide();
                     $paynowChooseCvs.removeClass('ys-cvs-shown').hide();
                     $paynowService.removeClass('ys-cvs-shown').hide();
                     console.log('[YS Compat] PayNow CVS fields hidden');
@@ -482,14 +646,12 @@ class YSThirdPartyShippingCompat {
      * 添加 CVS 欄位相關樣式
      *
      * 樣式包含：
-     * 1. 欄位 Grid 2 欄排版（桌機與手機）
-     * 2. 「選擇超商」按鈕樣式（PayNow）
-     * 3. 「超商門市」標題樣式（綠界）
-     * 4. 電話欄位位置修正
-     * 5. CVS 欄位顯示/隱藏控制
+     * 1. 綠界欄位 Grid 排版與選店標題
+     * 2. 電話欄位位置修正
+     * 3. 物流內部欄位隱藏
      *
-     * 注意：shipping 欄位使用 CSS Grid 排版，
-     * 所以必須用 grid-column 而不是 width 來控制欄位寬度
+     * PayNow 摘要面板與按鈕寬度由 yangsheep-compatibility.css
+     * 的 provider-scoped 規則單一負責，這裡不再修改其原生資料欄位寬度。
      */
     public function add_cvs_styles() {
         // 僅在結帳頁面載入
@@ -501,7 +663,7 @@ class YSThirdPartyShippingCompat {
         /**
          * YANGSHEEP 第三方物流相容性樣式
          *
-         * @version 1.1.0
+         * @version 1.7.2
          * @since 2026-01-12
          *
          * 重要：shipping 欄位使用 Grid 排版，必須用 grid-column 控制寬度
@@ -516,32 +678,7 @@ class YSThirdPartyShippingCompat {
             grid-column: span 1 !important;
         }
 
-        /* ===== 2. PayNow CVS 欄位 - Grid 2 欄排版 ===== */
-
-        /* PayNow CVS 欄位 - 使用 grid-column: span 1 讓每個欄位佔一格 */
-        body.ys-checkout-enhanced #paynow_storename_field,
-        body.ys-checkout-enhanced #paynow_storeid_field,
-        body.ys-checkout-enhanced #paynow_storeaddress_field {
-            grid-column: span 1 !important;
-        }
-
-        /* ===== 3. PayNow「選擇超商」按鈕樣式 ===== */
-
-        /* PayNow 選擇超商按鈕的父容器 - 全寬置中 */
-        body.ys-checkout-enhanced #choose-cvs-btn-field {
-            grid-column: 1 / -1 !important;
-            text-align: center !important;
-            margin-top: 20px !important;
-        }
-
-        /* PayNow 選擇超商按鈕 */
-        body.ys-checkout-enhanced #choose-cvs-btn,
-        body.ys-checkout-enhanced .paynow-choose-cvs,
-        body.ys-checkout-enhanced button[name="paynow_choose_cvs"] {
-            font-weight: bold !important;
-        }
-
-        /* ===== 4. 「選擇超商」「超商門市」標籤樣式 ===== */
+        /* ===== 2. 「選擇超商」「超商門市」標籤樣式 ===== */
 
         /* 綠界選擇超商按鈕/連結 - 全寬置中 */
         body.ys-checkout-enhanced .choose_cvs,
@@ -553,16 +690,16 @@ class YSThirdPartyShippingCompat {
             margin-top: 20px !important;
         }
 
-        /* PayNow 選擇超商表格行 (tr.choose_cvs) */
-        body.ys-checkout-enhanced tr.choose_cvs,
-        body.ys-checkout-enhanced tr.ys-cvs-choose-row {
+        /* 舊版綠界/其他通用選店列；PayNow 由專屬面板樣式負責 */
+        body.ys-checkout-enhanced tr.choose_cvs:not(.ys-paynow-store-selector),
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row:not(.ys-paynow-store-selector) {
             margin-top: 20px !important;
         }
 
-        body.ys-checkout-enhanced tr.choose_cvs th,
-        body.ys-checkout-enhanced tr.choose_cvs td,
-        body.ys-checkout-enhanced tr.ys-cvs-choose-row th,
-        body.ys-checkout-enhanced tr.ys-cvs-choose-row td {
+        body.ys-checkout-enhanced tr.choose_cvs:not(.ys-paynow-store-selector) th,
+        body.ys-checkout-enhanced tr.choose_cvs:not(.ys-paynow-store-selector) td,
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row:not(.ys-paynow-store-selector) th,
+        body.ys-checkout-enhanced tr.ys-cvs-choose-row:not(.ys-paynow-store-selector) td {
             text-align: center !important;
             font-weight: bold !important;
             padding-top: 20px !important;
@@ -577,12 +714,6 @@ class YSThirdPartyShippingCompat {
             grid-column: 1 / -1 !important;
         }
 
-        /* PayNow 選擇超商按鈕樣式 */
-        body.ys-checkout-enhanced .ys-cvs-choose-btn,
-        body.ys-checkout-enhanced #choose-cvs-btn {
-            font-weight: bold !important;
-        }
-
         /* 綠界 CVS 區塊標題 */
         body.ys-checkout-enhanced .cvs-info-title,
         body.ys-checkout-enhanced .ecpay-cvs-title,
@@ -593,7 +724,7 @@ class YSThirdPartyShippingCompat {
             font-weight: bold !important;
         }
 
-        /* ===== 5. 電話欄位位置修正 ===== */
+        /* ===== 3. 電話欄位位置修正 ===== */
 
         /*
          * 綠界外掛會在電話欄位加上 cvs-info class，
@@ -607,7 +738,7 @@ class YSThirdPartyShippingCompat {
             display: block !important;
         }
 
-        /* ===== 6. 內部欄位強制隱藏（Reserved NO, Ship Date, LogisticsSubType 等）===== */
+        /* ===== 4. 內部欄位強制隱藏（Reserved NO, Ship Date, LogisticsSubType 等）===== */
 
         /*
          * 這些欄位是物流外掛內部使用（冷藏配送等），用戶不需要看到
@@ -659,7 +790,7 @@ class YSThirdPartyShippingCompat {
             pointer-events: none !important;
         }
 
-        /* ===== 7. 隱藏綠界 CVS 表格中的特定欄位（Reserved NO, Ship Date）===== */
+        /* ===== 5. 隱藏綠界 CVS 表格中的特定欄位（Reserved NO, Ship Date）===== */
 
         /*
          * 綠界動態載入的表格使用 class="cvs-info"

@@ -1,0 +1,23 @@
+/**
+ * 超取模式：隱藏地址欄位（永遠載入、不受漸進增強 gate 影響）
+ *
+ * 「後台指定超商物流方式 → 選中時隱藏收件地址欄位」是語意上獨立於 YS 視覺
+ * 版面的功能：使用者選了超商取貨就不需填地址（PHP 端 is_cvs_shipping_selected()
+ * 也已把地址設為非必填，且該邏輯未受 enhancement gate 影響）。
+ *
+ * v1.7.0 起主結帳 CSS 以 media="not all" 載入、只在 enhancement 成功後才啟用；
+ * 若這些隱藏規則留在主 CSS，enhancement 未套用時（CSS 優化外掛合併、契約未通過、
+ * 載入時序等）body.yangsheep-cvs-mode 雖由 JS 加上，欄位卻不會隱藏（v1.7.1 regression）。
+ * 因此把「隱藏」規則獨立到本檔並「永遠」enqueue，還原 v1.6.34 的無條件行為。
+ *
+ * body class 由 yangsheep-checkout.js 的 updateShippingFieldsVisibility() 控制。
+ * （並排 grid 等純視覺排版仍留在 gated 的 yangsheep-checkout.css，只在增強後生效。）
+ */
+body.yangsheep-cvs-mode #shipping_postcode_field,
+body.yangsheep-cvs-mode #shipping_state_field,
+body.yangsheep-cvs-mode #shipping_city_field,
+body.yangsheep-cvs-mode #shipping_address_1_field,
+body.yangsheep-cvs-mode #shipping_address_2_field,
+body.yangsheep-cvs-mode #shipping-zipcode-fields {
+    display: none !important;
+}

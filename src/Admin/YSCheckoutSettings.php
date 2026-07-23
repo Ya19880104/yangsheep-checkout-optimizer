@@ -616,7 +616,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
     }
     public function cvs_shipping_section_header() {
         echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-store"></span> 超取物流方式設定</h3>';
-        echo '<p class="ys-section-desc" style="margin:0 0 15px 0;color:#666;">選擇哪些物流方式為「超商取貨」，選中的物流方式將隱藏地址欄位。若未勾選任何項目，系統將使用自動偵測。</p>';
+        echo '<p class="ys-section-desc" style="margin:0 0 15px 0;color:#666;">每個選項代表一個運送區域／實例的完整 rate ID。只勾選真正的超商取貨；若未勾選任何項目，系統會以已知方法 allowlist 自動偵測。混合包裹只要包含宅配，地址欄位就會保留並維持必填。</p>';
     }
     public function account_section_header() {
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-id-alt"></span> 我的帳號頁面</h3>';
@@ -685,7 +685,9 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         if ( ! is_array( $value ) ) {
             return array();
         }
-        return array_map( 'sanitize_text_field', $value );
+        $methods = array_map( 'sanitize_text_field', $value );
+        $methods = array_filter( $methods, 'strlen' );
+        return array_values( array_unique( $methods ) );
     }
 
     public function handle_checkbox_save( $value, $option, $old_value ) {
@@ -820,7 +822,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             foreach ( $methods as $method ) {
                 $method_id = $method['rate_id'];
                 $method_title = $method['title'];
-                $checked = in_array( $method_id, $saved_methods ) ? 'checked' : '';
+                $checked = in_array( $method_id, $saved_methods, true ) ? 'checked' : '';
 
                 echo '<label style="display:block;margin:6px 0;cursor:pointer;">';
                 echo '<input type="checkbox" name="yangsheep_cvs_shipping_methods[]" value="' . esc_attr( $method_id ) . '" ' . $checked . ' style="margin-right:8px;" />';
@@ -833,7 +835,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         }
 
         echo '</div>';
-        echo '<p class="description" style="margin-top:10px;">' . __( '勾選的物流方式將被視為「超商取貨」，會隱藏地址相關欄位。', 'yangsheep-checkout-optimization' ) . '</p>';
+        echo '<p class="description" style="margin-top:10px;">' . __( '清單值為完整 rate ID（含實例編號）。所有已選包裹都屬於這些超取方法時才會隱藏地址；混合包裹仍要求完整宅配地址。', 'yangsheep-checkout-optimization' ) . '</p>';
     }
 
     /**
@@ -1244,14 +1246,14 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
                                 </li>
                                 <li><strong>好用版 PayNow Shipping（PayNow 超取）</strong>
                                     <ul>
-                                        <li>支援 7-11、全家、萊爾富、OK 超商（C2C/B2C）</li>
-                                        <li>超取欄位（門市名稱、門市代號、地址）僅在選擇 PayNow 超取時顯示</li>
-                                        <li>「選擇超商」按鈕自動置中加粗</li>
+                                        <li>已知 C2C 7-11、全家、萊爾富方法可自動偵測；B2C、OK 或自訂方法請在「超取物流方式設定」以完整 rate ID 手動勾選</li>
+                                        <li>原生唯讀欄位保留為物流外掛的提交資料源；結帳強化成功後改顯示非輸入式門市摘要</li>
+                                        <li>選店介面與物流卡片位於同一區塊；若強化失敗，原生欄位與選店按鈕維持可操作</li>
                                     </ul>
                                 </li>
                             </ul>
-                            <p><strong>欄位排版：</strong>所有超取欄位自動設為 2 欄排版（桌機與手機）。</p>
-                            <p><strong>自動偵測：</strong>系統會根據選擇的物流方式自動顯示/隱藏對應的 CVS 欄位，無需額外設定。</p>
+                            <p><strong>門市資料：</strong>已增強版使用全寬摘要面板顯示門市名稱、編號與地址，不把唯讀資料呈現成可輸入欄位。</p>
+                            <p><strong>地址安全：</strong>所有包裹都確認為超商取貨時才隱藏地址；任一包裹為宅配或無法辨識時一律保留地址。</p>
                         </div>
 
                         <div class="ys-docs-section">

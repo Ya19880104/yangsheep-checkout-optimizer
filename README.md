@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.1
-**最後更新**：2026-07-18
+**當前版本**：1.7.2
+**最後更新**：2026-07-23
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -44,9 +44,9 @@
 - 內部欄位（LogisticsSubType、CVSStoreID）自動隱藏
 
 #### 好用版 PayNow Shipping（PayNow 超取）
-- 支援 7-11、全家、萊爾富、OK 超商（C2C/B2C）
-- 超取欄位（門市名稱、門市代號、地址）僅在選擇 PayNow 超取時顯示
-- 「選擇超商」按鈕自動置中加粗
+- 自動辨識已知 C2C 7-11、全家、萊爾富方法；B2C、OK 或自訂方法由後台以完整 rate ID 指定
+- 保留原生門市欄位作為送單資料源；增強成功後改以不可編輯的門市摘要顯示名稱、代號與地址
+- 選店區統一為「超商門市」標題、狀態文字、白底虛線面板與全寬按鈕
 - 內部欄位（Reserved NO、Ship Date）自動隱藏
 
 ### 6. 訂單頁面強化
@@ -82,7 +82,8 @@
 yangsheep-checkout-optimizer/
 ├── assets/
 │   ├── css/
-│   │   ├── yangsheep-checkout.css         # 結帳頁面樣式
+│   │   ├── yangsheep-checkout.css         # 結帳頁面樣式（media="not all"，增強後啟用）
+│   │   ├── yangsheep-cvs-mode.css         # 超取模式隱藏地址欄位（永遠載入，不受增強 gate）
 │   │   ├── yangsheep-cart.css             # 購物車折扣代碼欄位對齊
 │   │   ├── yangsheep-sidebar.css          # 側邊欄樣式
 │   │   ├── yangsheep-myaccount.css        # 我的帳號樣式
@@ -233,6 +234,22 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.2 (2026-07-23)
+
+#### 修復：後台指定超商物流 → 前端隱藏地址欄位失效（v1.7.0 regression）
+- **根因**：v1.7.0 為漸進增強 fail-open，把主結帳 CSS 改成 `media="not all"`、只在 enhancement 成功後啟用。而「超取模式隱藏地址欄位」規則（`body.yangsheep-cvs-mode #shipping_*_field`）留在該主 CSS 內：`yangsheep-checkout.js` 雖仍在選中超商物流時對 `<body>` 加 `yangsheep-cvs-mode`，但當 enhancement 未套用（CSS 優化外掛合併、契約未通過、載入時序）時 CSS 不生效 → 地址欄位不隱藏。v1.6.34 以前此 CSS 為無條件載入，故功能正常。
+- **修法**：將「隱藏地址欄位」規則抽到新檔 `assets/css/yangsheep-cvs-mode.css`，以**無 `media` gate 的方式永遠 enqueue**，還原無條件行為，並與 server 端 `is_cvs_shipping_selected()`（把地址設非必填、本就未 gate）一致。純視覺並排 grid 排版仍留在 gated 主 CSS。
+- 後台設定路徑（`yangsheep_cvs_shipping_methods`）與自動偵測路徑皆適用；不影響已增強站點既有行為。
+- **同輪修 rate id 前綴誤判（P1，訂單資料風險）**：後台儲存完整 rate id（`method_id:instance_id`），但前後端曾以前綴比對，`flat_rate:1` 會誤中 `flat_rate:10` → 宅配單被當超商、地址免必填、可能缺地址成單。改為「含 `:` 只完整相等、不含 `:` 才視為舊版 base id 允許 base 相等」，JS/PHP 同步，並新增 `tests/cvs-match-matrix.php` 回歸。
+- **多包裹聚合語意修正（P1，訂單資料風險）**：WC 分裝多包裹（`shipping_method[0]`、`[1]`…）時，舊邏輯「遇任一超商即回 `true`」會讓「超取+宅配」混合訂單也把全域收件地址設非必填/隱藏。改為**唯有「所有已選包裹都是超商」才免地址**（任一宅配 → 保留地址與必填，順序無關，fail-safe）：PHP 抽 `all_methods_cvs()`/`is_single_method_cvs()` 純函式；JS 收集所有 package 的 checked/hidden rate 用 `every()`、cache 鍵改為所有 method 的 signature。矩陣含 `超取+宅配`、`宅配+超取` 皆 false的順序無關案例。
+- **納入 WooCommerce 單一物流 hidden input（P1）**：WC 在「單一可用物流」時渲染 `<input type="hidden" name="shipping_method[…]">`（不符 `:checked`）。JS 前端改用 `#order_review input.shipping_method` 並過濾 `type==='hidden' || checked`（與 `yangsheep-shipping-cards.js` 的 source-of-truth 一致），避免單一超商漏判、或「hidden 宅配 + checked 超商」誤判全 CVS 而與後端不一致導致隱藏欄位驗證錯誤。
+- **PHP/JS 自動偵測 allowlist 對齊（P2）**：統一為 base（去 `:instance`）小寫比對 — PayUni(含 711/fami/hilife)、ECPay(含 ecpay+cvs)、YS PayNow(含 711/family/hilife)，以及好用版 PayNow 的已知 `paynow_shipping_c2c_*` / `woomp_paynow_shipping_c2c_*` 7-11、全家、萊爾富方法；B2C、宅配與未知方法一律非 CVS（fail-safe）。矩陣加入每種自動偵測 ID，總計 **43/43**。
+- **PAYUNi 多包裹地址衝突（P1）**：PAYUNi Store Selector 只讀 `shipping_method[0]`，所以「第 1 包 PAYUNi 超取 + 第 2 包宅配」時會在 YS 正確判定混合配送後，再以 inline style 隱藏全域地址。新增範圍受控的 provider bridge：只在目前完整 signature 同時含 PAYUNi 超取與非超取時，等待第三方 handler 完成後呼叫其公開 `showAddressFields()`（必要時同步還原 billing）；使用者快速切換或已回到全超取時不執行，舊版無公開 API 才走限定欄位 fallback。
+- **第三方相容樣式收斂（P2）**：Git 追溯確認 PayNow 的三個 `readonly` 門市欄位是 v1.3.34（commit `6813990`）引入的「2 欄輸入框」外觀，並沒有已提交的「純文字摘要」版本。現在只在增強成功且驗證到 PayNow chooser DOM 後，保留原生 inputs 作為可提交資料源、隱藏其視覺容器，改顯示不可編輯的門市摘要；選店列使用 provider-scoped `ys-paynow-store-selector`，套用「超商門市」標題、狀態文字、白底虛線面板及全寬按鈕。同時移除舊 inline CSS 對 PayNow 資料欄位的 `grid-column: span 1` 寬度硬改；DOM 契約不成立時維持原生欄位可見（fail-open）。PAYUNi 舊版 fallback 也只移除地址欄位的 inline `display`，不再清掉其他 inline 樣式。
+- **PayNow / PAYUNi 完成頁地址格式衝突（P1）**：兩支物流外掛都註冊假國碼 `PNCVS`，但分別使用 `{paynow_*}` 與 `{payuni_*}` placeholder；兩者共存時後載入的 PAYUNi 會讓 PayNow 訂單顯示未替換的 `{payuni_storename}`。相容層只對實際使用 woomp PayNow CVS 且已有 `_shipping_paynow_storeid` 的訂單改用 `YS_PAYNOW_CVS`，資料與其他物流完全不受影響。
+- **相容層與後台設定硬化**：第三方選店控制同步收集所有 checked/hidden package，不再只讀第一包；後台清楚說明完整 rate ID、混合包裹與手動指定規則，儲存時移除空值/重複值並用嚴格比對回顯。
+- **驗證關卡**：架構契約 **94/94**、CVS 判定矩陣 **43/43**（含「超商 + 未解析 package」一律保留地址），另含 dev-checkout 真實選店、下單、完成頁、故障注入、桌機/手機視覺與跨物流回歸。
 
 ### v1.7.1 (2026-07-18)
 

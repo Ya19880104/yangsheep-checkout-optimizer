@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.1';
+    window.__ysCheckoutOptimizerBuild = '1.7.2';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -1384,61 +1384,164 @@ jQuery(function ($) {
      */
     var lastShippingMethod = null;
     var shippingFieldsTimer = null;
+    var payuniAddressRestoreTimer = null;
 
     // 取得後台設定的超取物流方式清單
     var cvsShippingMethods = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.cvs_shipping_methods)
         ? yangsheep_checkout_params.cvs_shipping_methods
         : [];
 
-    function updateShippingFieldsVisibility(forceUpdate) {
-        // 取得選中的運送方式
-        var $shippingMethod = $('input[name^="shipping_method"]:checked');
-        var methodId = $shippingMethod.val() || '';
+    // 單一 package 的物流是否為超商（後台指定優先，否則自動偵測）。
+    // 規則需與 PHP YSCheckoutFields::is_single_method_cvs() 完全一致。
+    function isSingleMethodCvs(methodId) {
+        methodId = String(methodId || '');
+        if (!methodId) return false;
 
-        // 如果運送方式沒變，且不是強制更新，則跳過
-        if (!forceUpdate && methodId === lastShippingMethod) {
+        if (cvsShippingMethods.length > 0) {
+            return cvsShippingMethods.some(function(cvsMethod) {
+                cvsMethod = String(cvsMethod);
+                if (methodId === cvsMethod) return true;
+                // 含 ":" = 完整 rate id，只能完整相等，避免 flat_rate:1 前綴誤中 flat_rate:10
+                if (cvsMethod.indexOf(':') !== -1) return false;
+                // 不含 ":" = 舊版 base id，允許 method base 相等
+                return methodId.split(':')[0] === cvsMethod;
+            });
+        }
+
+        // 自動偵測 allowlist（規則須與 PHP is_single_method_cvs() 完全一致；
+        // 比對 base = 去掉 :instance_id 的部分，小寫）
+        var base = methodId.split(':')[0].toLowerCase();
+        // PayUni 超取
+        if (base.indexOf('payuni') !== -1 &&
+            (base.indexOf('711') !== -1 || base.indexOf('fami') !== -1 || base.indexOf('hilife') !== -1)) {
+            return true;
+        }
+        // 綠界 ECPay 超取
+        if (base.indexOf('ecpay') !== -1 && base.indexOf('cvs') !== -1) {
+            return true;
+        }
+        // YS PayNow 超取（711 / family / hilife；黑貓宅配 tcat 不在清單）
+        if (base.indexOf('ys_paynow_shipping') !== -1 &&
+            (base.indexOf('711') !== -1 || base.indexOf('family') !== -1 || base.indexOf('hilife') !== -1)) {
+            return true;
+        }
+        // 好用版（woomp）PayNow 已知 C2C 超商方法。限定明確 prefix，
+        // 避免把 B2C、宅配或其他未知方法誤判為超商而移除地址要求。
+        if ((base.indexOf('paynow_shipping_c2c_') === 0 ||
+             base.indexOf('woomp_paynow_shipping_c2c_') === 0) &&
+            (base.indexOf('711') !== -1 || base.indexOf('family') !== -1 || base.indexOf('hilife') !== -1)) {
+            return true;
+        }
+        return false;
+    }
+
+    function collectSelectedShippingMethodIds() {
+        return $('#order_review input.shipping_method').filter(function() {
+            return this.type === 'hidden' || this.checked;
+        }).map(function() {
+            return this.value;
+        }).get();
+    }
+
+    function isPayuniCvsMethod(methodId) {
+        var base = String(methodId || '').split(':')[0].toLowerCase();
+        return base.indexOf('payuni') !== -1 &&
+            (base.indexOf('711') !== -1 || base.indexOf('fami') !== -1 || base.indexOf('hilife') !== -1);
+    }
+
+    /**
+     * PAYUNi Store Selector reads only shipping_method[0]. In a mixed-package
+     * checkout it can therefore hide address fields after YS correctly decides
+     * that at least one package still needs delivery. Reconcile after all
+     * synchronous handlers and PAYUNi's delayed initialization have settled.
+     */
+    function schedulePayuniMixedAddressRestore(methodIds, allMethodsCvs) {
+        clearTimeout(payuniAddressRestoreTimer);
+        payuniAddressRestoreTimer = null;
+
+        var hasPayuniCvs = methodIds.some(isPayuniCvsMethod);
+        var hasNonCvs = methodIds.some(function(methodId) {
+            return !isSingleMethodCvs(methodId);
+        });
+
+        if (allMethodsCvs || !hasPayuniCvs || !hasNonCvs) {
             return;
         }
 
-        lastShippingMethod = methodId;
-        console.log('[YS Checkout] 運送方式:', methodId);
+        var expectedSignature = methodIds.join('|');
+        payuniAddressRestoreTimer = setTimeout(function () {
+            payuniAddressRestoreTimer = null;
+            var currentSignature = collectSelectedShippingMethodIds().join('|');
 
-        var isCVS = false;
-
-        // 判斷是否為超取
-        if (cvsShippingMethods.length > 0) {
-            // 使用後台設定的物流清單
-            // methodId 格式可能是 "flat_rate:12" 或 "ys_paynow_711:1"
-            // 需要檢查是否在清單中（包含 rate_id 和 instance_id 的比對）
-            isCVS = cvsShippingMethods.some(function(cvsMethod) {
-                // 精確比對
-                if (methodId === cvsMethod) return true;
-                // 比對 method_id 部分（忽略 instance_id）
-                var methodBase = methodId.split(':')[0];
-                var cvsBase = cvsMethod.split(':')[0];
-                return methodBase === cvsBase && methodId.indexOf(cvsMethod) === 0;
-            });
-            console.log('[YS Checkout] 使用後台設定判斷超取:', isCVS, '清單:', cvsShippingMethods);
-        } else {
-            // 未設定則使用自動偵測（PayUni、PayNow、ECPay 等）
-            // ys_paynow_shipping_711*, ys_paynow_shipping_family*, ys_paynow_shipping_hilife 為超取
-            // ys_paynow_shipping_tcat_* 為宅配（需排除）
-            isCVS = /payuni.*(711|fami|hilife)|ecpay.*cvs|ys_paynow_shipping_(711|family|hilife)/i.test(methodId);
-            // 排除黑貓宅配
-            if (/ys_paynow_shipping_tcat/i.test(methodId)) {
-                isCVS = false;
+            if (currentSignature !== expectedSignature || $('body').hasClass('yangsheep-cvs-mode')) {
+                return;
             }
-            console.log('[YS Checkout] 使用自動偵測判斷超取:', isCVS);
+
+            if (window.PayuniStoreSelector && typeof window.PayuniStoreSelector.showAddressFields === 'function') {
+                window.PayuniStoreSelector.showAddressFields();
+
+                if (typeof window.PayuniStoreSelector.showBillingAddressFields === 'function' &&
+                    typeof window.payuni_store_selector !== 'undefined' &&
+                    window.payuni_store_selector.hide_billing_address_fields) {
+                    window.PayuniStoreSelector.showBillingAddressFields();
+                }
+                return;
+            }
+
+            // Compatibility fallback for older PAYUNi versions without the
+            // public object. It is deliberately limited to a detected PAYUNi
+            // mixed checkout and to fields that PAYUNi itself hides.
+            if (typeof window.payuni_store_selector === 'undefined') {
+                return;
+            }
+
+            var shippingFields = [
+                '#shipping_country_field',
+                '#shipping_postcode_field',
+                '#shipping_state_field',
+                '#shipping_city_field',
+                '#shipping_address_1_field',
+                '#shipping_address_2_field',
+                '#shipping_company_field',
+                '#shipping_first_name_field',
+                '#shipping_last_name_field',
+                '#shipping_phone_field'
+            ].join(',');
+
+            $(shippingFields).removeClass('payuni-cvs-hide').each(function () {
+                this.style.removeProperty('display');
+            }).show();
+        }, 300);
+    }
+
+    function updateShippingFieldsVisibility(forceUpdate) {
+        // 🔴 多包裹：收集「所有」package 的物流（shipping_method[0]、[1]…）。
+        // WooCommerce 在「單一可用物流」時渲染 <input type="hidden">（不符 :checked），
+        // 故須同時納入 hidden 與 checked（與 shipping-cards.js 的 source-of-truth 一致）。
+        // 全域地址只在「全部包裹都是超商」時隱藏；任一宅配包裹 → 保留地址（fail-safe）。
+        var methodIds = collectSelectedShippingMethodIds();
+
+        // signature 作為 cache key（涵蓋所有 package，避免只比第一個）
+        var signature = methodIds.join('|');
+        if (!forceUpdate && signature === lastShippingMethod) {
+            return;
         }
+        lastShippingMethod = signature;
+        console.log('[YS Checkout] 運送方式(全部 package):', methodIds);
+
+        var isCVS = methodIds.length > 0 && methodIds.every(isSingleMethodCvs);
+        console.log('[YS Checkout] 全部包裹皆超取:', isCVS);
 
         // 使用 body class 控制（不會被 AJAX 覆蓋）
         if (isCVS) {
             console.log('[YS Checkout] 超取模式：隱藏地址欄位');
             $('body').addClass('yangsheep-cvs-mode');
         } else {
-            console.log('[YS Checkout] 宅配模式：顯示地址欄位');
+            console.log('[YS Checkout] 宅配/混合模式：顯示地址欄位');
             $('body').removeClass('yangsheep-cvs-mode');
         }
+
+        schedulePayuniMixedAddressRestore(methodIds, isCVS);
     }
 
     // Debounced 版本
