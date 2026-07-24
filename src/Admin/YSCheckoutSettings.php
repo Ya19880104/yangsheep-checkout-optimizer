@@ -14,67 +14,6 @@ class YSCheckoutSettings {
 
     private static $instance = null;
 
-    // 莫蘭迪淡藍色系預設值（藍、白、灰，無綠色）
-    private static $default_colors = array(
-        // 結帳按鈕 - 主色淡藍
-        'yangsheep_checkout_button_bg_color'        => '#8fa8b8',
-        'yangsheep_checkout_button_text_color'      => '#ffffff',
-        'yangsheep_checkout_button_hover_bg'        => '#7a95a6',
-        'yangsheep_checkout_button_hover_text'      => '#ffffff',
-        // 區塊樣式
-        'yangsheep_checkout_section_border_color'   => '#c5d1d8',
-        'yangsheep_checkout_section_bg_color'       => '#f5f8fa',
-        'yangsheep_checkout_block_border_radius'    => '12px',
-        // 表單欄位
-        'yangsheep_checkout_form_field_bg_color'    => '#ffffff',
-        'yangsheep_checkout_form_field_border_color'=> '#c5d1d8',
-        // 連結 - 主色淡藍
-        'yangsheep_checkout_link_color'             => '#6b8a9a',
-        // 登入區塊
-        'yangsheep_checkout_login_text_color'       => '#5a7080',
-        'yangsheep_checkout_login_text_bg'          => '#e8eff3',
-        'yangsheep_checkout_login_text_padding'     => '20px',
-        // 付款區塊 - 淡藍背景（移除綠色）
-        'yangsheep_checkout_payment_bg_color'       => '#e8eff5',
-        // 付款方式卡片 - 主色淡藍
-        'yangsheep_payment_method_bg'               => '#ffffff',
-        'yangsheep_payment_method_bg_active'        => '#e8eff5',
-        'yangsheep_payment_method_border'           => '#c5d1d8',
-        'yangsheep_payment_method_border_active'    => '#8fa8b8',
-        'yangsheep_payment_method_desc_bg'          => '#f5f8fa',
-        // 商品明細
-        'yangsheep_checkout_order_items_bg_color'   => '#f5f8fa',
-        // 折扣代碼
-        'yangsheep_checkout_coupon_block_bg_color'  => '#f5f8fa',
-        // 訂單總覽
-        'yangsheep_checkout_order_review_bg_color'  => '#f5f8fa',
-        // 物流卡片 - 主色淡藍
-        'yangsheep_shipping_card_radio_color'       => '#8fa8b8',
-        'yangsheep_shipping_card_border_active'     => '#8fa8b8',
-        'yangsheep_shipping_card_bg_color'          => '#ffffff',
-        'yangsheep_shipping_card_bg_active'         => '#e8eff5',
-        // 側邊欄
-        'yangsheep_sidebar_bg_color'                => '#ffffff',
-        // 我的帳號 - 主色淡藍
-        'yangsheep_myaccount_button_bg_color'       => '#8fa8b8',
-        'yangsheep_myaccount_button_text_color'     => '#ffffff',
-        'yangsheep_nav_button_hover_color'          => '#7a95a6',
-        'yangsheep_nav_button_active_color'         => '#8fa8b8',
-        'yangsheep_myaccount_link_color'            => '#6b8a9a',
-        'yangsheep_myaccount_link_hover_color'      => '#4a6a7a',
-        // 訂單狀態標籤 - 統一藍灰色系
-        'yangsheep_status_pending_bg'               => '#f0f4f7',
-        'yangsheep_status_pending_text'             => '#7a8b95',
-        'yangsheep_status_preparing_bg'             => '#e8eff5',
-        'yangsheep_status_preparing_text'           => '#6b8a9a',
-        'yangsheep_status_shipping_bg'              => '#fef6e8',
-        'yangsheep_status_shipping_text'            => '#b8860b',
-        'yangsheep_status_arrived_bg'               => '#f3e5f5',
-        'yangsheep_status_arrived_text'             => '#7b1fa2',
-        'yangsheep_status_completed_bg'             => '#e8eff5',
-        'yangsheep_status_completed_text'           => '#6b8a9a',
-    );
-
     public static function get_instance() {
         if ( is_null( self::$instance ) ) {
             self::$instance = new self();
@@ -83,12 +22,21 @@ class YSCheckoutSettings {
     }
 
     public static function get_default_colors() {
-        return self::$default_colors;
+        $defaults = array();
+        foreach ( YSSettingsManager::DEFAULT_VALUES as $key => $value ) {
+            if (
+                'yangsheep_checkout_block_border_radius' === $key
+                || ( is_string( $value ) && 1 === preg_match( '/^#[0-9a-f]{6}$/i', $value ) )
+            ) {
+                $defaults[ $key ] = YSSettingsManager::get_default( $key );
+            }
+        }
+        return $defaults;
     }
 
     private function __construct() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ), 22 );
-add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先於 settings_init
+        add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先於 settings_init
         add_action( 'admin_init', array( $this, 'settings_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
         add_filter( 'ys_toolbox_plugins', array( $this, 'register_toolbox_card' ) );
@@ -365,6 +313,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         'yangsheep_enable_manual_tracking',
         'yangsheep_checkout_close_lname',
         'yangsheep_checkout_tw_fields',
+        'yangsheep_checkout_field_compatibility',
         'yangsheep_checkout_order_note',
         'yangsheep_myaccount_visual',
         'yangsheep_wployalty_enable',
@@ -385,10 +334,6 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             'yangsheep_enable_manual_tracking',
 
             // Checkout UI
-            'yangsheep_checkout_login_welcome_text',
-            'yangsheep_checkout_login_text_color',
-            'yangsheep_checkout_login_text_bg',
-            'yangsheep_checkout_login_text_padding',
             'yangsheep_checkout_payment_bg_color',
             'yangsheep_payment_method_bg',
             'yangsheep_payment_method_bg_active',
@@ -403,9 +348,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             'yangsheep_checkout_section_bg_color',
             'yangsheep_checkout_form_field_bg_color',
             'yangsheep_checkout_form_field_border_color',
-            'yangsheep_checkout_link_color',
             'yangsheep_checkout_coupon_block_bg_color',
-            'yangsheep_checkout_order_review_bg_color',
             'yangsheep_checkout_order_items_bg_color',
             'yangsheep_checkout_block_border_radius',
             'yangsheep_shipping_card_radio_color',
@@ -418,6 +361,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             // Checkout Fields
             'yangsheep_checkout_close_lname',
             'yangsheep_checkout_tw_fields',
+            'yangsheep_checkout_field_compatibility',
             'yangsheep_checkout_order_note',
 
             // v1.6.20 Phone Validation
@@ -475,6 +419,19 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         add_settings_field( 'ys_checkout_shipping_check', __( 'WooCommerce 運送設定', 'yangsheep-checkout-optimization' ), array( $this, 'shipping_setting_check_callback' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_close_lname', __( '關閉 Last Name', 'yangsheep-checkout-optimization' ), __( '啟用後只顯示「姓名」欄位（使用 First Name）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_checkout_tw_fields', __( '台灣化欄位', 'yangsheep-checkout-optimization' ), __( '帳單只保留：姓名、電話、電子郵件；運送欄位調整為台灣格式', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+        $field_compatibility_status = class_exists( 'Flexible_Checkout_Fields_Plugin' )
+            ? '<strong>已偵測 Flexible Checkout Fields。</strong> '
+            : '';
+        $this->add_checkbox_field(
+            'yangsheep_checkout_field_compatibility',
+            __( '結帳欄位外掛相容強制模式', 'yangsheep-checkout-optimization' ),
+            $field_compatibility_status . __(
+                '啟用後會在所有欄位編輯器執行完畢後，重新套用 YS 的 Last Name、台灣化欄位與超取必填規則。第三方自訂欄位與物流欄位會保留；未遇到欄位被加回或必填狀態被覆寫時請維持關閉。',
+                'yangsheep-checkout-optimization'
+            ),
+            'yangsheep_tab_checkout',
+            'ys_checkout_fields_section'
+        );
         $this->add_checkbox_field( 'yangsheep_checkout_order_note', __( '訂單備註開關', 'yangsheep-checkout-optimization' ), __( '用戶勾選才顯示備註欄位', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // v1.6.20：台灣手機號碼驗證（09 開頭 + 10 碼）
@@ -492,51 +449,41 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );
         add_settings_field( 'yangsheep_cvs_shipping_methods', __( '超取物流方式', 'yangsheep-checkout-optimization' ), array( $this, 'cvs_shipping_methods_callback' ), 'yangsheep_tab_checkout', 'ys_cvs_shipping_section' );
 
-        // 登入區塊
-        add_settings_section( 'ys_checkout_login_section', '', array( $this, 'login_section_header' ), 'yangsheep_tab_checkout' );
-        add_settings_field( 'login_welcome_text', __( '登入歡迎文字', 'yangsheep-checkout-optimization' ), array( $this, 'login_welcome_text_callback' ), 'yangsheep_tab_checkout', 'ys_checkout_login_section' );
-        $this->add_color_field( 'yangsheep_checkout_login_text_color', __( '文字顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_login_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_login_section' );
-        $this->add_color_field( 'yangsheep_checkout_login_text_bg', __( '背景顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_login_text_bg'], 'yangsheep_tab_checkout', 'ys_checkout_login_section' );
-        $this->add_text_field( 'yangsheep_checkout_login_text_padding', __( 'Padding', 'yangsheep-checkout-optimization' ), '例如：20px', 'yangsheep_tab_checkout', 'ys_checkout_login_section' );
-
         // 付款區塊（新增）
         add_settings_section( 'ys_checkout_payment_section', '', array( $this, 'payment_section_header' ), 'yangsheep_tab_checkout' );
-        $this->add_color_field( 'yangsheep_checkout_payment_bg_color', __( '付款區塊背景色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_payment_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
-        $this->add_color_field( 'yangsheep_payment_method_bg', __( '付款方式背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_payment_method_bg'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
-        $this->add_color_field( 'yangsheep_payment_method_bg_active', __( '選中時背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_payment_method_bg_active'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
-        $this->add_color_field( 'yangsheep_payment_method_border', __( '付款方式邊框', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_payment_method_border'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
-        $this->add_color_field( 'yangsheep_payment_method_border_active', __( '選中時邊框', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_payment_method_border_active'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
-        $this->add_color_field( 'yangsheep_payment_method_desc_bg', __( '描述區域背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_payment_method_desc_bg'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_checkout_payment_bg_color', __( '付款區塊背景色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_payment_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_payment_method_bg', __( '付款方式背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_payment_method_bg'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_payment_method_bg_active', __( '選中時背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_payment_method_bg_active'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_payment_method_border', __( '付款方式邊框', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_payment_method_border'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_payment_method_border_active', __( '選中時邊框', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_payment_method_border_active'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
+        $this->add_color_field( 'yangsheep_payment_method_desc_bg', __( '描述區域背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_payment_method_desc_bg'], 'yangsheep_tab_checkout', 'ys_checkout_payment_section' );
 
         // 按鈕樣式
         add_settings_section( 'ys_checkout_button_section', '', array( $this, 'button_section_header' ), 'yangsheep_tab_checkout' );
-        $this->add_color_field( 'yangsheep_checkout_button_bg_color', __( '背景顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_button_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
-        $this->add_color_field( 'yangsheep_checkout_button_text_color', __( '文字顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_button_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
-        $this->add_color_field( 'yangsheep_checkout_button_hover_bg', __( 'Hover 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_button_hover_bg'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
-        $this->add_color_field( 'yangsheep_checkout_button_hover_text', __( 'Hover 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_button_hover_text'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
+        $this->add_color_field( 'yangsheep_checkout_button_bg_color', __( '背景顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_button_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
+        $this->add_color_field( 'yangsheep_checkout_button_text_color', __( '文字顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_button_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
+        $this->add_color_field( 'yangsheep_checkout_button_hover_bg', __( 'Hover 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_button_hover_bg'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
+        $this->add_color_field( 'yangsheep_checkout_button_hover_text', __( 'Hover 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_button_hover_text'], 'yangsheep_tab_checkout', 'ys_checkout_button_section' );
 
         // 區塊樣式
         add_settings_section( 'ys_checkout_block_section', '', array( $this, 'block_section_header' ), 'yangsheep_tab_checkout' );
-        $this->add_color_field( 'yangsheep_checkout_section_border_color', __( '邊框顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_section_border_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
-        $this->add_color_field( 'yangsheep_checkout_section_bg_color', __( '背景顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_section_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_section_border_color', __( '邊框顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_section_border_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_section_bg_color', __( '背景顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_section_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
         $this->add_text_field( 'yangsheep_checkout_block_border_radius', __( '圓角大小', 'yangsheep-checkout-optimization' ), '例如：12px', 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
-        $this->add_color_field( 'yangsheep_checkout_order_items_bg_color', __( '商品明細背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_order_items_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
-        $this->add_color_field( 'yangsheep_checkout_coupon_block_bg_color', __( '折扣區塊背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_coupon_block_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
-        $this->add_color_field( 'yangsheep_checkout_order_review_bg_color', __( '訂單總覽背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_order_review_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
-        $this->add_color_field( 'yangsheep_sidebar_bg_color', __( '側邊欄背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_sidebar_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_order_items_bg_color', __( '商品明細背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_order_items_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_coupon_block_bg_color', __( '折扣區塊背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_coupon_block_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_sidebar_bg_color', __( '側邊欄背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_sidebar_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
 
         // 表單欄位
         add_settings_section( 'ys_checkout_form_section', '', array( $this, 'form_section_header' ), 'yangsheep_tab_checkout' );
-        $this->add_color_field( 'yangsheep_checkout_form_field_bg_color', __( '欄位背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_form_field_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_form_section' );
-        $this->add_color_field( 'yangsheep_checkout_form_field_border_color', __( '欄位邊框', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_form_field_border_color'], 'yangsheep_tab_checkout', 'ys_checkout_form_section' );
-        $this->add_color_field( 'yangsheep_checkout_link_color', __( '連結顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_checkout_link_color'], 'yangsheep_tab_checkout', 'ys_checkout_form_section' );
-
+        $this->add_color_field( 'yangsheep_checkout_form_field_bg_color', __( '欄位背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_form_field_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_form_section' );
+        $this->add_color_field( 'yangsheep_checkout_form_field_border_color', __( '欄位邊框', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_form_field_border_color'], 'yangsheep_tab_checkout', 'ys_checkout_form_section' );
         // 物流卡片（新增背景色設定）
         add_settings_section( 'ys_checkout_shipping_section', '', array( $this, 'shipping_section_header' ), 'yangsheep_tab_checkout' );
-        $this->add_color_field( 'yangsheep_shipping_card_bg_color', __( '卡片背景色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_shipping_card_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
-        $this->add_color_field( 'yangsheep_shipping_card_bg_active', __( '選中時背景色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_shipping_card_bg_active'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
-        $this->add_color_field( 'yangsheep_shipping_card_radio_color', __( '選中標示色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_shipping_card_radio_color'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
-        $this->add_color_field( 'yangsheep_shipping_card_border_active', __( '選中邊框色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_shipping_card_border_active'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
+        $this->add_color_field( 'yangsheep_shipping_card_bg_color', __( '卡片背景色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_shipping_card_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
+        $this->add_color_field( 'yangsheep_shipping_card_bg_active', __( '選中時背景色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_shipping_card_bg_active'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
+        $this->add_color_field( 'yangsheep_shipping_card_radio_color', __( '選中標示色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_shipping_card_radio_color'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
+        $this->add_color_field( 'yangsheep_shipping_card_border_active', __( '選中邊框色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_shipping_card_border_active'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
 
         // 超商區域設定已移至 PayNow 物流外掛
 
@@ -545,26 +492,26 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         add_settings_section( 'ys_account_style_section', '', array( $this, 'account_section_header' ), 'yangsheep_tab_account' );
 
         $this->add_checkbox_field( 'yangsheep_myaccount_visual', __( '啟用我的帳號頁面強化設計 (BETA)', 'yangsheep-checkout-optimization' ), __( '套用自訂色彩與強化樣式至「我的帳號」頁面', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_myaccount_button_bg_color', __( '導航按鈕背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_button_bg_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_myaccount_button_text_color', __( '導航按鈕文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_button_text_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_nav_button_hover_color', __( '導航 Hover 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_nav_button_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_nav_button_active_color', __( '導航 Active 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_nav_button_active_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_myaccount_link_color', __( '連結顏色', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_link_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
-        $this->add_color_field( 'yangsheep_myaccount_link_hover_color', __( '連結 Hover', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_myaccount_link_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_myaccount_button_bg_color', __( '導航按鈕背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_myaccount_button_bg_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_myaccount_button_text_color', __( '導航按鈕文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_myaccount_button_text_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_nav_button_hover_color', __( '導航 Hover 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_nav_button_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_nav_button_active_color', __( '導航 Active 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_nav_button_active_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_myaccount_link_color', __( '連結顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_myaccount_link_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
+        $this->add_color_field( 'yangsheep_myaccount_link_hover_color', __( '連結 Hover', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_myaccount_link_hover_color'], 'yangsheep_tab_account', 'ys_account_style_section' );
 
 
         // --- Tab 4: 訂單狀態強化 ---
         add_settings_section( 'ys_order_status_colors_section', '', array( $this, 'status_section_header' ), 'yangsheep_tab_order_status' );
-        $this->add_color_field( 'yangsheep_status_pending_bg', __( '待處理 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_pending_text', __( '待處理 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_pending_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_preparing_bg', __( '備貨中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_preparing_text', __( '備貨中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_preparing_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_shipping_bg', __( '運送中 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_shipping_text', __( '運送中 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_shipping_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_arrived_bg', __( '已到店 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_arrived_text', __( '已到店 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_arrived_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_completed_bg', __( '已完成 - 背景', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
-        $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::$default_colors['yangsheep_status_completed_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_pending_bg', __( '待處理 - 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_pending_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_pending_text', __( '待處理 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_pending_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_preparing_bg', __( '備貨中 - 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_preparing_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_preparing_text', __( '備貨中 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_preparing_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_shipping_bg', __( '運送中 - 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_shipping_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_shipping_text', __( '運送中 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_shipping_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_arrived_bg', __( '已到店 - 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_arrived_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_arrived_text', __( '已到店 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_arrived_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_completed_bg', __( '已完成 - 背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_completed_bg'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
+        $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_completed_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
 
         // --- Tab 5: 購物金整合 ---
         add_settings_section( 'ys_loyalty_section', '', array( $this, 'loyalty_section_header' ), 'yangsheep_tab_loyalty' );
@@ -595,9 +542,6 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
     }
     public function checkout_fields_section_header() {
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-forms"></span> 結帳欄位設置</h3>';
-    }
-    public function login_section_header() {
-        echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-admin-users"></span> 登入區塊</h3>';
     }
     public function payment_section_header() {
         echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-money-alt"></span> 付款區塊</h3>';
@@ -791,11 +735,6 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
         echo '</div>';
     }
 
-    public function login_welcome_text_callback() {
-        $val = YSSettingsManager::get( 'yangsheep_checkout_login_welcome_text', '' );
-        echo '<textarea name="yangsheep_checkout_login_welcome_text" class="large-text" rows="3" placeholder="輸入歡迎文字...">' . esc_textarea( $val ) . '</textarea>';
-    }
-
     /**
      * 超取物流方式多選 callback
      */
@@ -896,7 +835,7 @@ add_action( 'admin_init', array( $this, 'handle_settings_save' ), 5 ); // 優先
             wp_send_json_error( '權限不足' );
         }
 
-        foreach ( self::$default_colors as $opt => $default ) {
+        foreach ( self::get_default_colors() as $opt => $default ) {
             YSSettingsManager::set( $opt, $default );
         }
 
@@ -1645,9 +1584,6 @@ add_action( 'wp_head', function() {
             $css_vars .= "{$key}: {$val};";
         }
         $css_vars .= '}';
-        echo "<style>{$css_vars}
-            .ct-account-user-box a { color: var(--myacc-link)!important; }
-            .ct-account-user-box a:hover { color: var(--myacc-link-h)!important; }
-        </style>";
+        echo "<style>{$css_vars}</style>";
     }
 }, 99 );

@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.2';
+    window.__ysCheckoutOptimizerBuild = '1.7.3';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -648,7 +648,7 @@ jQuery(function ($) {
         var $checkbox = $('#createaccount');
         // 沒有 checkbox = 強制註冊，密碼必須顯示
         var show = !$checkbox.length || $checkbox.is(':checked');
-        var $targets = $('.yangsheep-account-fields, #account_password_field, #account_username_field');
+        var $targets = $('#account_password_field, #account_username_field');
         if (show) {
             $targets.addClass('ys-show');
         } else {

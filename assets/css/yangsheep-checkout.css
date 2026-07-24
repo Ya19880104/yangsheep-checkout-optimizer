@@ -189,50 +189,10 @@ form.checkout.ys-checkout-enhanced {
     grid-row-gap: unset !important;
 }
 
-/* 登入樣式 */
-.yangsheep-login-text {
-    color: var(--login-text-color) !important;
-    background: var(--login-text-bg) !important;
-    padding: var(--login-text-padding) !important;
-}
-
-.yangsheep-logintext-footer {
-    margin: 20px 0px;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    align-content: center;
-}
-
-.yangsheep-loginbutton {
-    color: var(--theme-button-text-initial-color);
-    border: var(--button-border);
-    background-color: var(--theme-button-background-initial-color);
-    font-family: var(--buttonFontFamily, var(--fontFamily));
-    font-size: var(--buttonFontSize);
-    font-weight: var(--buttonFontWeight);
-    font-style: var(--buttonFontStyle);
-    line-height: var(--buttonLineHeight);
-    letter-spacing: var(--buttonLetterSpacing);
-    padding: var(--button-padding);
-    text-align: center;
-    border-radius: var(--buttonBorderRadius, 3px);
-}
-
-.yangsheep-login .lost_password {
-    display: flex;
-    width: 100%;
-    justify-content: flex-end;
-    margin: 15px 0px 0px 0px !important;
-}
-
-.yangsheep-login form.woocommerce-form-login .form-row {
-    margin-bottom: 0px !important;
-    width: 100%;
-}
-
-.yangsheep-login .lost_password p {
-    font-size: 16px !important;
+/* v1.7.3: keep billing as contact data and shipping as recipient data.
+ * Native controls remain available whenever progressive enhancement fails. */
+body.ys-checkout-enhanced h3#ship-to-different-address {
+    display: none !important;
 }
 
 .woocommerce-form-login__submit {
@@ -259,27 +219,9 @@ form.checkout.ys-checkout-enhanced {
     width: 100%;
 }
 
-.yangsheep-login {
-    border: 2px solid var(--theme-form-field-border-initial-color);
-    background-color: var(--bgcolor-gray-200);
-    margin-bottom: 20px;
-}
-
 /* 訂單預覽 */
 .yangsheep-review-wrapper {
     margin-bottom: 20px;
-}
-
-.ct-order-review table.shop_table {
-    margin-bottom: 0px !important;
-}
-
-.ct-order-review {
-    background: var(--order-review-bg-color) !important;
-    border: 2px solid var(--theme-section-border-color) !important;
-    /* padding 由 RWD 區塊統一控制 */
-    margin-bottom: 20px !important;
-    border-radius: var(--block-border-radius, 8px) !important;
 }
 
 /* 運輸方式 */
@@ -309,19 +251,6 @@ ul#shipping_method li {
 #billing_address_2_field .optional {
     display: none !important;
 }
-
-/* 註解：已改用 Grid 佈局，不再需要 width 設定
-.yangsheep-wide50,
-#shipping_phone_field {
-    width: 48.5%;
-}
-*/
-
-/* 註解：避免干擾外掛的欄位控制，改用更安全的方式
-.yangsheep-wide100 {
-    width: 100%;
-}
-*/
 
 .form-row {
     margin-bottom: 10px;
@@ -358,7 +287,6 @@ ul#shipping_method li {
 .yangsheep-order-review h3,
 .yangsheep-coupon-block .yangsheep-h3-title,
 .yangsheep-shipping-title,
-.ct-order-review h3,
 h3.yangsheep-h3-title,
 h3#order_review_heading,
 .yangsheep-payment .yangsheep-h3-title {
@@ -508,7 +436,7 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-coupon,
 .yangsheep-coupon-point {
-    background-color: var(--coupon-block-bg-color);
+    background-color: transparent;
     padding: 20px;
     box-sizing: border-box;
 }
@@ -602,10 +530,6 @@ a.woocommerce-remove-coupon {
 }
 
 /* 購物金 */
-.yangsheep-h3-point-title {
-    margin: 0;
-}
-
 .yangsheep-coupon-point .woocommerce-cart-notice {
     background-color: var(--section-bg-color);
     margin-bottom: 0 !important;
@@ -670,7 +594,7 @@ a.woocommerce-remove-coupon {
 
 /* 智慧折扣券 */
 #coupons_list {
-    border: 2px solid var(--theme-section-border-initial-color);
+    border: 2px solid var(--theme-section-border-color);
     margin-bottom: 20px;
 }
 
@@ -721,59 +645,24 @@ a.woocommerce-remove-coupon {
 
 /* RWD: >=1000px */
 @media(min-width:1000px) {
-    .yangsheep-login {
-        padding: 20px;
-    }
-
-    .yangsheep-login .woocommerce-form-login .form-row-first {
-        width: 49% !important;
-        margin-right: 1%;
-    }
-
-    .yangsheep-login .woocommerce-form-login .form-row-last {
-        width: 49% !important;
-        margin-left: 1%;
-    }
-
     /* ===== 區塊 padding - 統一 20px ===== */
     .woocommerce-billing-fields,
     .woocommerce-shipping-fields,
     .woocommerce-additional-fields,
     .yangsheep-checkout-country,
     .yangsheep-payment,
-    .yangsheep-order-review,
-    .ct-order-review {
+    .yangsheep-order-review {
         padding: 20px !important;
-    }
-
-    #yangsheep_copy_field {
-        width: 100%;
-        margin-bottom: 10px;
-        display: block !important;
     }
 
     #coupons_list {
         padding: 20px;
     }
 
-    /*購買時註冊欄位 */
-    .yangsheep-account-fields {
-        margin-top: 15px;
-    }
-
-    .yangsheep-account-note {
-        font-size: 13px;
-        color: var(--ys-text-muted);
-        margin-bottom: 10px;
-        padding: 10px 15px;
-        background: rgba(0, 0, 0, 0.03);
-        border-radius: 4px;
-    }
 }
 
 /* 建立帳號密碼：預設隱藏，勾選 checkbox 後才顯示 */
 /* 直接針對欄位 ID，不依賴容器嵌套（WC 可能把欄位渲染在容器外） */
-.yangsheep-account-fields:not(.ys-show),
 #account_password_field:not(.ys-show),
 #account_username_field:not(.ys-show) {
     display: none !important;
@@ -787,11 +676,6 @@ a.woocommerce-remove-coupon {
 
 /* RWD: <=999.9px（平板以下通用） */
 @media(max-width:999.9px) {
-    .yangsheep-login {
-        padding: 20px 15px;
-    }
-
-    .yangsheep-wide50,
     #shipping_phone_field {
         width: 100%;
     }
@@ -806,8 +690,7 @@ a.woocommerce-remove-coupon {
     .woocommerce-additional-fields,
     .yangsheep-checkout-country,
     .yangsheep-payment,
-    .yangsheep-order-review,
-    .ct-order-review {
+    .yangsheep-order-review {
         padding: 20px 15px !important;
     }
 
@@ -1201,7 +1084,6 @@ a.woocommerce-remove-coupon {
 }
 
 /* 限制所有結帳區域的圖片尺寸 */
-.ct-order-review img,
 .woocommerce-checkout-review-order img,
 .yangsheep-review-wrapper img,
 .yangsheep-cart-item img {
@@ -1212,8 +1094,6 @@ a.woocommerce-remove-coupon {
     object-fit: cover !important;
     border-radius: 4px !important;
 }
-
-/* ct-order-review 標題 - 樣式已在統一區塊標題中定義 */
 
 /* ===== 商品明細 RWD - 手機版 ===== */
 @media (max-width: 768px) {
@@ -1334,24 +1214,6 @@ a.woocommerce-remove-coupon {
         grid-column: 1 / -1;
     }
 
-    /* 建立帳號區塊全寬 */
-    .woocommerce-billing-fields__field-wrapper .yangsheep-create-account {
-        grid-column: 1 / -1;
-    }
-
-    /* 建立帳號內部元素全寬（覆蓋 form-row width:auto） */
-    .yangsheep-create-account .yangsheep-account-fields,
-    .yangsheep-create-account #account_password_field,
-    .yangsheep-create-account #account_username_field {
-        width: 100% !important;
-    }
-
-    /* 同訂購人 Checkbox 全寬 */
-    .woocommerce-shipping-fields__field-wrapper .yangsheep-copy-billing,
-    #yangsheep_copy_billing_field {
-        grid-column: 1 / -1;
-    }
-
     /* ===== 收件人姓名電話強制並排（一般模式）===== */
     /* 確保姓名和電話欄位在 Grid 中保持並排 */
     /* 註解：台灣模式（6欄 Grid）由動態 CSS 控制，這裡只處理一般模式 */
@@ -1379,17 +1241,9 @@ a.woocommerce-remove-coupon {
         grid-column: 1 / -1;
     }
 
-    /* 建立帳號區塊全寬 */
-    .woocommerce-billing-fields__field-wrapper .yangsheep-create-account,
+    /* 建立帳號欄位全寬 */
     #createaccount_field {
         grid-column: 1 / -1;
-    }
-
-    /* 建立帳號內部元素全寬 */
-    .yangsheep-create-account .yangsheep-account-fields,
-    .yangsheep-create-account #account_password_field,
-    .yangsheep-create-account #account_username_field {
-        width: 100% !important;
     }
 
     /* 收件人姓名電話強制並排（一般模式，非台灣模式） */

@@ -11,7 +11,7 @@ function source(string $path): string
         throw new RuntimeException("Unable to read {$path}");
     }
     // 跨平台：Windows checkout（core.autocrlf=true）工作樹為 CRLF，
-    // 固定字串斷言以 LF 撰寫 — 讀檔時統一正規化，讓全部 74 條斷言
+    // 固定字串斷言以 LF 撰寫 — 讀檔時統一正規化，讓全部斷言
     // 在 LF/CRLF 工作樹皆可重現（v1.7.1 P1 release-gate 修正）
     return str_replace("\r\n", "\n", $contents);
 }
@@ -62,7 +62,12 @@ $wployaltyJs = source($root . '/assets/js/yangsheep-wployalty.js');
 $wployaltyCompat = source($root . '/src/Compat/YSWPLoyaltyIntegration.php');
 $shippingCompat = source($root . '/src/Compat/YSThirdPartyShippingCompat.php');
 $settings = source($root . '/src/Admin/YSCheckoutSettings.php');
+$settingsManager = source($root . '/src/Settings/YSSettingsManager.php');
+$settingsMigrator = source($root . '/src/Settings/YSSettingsMigrator.php');
 $yithCompat = source($root . '/src/Compat/YSYithPointsIntegration.php');
+$myAccountCss = source($root . '/assets/css/yangsheep-myaccount.css');
+$orderCss = source($root . '/assets/css/yangsheep-order.css');
+$orderEnhancerCss = source($root . '/assets/css/yangsheep-order-enhancer.css');
 $readme = source($root . '/README.md');
 $readmeTree = strstr($readme, '## 核心類別說明', true);
 
@@ -73,26 +78,13 @@ $templateFiles = array_map(
 );
 sort($templateFiles);
 
-// v1.7.0 最終形：checkout 永遠用 Woo 核心模板；只保留「我的帳號視覺」這組
-// 設定 gated 的 myaccount/order 模板（模板與 myaccount/order CSS 是配對系統）。
-$locateFilterPos = strpos( $bootstrap, "add_filter( 'woocommerce_locate_template'" );
 check(
-    $locateFilterPos !== false
-    && str_contains( $bootstrap, "strpos( \$template_name, 'myaccount/' ) !== 0 && strpos( \$template_name, 'order/' ) !== 0" )
-    && str_contains( $bootstrap, "YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) !== 'yes'" ),
-    'template interception is limited to the opt-in my-account visual (never checkout)'
+    !str_contains( $bootstrap, 'woocommerce_locate_template' ),
+    'checkout, myaccount and order templates always belong to WooCommerce or the active theme'
 );
 check($templateFiles === [
     'templates/checkout/shipping-cards.php',
-    'templates/myaccount/form-edit-address.php',
-    'templates/myaccount/form-login.php',
-    'templates/myaccount/my-account.php',
-    'templates/myaccount/my-address.php',
-    'templates/myaccount/view-order.php',
-    'templates/myaccount/view-subscription.php',
-    'templates/order/order-details-customer.php',
-    'templates/order/order-details.php',
-], 'shipping-card partial plus the gated my-account visual templates remain');
+], 'only the directly included shipping-card visual partial remains');
 check(str_contains($layout, 'woocommerce_checkout_before_customer_details'), 'enhancement blocks use a standard checkout hook');
 check(
     str_contains($layout, 'woocommerce_before_checkout_shipping_form')
@@ -327,9 +319,10 @@ check(
     'cart-contents collapsible is a keyboard-operable button with aria state'
 );
 check(
-    str_contains($bootstrap, "strpos( \$template_name, 'order/' ) === 0")
-    && str_contains($bootstrap, 'is_account_page()'),
-    'order/* template override is limited to My Account pages (order-received stays core)'
+    !str_contains($bootstrap, "strpos( \$template_name, 'order/' )")
+    && !is_file($root . '/templates/order/order-details.php')
+    && !is_file($root . '/templates/order/order-details-customer.php'),
+    'order details always use the installed WooCommerce core templates'
 );
 // v1.7.1：coupon 輸入樣式與唯一 id 同步（v1.7.0 改 id 後 CSS 曾成死碼）
 check(
@@ -548,15 +541,224 @@ check(
 );
 check(
     !preg_match('/#billing_country_field\s*\{\s*display:\s*none/s', $checkoutCss)
-    && !preg_match('/h3#ship-to-different-address\s*\{\s*display:\s*none/s', $checkoutCss)
+    && str_contains($checkoutCss, 'body.ys-checkout-enhanced h3#ship-to-different-address')
+    && preg_match('/body\.ys-checkout-enhanced\s+h3#ship-to-different-address\s*\{[^}]*display:\s*none\s*!important/s', $checkoutCss) === 1
     && !preg_match('/#payment\s+li\s+img\s*\{\s*display:\s*none/s', $checkoutCss),
-    'progressive styles do not hide native country, shipping-address, or gateway controls'
+    'progressive styles preserve native controls except the enhanced legacy shipping-address toggle'
+);
+check(
+    str_contains($settingsManager, "'yangsheep_checkout_field_compatibility'")
+    && preg_match(
+        "/'yangsheep_checkout_field_compatibility'\s*=>\s*'no'/",
+        $settingsManager
+    ) === 1
+    && str_contains($settings, "'yangsheep_checkout_field_compatibility'")
+    && str_contains($settings, '結帳欄位外掛相容強制模式'),
+    'checkout-field compatibility mode is an explicit opt-in backend setting'
+);
+check(
+    str_contains(
+        $checkoutFields,
+        "add_filter( 'woocommerce_checkout_fields', array( \$this, 'enforce_checkout_field_compatibility' ), PHP_INT_MAX )"
+    )
+    && str_contains(
+        $checkoutFields,
+        "YSSettingsManager::get( 'yangsheep_checkout_field_compatibility', 'no' )"
+    )
+    && str_contains($checkoutFields, '$this->customize_checkout_fields( $fields )')
+    && str_contains($checkoutFields, '$this->maybe_remove_address_required_for_cvs( $fields )')
+    && str_contains($checkoutFields, '$this->force_phone_fields( $fields )'),
+    'compatibility mode reapplies YS field rules after priority-9999 field editors'
+);
+check(
+    str_contains(
+        $checkoutFields,
+        "add_filter( 'woocommerce_ship_to_different_address_checked', array( \$this, 'force_separate_shipping_address' ), 999 )"
+    )
+    && str_contains($checkoutFields, 'public function force_separate_shipping_address'),
+    'enhanced checkout preserves the legacy separate-recipient data model'
 );
 check(
     !str_contains($checkoutCss, '.yangsheep-order-totals .woocommerce-checkout-review-order')
     && !str_contains($checkoutJs, 'ys-yith-points-mounted')
     && !str_contains($bootstrap, 'yangsheep_order_totals'),
     'retired template selectors and write-only mount markers are removed'
+);
+$retiredSettingKeys = [
+    'yangsheep_checkout_login_welcome_text',
+    'yangsheep_checkout_login_text_padding',
+    'yangsheep_checkout_login_text_color',
+    'yangsheep_checkout_login_text_bg',
+    'yangsheep_checkout_link_color',
+    'yangsheep_checkout_order_review_bg_color',
+];
+$retiredSettingsAbsent = true;
+foreach ($retiredSettingKeys as $retiredSettingKey) {
+    if (
+        str_contains($settingsManager, "'{$retiredSettingKey}'")
+        || str_contains($settings, "'{$retiredSettingKey}'")
+        || str_contains($bootstrap, "YSSettingsManager::get('{$retiredSettingKey}'")
+    ) {
+        $retiredSettingsAbsent = false;
+        break;
+    }
+}
+check(
+    $retiredSettingsAbsent
+    && str_contains($settingsMigrator, 'RETIRED_SETTING_KEYS')
+    && str_contains($settingsMigrator, '$this->repository->delete_many')
+    && str_contains($settingsMigrator, 'delete_option( $key )'),
+    'six no-op settings are retired from UI/runtime/defaults and cleaned from both storage backends'
+);
+check(
+    str_contains($settingsMigrator, '$from_version < 1')
+    && str_contains($settingsMigrator, '$from_version < 2')
+    && str_contains($settingsMigrator, "if ( empty( \$result['errors'] ) )")
+    && substr_count($bootstrap, 'migration_required()') >= 2,
+    'upgrade path runs v2 cleanup without replaying stale wp_options and failed migrations remain retryable'
+);
+check(
+    !str_contains($settings, 'private static $default_colors')
+    && str_contains($settings, 'YSSettingsManager::get_default')
+    && str_contains($settingsManager, "self::get( \$key, self::get_default( \$key ) )")
+    && preg_match(
+        "/'yangsheep_checkout_block_border_radius'\s*=>\s*'12px'/",
+        $settingsManager
+    ) === 1
+    && preg_match(
+        "/'yangsheep_checkout_section_bg_color'\s*=>\s*'#f5f8fa'/",
+        $settingsManager
+    ) === 1
+    && preg_match(
+        "/'yangsheep_checkout_form_field_bg_color'\s*=>\s*'#ffffff'/",
+        $settingsManager
+    ) === 1,
+    'admin, runtime fallback, reset and custom-table writes share one canonical default map'
+);
+
+preg_match_all(
+    "/'(?<key>yangsheep_[a-z0-9_]+)'\s*=>/",
+    $settingsManager,
+    $defaultSettingMatches
+);
+$runtimeSettingSources = $bootstrap;
+$runtimeSettingFiles = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($root . '/src', FilesystemIterator::SKIP_DOTS)
+);
+foreach ($runtimeSettingFiles as $runtimeSettingFile) {
+    if (
+        !$runtimeSettingFile->isFile()
+        || strtolower($runtimeSettingFile->getExtension()) !== 'php'
+        || in_array(
+            $runtimeSettingFile->getFilename(),
+            ['YSSettingsManager.php', 'YSSettingsMigrator.php'],
+            true
+        )
+    ) {
+        continue;
+    }
+    $runtimeSettingSources .= "\n" . source($runtimeSettingFile->getPathname());
+}
+$settingsWithoutConsumers = [];
+foreach (array_unique($defaultSettingMatches['key'] ?? []) as $settingKey) {
+    if (
+        preg_match(
+            "/YSSettingsManager::get\(\s*'" . preg_quote($settingKey, '/') . "'/",
+            $runtimeSettingSources
+        ) !== 1
+    ) {
+        $settingsWithoutConsumers[] = $settingKey;
+    }
+}
+check(
+    $settingsWithoutConsumers === [],
+    'every canonical setting has an explicit runtime consumer'
+);
+
+$ownedCssSources = '';
+foreach (glob($root . '/assets/css/*.css') ?: [] as $cssPath) {
+    $ownedCssSources .= "\n" . source($cssPath);
+}
+preg_match_all(
+    '/[.#](?<name>(?:yangsheep[-_]|ys[-_])[a-zA-Z0-9_-]+)/',
+    $ownedCssSources,
+    $ownedSelectorMatches
+);
+$ownedSelectorProducers = $bootstrap;
+foreach ([
+    $root . '/src',
+    $root . '/assets/js',
+    $root . '/templates',
+] as $producerRoot) {
+    $producerFiles = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($producerRoot, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($producerFiles as $producerFile) {
+        if (
+            !$producerFile->isFile()
+            || !in_array(strtolower($producerFile->getExtension()), ['php', 'js'], true)
+        ) {
+            continue;
+        }
+        $ownedSelectorProducers .= "\n" . source($producerFile->getPathname());
+    }
+}
+$ownedSelectorsWithoutProducers = [];
+foreach (array_unique($ownedSelectorMatches['name'] ?? []) as $selectorName) {
+    if (!str_contains($ownedSelectorProducers, $selectorName)) {
+        $ownedSelectorsWithoutProducers[] = $selectorName;
+    }
+}
+check(
+    $ownedSelectorsWithoutProducers === [],
+    'every owned CSS selector has a current PHP, JavaScript or template producer'
+);
+
+check(
+    !str_contains($checkoutCss, '.ct-order-review')
+    && !str_contains($bootstrap, '.ct-order-review')
+    && !str_contains($checkoutCss, '.yangsheep-login')
+    && !str_contains($checkoutCss, '.yangsheep-wide50')
+    && !str_contains($checkoutCss, '.yangsheep-wide100')
+    && !str_contains($checkoutCss, '.yangsheep-account-note')
+    && !str_contains($checkoutCss, '.yangsheep-create-account')
+    && !str_contains($checkoutCss, '.yangsheep-account-fields')
+    && !str_contains($checkoutJs, '.yangsheep-account-fields')
+    && !str_contains($checkoutCss, '.yangsheep-h3-point-title')
+    && !str_contains($checkoutCss, '.yangsheep-copy-billing')
+    && !str_contains($shippingCardsCss, '.yangsheep-shipping-meta')
+    && !str_contains($checkoutCss, '#yangsheep_copy_field')
+    && !str_contains($checkoutCss, '#yangsheep_copy_billing_field')
+    && !str_contains($orderCss, 'woocommerce-customer-details'),
+    'selectors without a current markup producer and obsolete order-customer layout overrides are removed'
+);
+check(
+    str_contains($myAccountCss, '.woocommerce-account .woocommerce-MyAccount-navigation ul {')
+    && str_contains($myAccountCss, 'display: block !important;')
+    && str_contains($myAccountCss, 'overflow-x: auto;')
+    && !str_contains($myAccountCss, '.woocommerce-account .ct-woo-account'),
+    'My Account visual mode respects the theme desktop columns and uses bounded mobile navigation'
+);
+preg_match_all("/\\\$vars\\['(?<property>--[^']+)'\\]/", $settings, $cssVariableMatches);
+$unconsumedCssVariables = [];
+foreach (array_unique($cssVariableMatches['property'] ?? []) as $cssVariable) {
+    if (
+        !str_contains($myAccountCss, "var({$cssVariable}")
+        && !str_contains($orderEnhancerCss, "var({$cssVariable}")
+    ) {
+        $unconsumedCssVariables[] = $cssVariable;
+    }
+}
+check(
+    $unconsumedCssVariables === [],
+    'every backend-emitted My Account and order-status CSS variable has a loaded stylesheet consumer'
+);
+check(
+    str_contains($shippingCompat, "'paynow_shipping_b2c_711'")
+    && str_contains($settings, 'B2C、OK 或自訂方法請在「超取物流方式設定」以完整 rate ID 手動勾選')
+    && str_contains($checkoutFields, 'paynow_shipping_c2c_')
+    && !str_contains($checkoutFields, "strpos( \$base, 'paynow_shipping_b2c_'"),
+    'PayNow B2C keeps selector compatibility but address relaxation remains explicit manual opt-in'
 );
 check(
     is_string($readmeTree)

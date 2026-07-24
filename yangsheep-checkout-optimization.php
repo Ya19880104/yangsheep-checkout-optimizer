@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.7.2
+ * Version:           1.7.3
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.2' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.3' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -128,6 +128,14 @@ add_action( 'plugins_loaded', function(){
         add_action( 'admin_notices', 'yangsheep_checkout_optimizer_wc_missing_notice' );
         return;
     }
+
+    // File-replacement upgrades do not run register_activation_hook(). Execute
+    // versioned migrations once during normal bootstrap so retired settings and
+    // future schema steps are applied on real upgrades as well as fresh installs.
+    $migrator = YSSettingsMigrator::instance();
+    if ( $migrator->migration_required() ) {
+        $migrator->migrate();
+    }
 });
 
 // 啟動設定與自訂器
@@ -201,33 +209,6 @@ add_action( 'wp_enqueue_scripts', function(){
         }
     }
 });
-
-// 「我的帳號視覺」模板（v1.7.0 保留的唯一模板覆寫，且必須設定開啟才生效）。
-// checkout/* 一律走 Woo 核心模板 — 不做任何無條件覆寫。
-// myaccount/* 與 order/* 是與 yangsheep-myaccount.css / yangsheep-order.css 配對的
-// 選用視覺系統；沒有模板只掛 CSS 會讓原生 markup 大跑版，因此兩者同開同關。
-add_filter( 'woocommerce_locate_template', function( $template, $template_name, $template_path ) {
-    if ( strpos( $template_name, 'myaccount/' ) !== 0 && strpos( $template_name, 'order/' ) !== 0 ) {
-        return $template; // checkout 等其他模板永遠用 Woo 核心
-    }
-
-    if ( YSSettingsManager::get( 'yangsheep_myaccount_visual', 'no' ) !== 'yes' ) {
-        return $template;
-    }
-
-    // order/* 只在「我的帳號」頁面覆寫（view-order 等，與 yangsheep-order.css 配對載入）。
-    // order-received / order-pay 等結帳端點不是帳號頁：用 Woo 核心模板，
-    // 避免陳舊模板 + 無配對 CSS 的裸樣式（CODEX P1：真單 #12148 實證）。
-    if (
-        strpos( $template_name, 'order/' ) === 0
-        && ( ! function_exists( 'is_account_page' ) || ! is_account_page() )
-    ) {
-        return $template;
-    }
-
-    $plugin_template = YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR . 'templates/' . $template_name;
-    return file_exists( $plugin_template ) ? $plugin_template : $template;
-}, 10, 3 );
 
 // 保留 WooCommerce 原生模板、標準 checkout hooks、付款與折扣入口。
 // YS 只有在前端 layout 初始化成功後才隱藏原生折扣入口；JS 失敗時仍可使用 Woo 原生流程。
@@ -411,9 +392,7 @@ add_action('wp_head',function(){
     $sec_bg = YSSettingsManager::get('yangsheep_checkout_section_bg_color');
     $fld_bg = YSSettingsManager::get('yangsheep_checkout_form_field_bg_color');       // 欄位背景淡藍
     $fld_bd = YSSettingsManager::get('yangsheep_checkout_form_field_border_color');
-    $link = YSSettingsManager::get('yangsheep_checkout_link_color');                  // 連結色
     $cp_bg = YSSettingsManager::get('yangsheep_checkout_coupon_block_bg_color');      // 折扣區淡藍
-    $or_bg = YSSettingsManager::get('yangsheep_checkout_order_review_bg_color');      // 訂單區淡藍
     $rad = YSSettingsManager::get('yangsheep_checkout_block_border_radius');
     $ship_radio = YSSettingsManager::get('yangsheep_shipping_card_radio_color');      // 主色
     $ship_border = YSSettingsManager::get('yangsheep_shipping_card_border_active');   // 主色
@@ -437,31 +416,14 @@ add_action('wp_head',function(){
     echo 'body.ys-checkout-enhanced{';
     echo "--theme-button-background-initial-color:{$btn_bg};";
     echo "--theme-button-text-initial-color:{$btn_txt};";
-    echo "--theme-button-hover-bg:{$btn_hover_bg};";
-    echo "--theme-button-hover-text:{$btn_hover_txt};";
     echo "--theme-section-border-color:{$sec_bd};";
     echo "--section-bg-color:{$sec_bg};";
     echo "--form-field-bg-color:{$fld_bg};";
     echo "--theme-form-field-border-initial-color:{$fld_bd};";
-    echo "--theme-link-color:{$link};";
     echo "--block-border-radius:{$rad};";
     echo "--yangsheep-shipping-radio-color:{$ship_radio};";
     echo "--yangsheep-shipping-border-active:{$ship_border};";
     echo "--yangsheep-sidebar-bg:{$sidebar_bg};";
-    // 新增 CSS 變數
-    echo "--yangsheep-payment-bg:{$payment_bg};";
-    echo "--yangsheep-order-items-bg:{$order_items_bg};";
-    echo "--yangsheep-shipping-card-bg:{$ship_card_bg};";
-    echo "--yangsheep-shipping-card-bg-active:{$ship_card_active};";
-    echo '}';
-
-    // Order Review 區塊（使用頁面前綴提高優先級）
-    echo ".yangsheep-design-checkout-page .ct-order-review {";
-    echo "background-color:{$or_bg};";
-    echo "border-radius:{$rad};";
-    echo "border:2px solid {$sec_bd};";
-    echo "padding:20px;";
-    echo "margin-bottom:0;";
     echo '}';
 
     // 折扣代碼區塊

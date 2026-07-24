@@ -30,10 +30,74 @@ class YSCheckoutFields {
         add_filter( 'woocommerce_address_to_edit', array( $this, 'filter_address_to_edit' ), 20, 2 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'force_phone_fields' ), 9999 );
+        add_filter( 'woocommerce_checkout_fields', array( $this, 'enforce_checkout_field_compatibility' ), PHP_INT_MAX );
+        add_filter( 'woocommerce_ship_to_different_address_checked', array( $this, 'force_separate_shipping_address' ), 999 );
         add_filter( 'woocommerce_billing_fields', array( $this, 'force_billing_phone' ), 9999 );
         // v1.6.20：兩個電話驗證 hook 都註冊，內部依設定決定是否實際執行
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_shipping_phone' ) );
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_billing_phone' ) );
+    }
+
+    /**
+     * Reapply YS-owned core field rules after high-priority field editors.
+     *
+     * Third-party billing fields are restored after normalization so enabling
+     * compatibility mode cannot silently remove tax IDs or provider metadata.
+     *
+     * @param array $fields Checkout fields.
+     * @return array
+     */
+    public function enforce_checkout_field_compatibility( $fields ) {
+        if ( YSSettingsManager::get( 'yangsheep_checkout_field_compatibility', 'no' ) !== 'yes' ) {
+            return $fields;
+        }
+
+        $core_billing_keys = array(
+            'billing_first_name',
+            'billing_last_name',
+            'billing_company',
+            'billing_country',
+            'billing_postcode',
+            'billing_state',
+            'billing_city',
+            'billing_address_1',
+            'billing_address_2',
+            'billing_phone',
+            'billing_email',
+        );
+        $custom_billing_fields = array();
+
+        if ( isset( $fields['billing'] ) && is_array( $fields['billing'] ) ) {
+            $custom_billing_fields = array_diff_key(
+                $fields['billing'],
+                array_flip( $core_billing_keys )
+            );
+        }
+
+        $fields = $this->customize_checkout_fields( $fields );
+
+        if ( ! empty( $custom_billing_fields ) ) {
+            foreach ( $custom_billing_fields as $key => $field ) {
+                if ( ! isset( $fields['billing'][ $key ] ) ) {
+                    $fields['billing'][ $key ] = $field;
+                }
+            }
+        }
+
+        $fields = $this->maybe_remove_address_required_for_cvs( $fields );
+        return $this->force_phone_fields( $fields );
+    }
+
+    /**
+     * Preserve the v1.6 checkout model: billing is contact data and shipping
+     * is always the recipient data source. The native control remains in the
+     * DOM and is hidden only after visual enhancement succeeds.
+     *
+     * @param mixed $checked WooCommerce default state.
+     * @return int
+     */
+    public function force_separate_shipping_address( $checked ) {
+        return 1;
     }
 
     public function maybe_remove_address_required_for_cvs( $fields ) {

@@ -28,7 +28,23 @@ class YSSettingsMigrator {
      *
      * @var int
      */
-    const CURRENT_MIGRATION_VERSION = 1;
+    const CURRENT_MIGRATION_VERSION = 2;
+
+    /**
+     * Settings retired in v1.7.3 because they had no live frontend consumer.
+     *
+     * Keeping the cleanup list in the migrator removes orphaned rows from the
+     * custom table as well as legacy wp_options without treating them as
+     * current defaults.
+     */
+    const RETIRED_SETTING_KEYS = array(
+        'yangsheep_checkout_login_welcome_text',
+        'yangsheep_checkout_login_text_padding',
+        'yangsheep_checkout_login_text_color',
+        'yangsheep_checkout_login_text_bg',
+        'yangsheep_checkout_link_color',
+        'yangsheep_checkout_order_review_bg_color',
+    );
 
     /**
      * 單例實例
@@ -102,6 +118,7 @@ class YSSettingsMigrator {
             'skipped'  => 0,
             'errors'   => array(),
         );
+        $from_version = $this->get_migration_version();
 
         // 確保資料表存在
         if ( ! $this->table_maker->table_exists() ) {
@@ -113,27 +130,41 @@ class YSSettingsMigrator {
             return $result;
         }
 
-        // 遷移所有設定
-        foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
-            $value = get_option( $key, null );
+        // v1 was the one-time wp_options -> custom-table migration. Never
+        // replay it on later schema versions: the custom table is authoritative
+        // and wp_options may contain stale values.
+        if ( $from_version < 1 ) {
+            foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+                $value = get_option( $key, null );
 
-            // 如果 wp_options 中有值，遷移到新表
-            if ( null !== $value && false !== $value ) {
-                $success = $this->repository->set( $key, $value );
-                if ( $success ) {
-                    $result['migrated']++;
+                if ( null !== $value && false !== $value ) {
+                    $success = $this->repository->set( $key, $value );
+                    if ( $success ) {
+                        $result['migrated']++;
+                    } else {
+                        $result['errors'][] = "遷移 {$key} 失敗";
+                    }
                 } else {
-                    $result['errors'][] = "遷移 {$key} 失敗";
+                    $result['skipped']++;
                 }
-            } else {
-                $result['skipped']++;
             }
         }
 
-        // 標記遷移完成
-        $this->mark_migration_complete();
+        // v2 retires settings from both storage backends. This is deliberately
+        // independent from v1 so existing custom-table values are untouched.
+        if ( $from_version < 2 ) {
+            if ( ! $this->repository->delete_many( self::RETIRED_SETTING_KEYS ) ) {
+                $result['errors'][] = '清理已退休設定失敗';
+            }
+            foreach ( self::RETIRED_SETTING_KEYS as $key ) {
+                delete_option( $key );
+            }
+        }
 
         $result['success'] = empty( $result['errors'] );
+        if ( empty( $result['errors'] ) ) {
+            $this->mark_migration_complete();
+        }
         return $result;
     }
 
@@ -185,7 +216,8 @@ class YSSettingsMigrator {
     public function cleanup_wp_options(): int {
         $deleted = 0;
 
-        foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+        $managed_keys = array_merge( YSSettingsManager::ALL_SETTING_KEYS, self::RETIRED_SETTING_KEYS );
+        foreach ( $managed_keys as $key ) {
             if ( delete_option( $key ) ) {
                 $deleted++;
             }

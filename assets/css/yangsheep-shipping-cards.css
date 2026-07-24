@@ -122,12 +122,6 @@
     display: none;
 }
 
-.yangsheep-shipping-meta {
-    font-size: 13px;
-    color: #777;
-    line-height: 1.3;
-}
-
 /* ===== 價格顯示 ===== */
 .yangsheep-shipping-price {
     flex-shrink: 0;

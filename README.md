@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.2
+**當前版本**：1.7.3
 **最後更新**：2026-07-23
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -119,14 +119,8 @@ yangsheep-checkout-optimizer/
 │       ├── YSSettingsTableMaker.php       # 設定資料表建立
 │       └── YSSettingsMigrator.php         # 設定資料遷移
 ├── templates/
-│   ├── checkout/
-│   │   └── shipping-cards.php             # 直接 include 的視覺 proxy partial
-│   ├── myaccount/                         # 「我的帳號視覺」配對模板（設定開啟才覆寫）
-│   │   ├── my-account.php / my-address.php / form-login.php
-│   │   ├── form-edit-address.php / view-order.php / view-subscription.php
-│   └── order/                             # 同上（與 yangsheep-order.css 配對）
-│       ├── order-details.php
-│       └── order-details-customer.php
+│   └── checkout/
+│       └── shipping-cards.php             # 直接 include 的視覺 proxy partial
 ├── README.md                              # 本檔案
 └── yangsheep-checkout-optimization.php    # 主外掛檔案（含 PSR-4 自動載入器）
 ```
@@ -234,6 +228,24 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.3 (2026-07-23)
+
+#### 結帳欄位外掛相容與舊版收件流程回歸
+- 新增「結帳欄位外掛相容強制模式」後台開關（預設關閉）。啟用後會在 Flexible Checkout Fields 等高優先級欄位編輯器執行完畢後，重新套用 YS 的 Last Name、台灣化欄位及超取地址必填規則。
+- 強制模式只覆蓋 WooCommerce 核心姓名／地址欄位；第三方自訂帳單欄位、統編欄位及物流 provider 欄位會保留。
+- 恢復 v1.6.x 的收件流程：shipping address 固定作為收件資料來源；「運送到不同地址」原生控制只在 YS 漸進增強成功後隱藏，增強失敗時維持 WooCommerce 原生可操作。
+- 新增欄位相容矩陣與契約，覆蓋開關 off/on、台灣化欄位、CVS／宅配必填及第三方欄位保留。
+
+#### My Account、設定與樣式架構收斂
+- 外掛不再透過 `woocommerce_locate_template` 覆寫任何 checkout、myaccount 或 order 模板；即使開啟「我的帳號視覺」，頁面與訂單明細仍使用目前安裝的 WooCommerce／WooCommerce Subscriptions／主題模板。這保留最新 Actions 欄、POST 回填、表單屬性、`woocommerce_my_account_after_my_address`、`woocommerce_order_details_status` 與 `woocommerce_after_order_details` 等標準擴充點；My Account 強化只載入 opt-in CSS。
+- 退役六個沒有前台消費端的設定：登入歡迎文字、登入文字 padding／顏色／背景、結帳連結顏色、訂單總覽背景。升級遷移會同時從 YS 自訂設定表與 `wp_options` 清除，不再顯示無效控制項。
+- 設定遷移改為在一般外掛升級請求自動執行，不再只依賴 activation hook；v1→v2 只執行退役設定清理，不會重播初版 `wp_options` 匯入而覆寫自訂表中的現行設定，失敗時也不會提前推進 migration version。
+- 後台預設值、runtime fallback、重設配色、自訂表寫入與 checkbox 聚合 API 改共用 `YSSettingsManager::DEFAULT_VALUES`；基準值統一為區塊圓角 `12px`、區塊背景 `#f5f8fa`、欄位背景 `#ffffff`。既有商店已儲存的有效自訂值不會被覆寫。
+- 移除沒有現行 markup 生產者的 `.yangsheep-login*`、`.yangsheep-wide*`、`.yangsheep-account-*`、`.yangsheep-create-account` 與 `.ct-order-review` 規則；訂單 CSS 不再強制改寫 Woo 核心顧客地址結構。
+- 修正 My Account opt-in CSS 與 Blocksy 雙欄結構衝突：桌機保留主題側欄／內容欄，導覽項目使用可讀的單列垂直配置；390px 手機改為容器內橫向捲動，頁面本身不產生水平溢位。
+- PayNow B2C 方法只保留選店介面的相容辨識，不會自動放寬地址必填；如特定 B2C 方案確實為超取，必須在後台以完整 rate ID 明確勾選，未知方法維持要求地址的 fail-safe 行為。
+- 架構契約擴充至設定生命週期、模板 ownership、CSS markup ownership、後台 CSS 變數消費端與 PayNow B2C 分流，避免未來再次把無效控制項、過期模板或無作用樣式設定帶回。
 
 ### v1.7.2 (2026-07-23)
 

@@ -55,6 +55,7 @@ class YSSettingsManager {
         'yangsheep_enable_manual_tracking',
         'yangsheep_checkout_close_lname',
         'yangsheep_checkout_tw_fields',
+        'yangsheep_checkout_field_compatibility',
         'yangsheep_checkout_order_note',
         'yangsheep_myaccount_visual',
         'yangsheep_wployalty_enable',
@@ -67,13 +68,7 @@ class YSSettingsManager {
         'yangsheep_yith_points_integration',
 
         // 文字設定
-        'yangsheep_checkout_login_welcome_text',
-        'yangsheep_checkout_login_text_padding',
         'yangsheep_checkout_block_border_radius',
-
-        // 登入區塊樣式
-        'yangsheep_checkout_login_text_color',
-        'yangsheep_checkout_login_text_bg',
 
         // 結帳按鈕樣式
         'yangsheep_checkout_button_bg_color',
@@ -86,9 +81,7 @@ class YSSettingsManager {
         'yangsheep_checkout_section_bg_color',
         'yangsheep_checkout_form_field_bg_color',
         'yangsheep_checkout_form_field_border_color',
-        'yangsheep_checkout_link_color',
         'yangsheep_checkout_coupon_block_bg_color',
-        'yangsheep_checkout_order_review_bg_color',
         'yangsheep_checkout_order_items_bg_color',
 
         // 付款區塊樣式
@@ -141,6 +134,7 @@ class YSSettingsManager {
         'yangsheep_enable_manual_tracking'    => 'yes',
         'yangsheep_checkout_close_lname'      => 'no',
         'yangsheep_checkout_tw_fields'        => 'no',
+        'yangsheep_checkout_field_compatibility' => 'no',
         'yangsheep_checkout_order_note'       => 'yes',
         'yangsheep_myaccount_visual'          => 'no',
         'yangsheep_wployalty_enable'          => 'no',
@@ -153,13 +147,7 @@ class YSSettingsManager {
         'yangsheep_yith_points_integration'    => 'yes',
 
         // 文字設定
-        'yangsheep_checkout_login_welcome_text' => '',
-        'yangsheep_checkout_login_text_padding' => '20px',
-        'yangsheep_checkout_block_border_radius' => '8px',
-
-        // 登入區塊樣式
-        'yangsheep_checkout_login_text_color' => '#5a7080',
-        'yangsheep_checkout_login_text_bg'    => '#e8eff3',
+        'yangsheep_checkout_block_border_radius' => '12px',
 
         // 結帳按鈕樣式
         'yangsheep_checkout_button_bg_color'    => '#8fa8b8',
@@ -169,12 +157,10 @@ class YSSettingsManager {
 
         // 區塊樣式
         'yangsheep_checkout_section_border_color'   => '#c5d1d8',
-        'yangsheep_checkout_section_bg_color'       => '#ffffff',
-        'yangsheep_checkout_form_field_bg_color'    => '#f5f7f9',
+        'yangsheep_checkout_section_bg_color'       => '#f5f8fa',
+        'yangsheep_checkout_form_field_bg_color'    => '#ffffff',
         'yangsheep_checkout_form_field_border_color' => '#c5d1d8',
-        'yangsheep_checkout_link_color'             => '#7a95a6',
         'yangsheep_checkout_coupon_block_bg_color'  => '#f5f8fa',
-        'yangsheep_checkout_order_review_bg_color'  => '#f5f8fa',
         'yangsheep_checkout_order_items_bg_color'   => '#f5f8fa',
 
         // 付款區塊樣式
@@ -356,14 +342,19 @@ class YSSettingsManager {
             'yangsheep_enable_manual_tracking',
             'yangsheep_checkout_close_lname',
             'yangsheep_checkout_tw_fields',
+            'yangsheep_checkout_field_compatibility',
             'yangsheep_checkout_order_note',
             'yangsheep_myaccount_visual',
             'yangsheep_wployalty_enable',
+            'yangsheep_validate_phone_billing',
+            'yangsheep_validate_phone_shipping',
+            'yangsheep_yith_coupon_friendly_label',
+            'yangsheep_yith_points_integration',
         );
 
         $result = array();
         foreach ( $checkboxes as $key ) {
-            $result[ $key ] = self::get( $key, 'no' );
+            $result[ $key ] = self::get( $key, self::get_default( $key ) );
         }
         return $result;
     }
