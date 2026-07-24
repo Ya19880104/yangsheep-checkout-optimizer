@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.5';
+    window.__ysCheckoutOptimizerBuild = '1.7.6';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -583,10 +583,22 @@ jQuery(function ($) {
      * 原生介面留在 form 外原位置（= 提交事實源，fragment 重繪保有 <form>），
      * coupon 區內放淨化後的視覺代理；代理按鈕只同步點數值並觸發原生按鈕。
      */
+    function disposeYithProxy($proxy) {
+        $proxy.each(function () {
+            var $item = $(this);
+            var observer = $item.data('ysYithDiscountObserver');
+            if (observer && typeof observer.disconnect === 'function') {
+                observer.disconnect();
+            }
+            clearTimeout($item.data('ysYithConversionFallbackTimer'));
+        });
+        $proxy.remove();
+    }
+
     function buildYithProxy($source, $pointBlock) {
         var $old = $pointBlock.children('.ys-yith-proxy');
         var typedValue = $old.find('.ys-yith-proxy-points').val();
-        $old.remove();
+        disposeYithProxy($old);
 
         var i18n = (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.i18n) || {};
         var $realInput = $source.find('input[name="ywpar_input_points"]').first();
@@ -594,6 +606,7 @@ jQuery(function ($) {
             'button[name="ywpar_apply_discounts"], input[type="submit"][name="ywpar_apply_discounts"], #ywpar_apply_discounts'
         ).first();
         var $realForm = $realInput.closest('form.ywpar_apply_discounts');
+        var $realDiscount = $source.find('.woocommerce-Price-amount').first();
 
         // 完整 provider contract 不存在就不建立 proxy、不隱藏原生。
         if (!$realInput.length || !$realAction.length || !$realForm.length) {
@@ -618,8 +631,6 @@ jQuery(function ($) {
         var $title = $('<h3 class="yangsheep-h3-title ys-loyalty-title"></h3>')
             .text(i18n.title || '購物金折抵');
         var $row = $('<div class="ys-loyalty-redeem-row"></div>');
-        var $label = $('<span class="ys-loyalty-field-label"></span>')
-            .text(i18n.points_label || '折抵點數');
         var $pointsInput = $('<input>', {
             type: 'number',
             class: 'ys-yith-proxy-points',
@@ -640,6 +651,7 @@ jQuery(function ($) {
             type: 'button',
             class: 'button ys-yith-use-all'
         }).text(i18n.use_all || '全部使用');
+        var $conversion = $('<p class="ys-yith-conversion" role="status" aria-live="polite"></p>');
         var $limit = $('<p class="ys-yith-limit"></p>');
         if (maximum > 0) {
             $limit
@@ -649,17 +661,132 @@ jQuery(function ($) {
         }
         var $feedback = $('<p class="ys-yith-feedback" role="alert" aria-live="polite"></p>');
 
-        $row.append($label, $pointsInput, $applyBtn);
-        $proxy.append($title, $row);
+        // 版面（2026-07-25 使用者指定）：標題列＝標題靠左＋「本次最多可使用」
+        // 靠右垂直置中；輸入框靠左與「套用折抵」「全部使用」同列；不顯示文字 label
+        //（aria-label 保留於輸入框供無障礙）。
+        var $header = $('<div class="ys-loyalty-header"></div>').append($title);
         if (maximum > 0) {
-            $proxy.append($useAll, $limit);
+            $header.append($limit);
+        }
+        $row.append($pointsInput, $applyBtn);
+        if (maximum > 0) {
+            $row.append($useAll);
+        }
+        $proxy.append($header, $row);
+        if (maximum > 0) {
+            $proxy.append($conversion);
         }
         $proxy.append($feedback);
         $pointBlock.append($proxy);
         $proxy.data('ysYithMaximum', maximum);
 
+        var maximumDiscountText = $.trim($realDiscount.text());
+        var renderConversion = function(points, discountText, state) {
+            $conversion
+                .empty()
+                .toggleClass('is-calculating', state === 'calculating')
+                .attr('aria-busy', state === 'calculating' ? 'true' : 'false');
+
+            if (state === 'calculating') {
+                $conversion.text(i18n.conversion_calculating || '正在換算折抵金額…');
+                return;
+            }
+            if (!discountText) {
+                $conversion.text(
+                    state === 'invalid'
+                        ? (i18n.conversion_invalid || '請輸入有效點數以查看折抵金額。')
+                        : (i18n.conversion_unavailable || '折抵金額將於套用時由 YITH 確認。')
+                );
+                return;
+            }
+
+            $conversion
+                .append(document.createTextNode((i18n.conversion_prefix || '目前輸入') + ' '))
+                .append($('<strong class="ys-yith-conversion-points"></strong>').text(points.toLocaleString()))
+                .append(document.createTextNode(' ' + (i18n.points_unit || '點') + '，' + (i18n.conversion_discount || '可折抵') + ' '))
+                .append($('<strong class="ys-yith-conversion-amount"></strong>').text(discountText));
+        };
+
+        $proxy
+            .data('ysYithRealInput', $realInput)
+            .data('ysYithMaximumDiscountText', maximumDiscountText)
+            .data('ysYithRenderConversion', renderConversion);
+
+        if (maximum > 0 && current === maximum && maximumDiscountText) {
+            renderConversion(current, maximumDiscountText, 'ready');
+        } else if (current !== maximum) {
+            renderConversion(current, '', 'calculating');
+        } else {
+            renderConversion(current, '', 'unavailable');
+        }
+
+        if (window.MutationObserver && $realDiscount.length) {
+            var discountObserver = new MutationObserver(function () {
+                var discountText = $.trim($realDiscount.text());
+                if (!discountText || !$proxy.closest('html').length) {
+                    return;
+                }
+                clearTimeout($proxy.data('ysYithConversionFallbackTimer'));
+                var pendingPoints = parseInt($proxy.data('ysYithPendingPoints'), 10) || maximum || current;
+                renderConversion(pendingPoints, discountText, 'ready');
+            });
+            discountObserver.observe($realDiscount[0], {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+            $proxy.data('ysYithDiscountObserver', discountObserver);
+        }
+
+        if (current !== maximum) {
+            setTimeout(function () {
+                $pointsInput.trigger('input');
+            }, 0);
+        }
+
         return $proxy;
     }
+
+    $(document).on('input', '.ys-yith-proxy-points', function () {
+        var $input = $(this);
+        var $proxy = $input.closest('.ys-yith-proxy');
+        var rawValue = String($input.val() || '').trim();
+        var points = parseInt(rawValue, 10);
+        var minimum = parseInt($input.attr('min'), 10) || 1;
+        var maximum = parseInt($input.attr('max'), 10) || 0;
+        var renderConversion = $proxy.data('ysYithRenderConversion');
+        var $realInput = $proxy.data('ysYithRealInput');
+
+        clearTimeout($proxy.data('ysYithConversionFallbackTimer'));
+        if (!/^\d+$/.test(rawValue) || !Number.isFinite(points) || points < minimum || (maximum > 0 && points > maximum)) {
+            if (typeof renderConversion === 'function') {
+                renderConversion(Number.isFinite(points) ? points : 0, '', 'invalid');
+            }
+            return;
+        }
+
+        var maximumDiscountText = $proxy.data('ysYithMaximumDiscountText');
+        if (maximum > 0 && points === maximum && maximumDiscountText) {
+            if (typeof renderConversion === 'function') {
+                renderConversion(points, maximumDiscountText, 'ready');
+            }
+            return;
+        }
+
+        if (!$realInput || !$realInput.length || typeof renderConversion !== 'function') {
+            return;
+        }
+
+        $proxy.data('ysYithPendingPoints', points);
+        $realInput.val(points).trigger('keyup');
+        renderConversion(points, '', 'calculating');
+        $proxy.data(
+            'ysYithConversionFallbackTimer',
+            setTimeout(function () {
+                renderConversion(points, '', 'unavailable');
+            }, 2500)
+        );
+    });
 
     $(document).on('click', '.ys-yith-use-all', function () {
         var $proxy = $(this).closest('.ys-yith-proxy');
@@ -789,13 +916,13 @@ jQuery(function ($) {
                         .attr('aria-hidden', 'true')
                         .hide();
                 } else {
-                    $yithProxy.remove();
+                    disposeYithProxy($yithProxy);
                     $yithMessage.removeClass('ys-yith-points-proxied').removeAttr('aria-hidden').show();
                 }
             } else if (!$('.ys-yith-points-proxied').length) {
                 // Provider fragment no longer exposes a redeem surface (for
                 // example after points are exhausted): remove stale proxy UI.
-                $pointBlock.children('.ys-yith-proxy').remove();
+                disposeYithProxy($pointBlock.children('.ys-yith-proxy'));
             }
         }
 

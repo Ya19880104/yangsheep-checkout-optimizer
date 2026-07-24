@@ -579,20 +579,29 @@ a.woocommerce-remove-coupon {
     border-top: 1px solid var(--theme-section-border-color, #7d929e);
 }
 
-.yangsheep-coupon-point .ys-loyalty-title {
+.yangsheep-coupon-point .ys-loyalty-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
     margin: 0 0 12px;
+}
+
+.yangsheep-coupon-point .ys-loyalty-title {
+    margin: 0;
+}
+
+.yangsheep-coupon-point .ys-loyalty-header .ys-yith-limit {
+    margin: 0;
+    text-align: right;
 }
 
 .yangsheep-coupon-point .ys-loyalty-redeem-row {
     display: grid;
-    grid-template-columns: max-content minmax(76px, 1fr) auto;
+    grid-template-columns: minmax(96px, 1fr) auto auto;
     align-items: center;
     gap: 8px;
-}
-
-.yangsheep-coupon-point .ys-loyalty-field-label {
-    font-weight: 600;
-    color: var(--ys-text-primary, #2d3748);
 }
 
 .yangsheep-coupon-point .ys-yith-proxy-points {
@@ -627,20 +636,38 @@ a.woocommerce-remove-coupon {
 
 .yangsheep-coupon-point .ys-yith-use-all {
     width: auto;
-    min-height: 36px;
-    margin-top: 10px;
-    padding: 7px 14px !important;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 14px !important;
     background: transparent !important;
     border: 1px solid var(--theme-button-background-initial-color, #5f7482) !important;
     border-radius: var(--block-border-radius, 8px);
     color: var(--theme-button-background-initial-color, #5f7482) !important;
+    white-space: nowrap;
 }
 
+.yangsheep-coupon-point .ys-yith-conversion,
 .yangsheep-coupon-point .ys-yith-limit,
 .yangsheep-coupon-point .ys-yith-feedback {
     margin: 10px 0 0;
     font-size: 13px;
     line-height: 1.5;
+    color: var(--ys-text-muted, #667085);
+}
+
+.yangsheep-coupon-point .ys-yith-conversion {
+    color: var(--ys-text-secondary, #4b5563);
+}
+
+.yangsheep-coupon-point .ys-yith-conversion strong {
+    color: var(--ys-text-primary, #2d3748);
+}
+
+.yangsheep-coupon-point .ys-yith-conversion-amount {
+    color: var(--theme-button-background-initial-color, #5f7482) !important;
+}
+
+.yangsheep-coupon-point .ys-yith-conversion.is-calculating {
     color: var(--ys-text-muted, #667085);
 }
 
@@ -1423,15 +1450,20 @@ body.ys-checkout-enhanced .ys-yith-points-duplicate {
 }
 
 @media (max-width: 479.9px) {
+    /* 窄幅：輸入框獨占一列，套用/全部使用並排於第二列 */
     .yangsheep-coupon-point .ys-loyalty-redeem-row {
         grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    .yangsheep-coupon-point .ys-loyalty-field-label {
+    .yangsheep-coupon-point .ys-yith-proxy-points {
         grid-column: 1 / -1;
     }
 
     .yangsheep-coupon-point .ys-yith-proxy-apply {
         min-width: 96px;
+    }
+
+    .yangsheep-coupon-point .ys-loyalty-header .ys-yith-limit {
+        text-align: left;
     }
 }

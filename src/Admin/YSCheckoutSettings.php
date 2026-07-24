@@ -569,7 +569,7 @@ class YSCheckoutSettings {
         add_settings_field( 'yangsheep_wployalty_info', '', array( $this, 'loyalty_info_callback' ), 'yangsheep_tab_loyalty', 'ys_wployalty_section' );
 
         add_settings_section( 'ys_yith_loyalty_section', '', array( $this, 'yith_loyalty_section_header' ), 'yangsheep_tab_loyalty' );
-        $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), __( '以安全的數字代理介面顯示 YITH Points & Rewards 折抵功能；原生 YITH 表單保留為提交來源，強化失敗時會自動回到原生介面。', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
+        $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), __( '以安全的數字代理介面顯示 YITH Points & Rewards 折抵功能，並鏡射 YITH 官方即時換算的點數與折抵金額；原生 YITH 表單保留為提交來源，強化失敗時會自動回到原生介面。', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
         $this->add_checkbox_field( 'yangsheep_yith_coupon_friendly_label', __( '折扣代碼顯示中文名稱', 'yangsheep-checkout-optimization' ), __( 'YITH Points & Rewards / Subscriptions / Gift Cards 產生的系統代碼會顯示為「購物金折抵」「YITH 訂閱折扣」等友善名稱。', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
         add_settings_field( 'ys_yith_points_diagnostics', __( '整合狀態', 'yangsheep-checkout-optimization' ), array( $this, 'yith_points_diagnostics_callback' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
 
@@ -724,7 +724,7 @@ class YSCheckoutSettings {
         echo '<span class="ys-status-badge ' . esc_attr( $active_rules > 0 ? 'ys-status-success' : 'ys-status-warning' ) . '">' . esc_html( (string) $active_rules ) . '</span> ';
         echo '<a href="' . esc_url( $rules_url ) . '" class="button button-secondary" target="_blank">' . esc_html__( '管理兌換規則', 'yangsheep-checkout-optimization' ) . '</a></p>';
         echo '<p><strong>' . esc_html__( '偵測節點：', 'yangsheep-checkout-optimization' ) . '</strong> <code>' . esc_html( implode( ', ', array_map( 'strval', (array) $selectors ) ) ) . '</code></p>';
-        echo '<p class="description">' . esc_html__( '前台需使用 WooCommerce 經典結帳、登入具有點數的顧客，並在 YITH 啟用購物金兌換規則。找不到可見兌換介面時，YS 不會隱藏或複製 YITH 原始內容。', 'yangsheep-checkout-optimization' ) . '</p>';
+        echo '<p class="description">' . esc_html__( '前台需使用 WooCommerce 經典結帳、登入具有點數的顧客，並在 YITH 啟用購物金兌換規則。YS 會鏡射 YITH 官方即時換算的折抵金額，不會自行猜測兌換比例；找不到可見兌換介面時，也不會隱藏或複製 YITH 原始內容。', 'yangsheep-checkout-optimization' ) . '</p>';
         echo '</div>';
     }
 
@@ -1025,7 +1025,7 @@ class YSCheckoutSettings {
         echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-visibility"></span> ';
         echo esc_html__( '結帳頁預覽', 'yangsheep-checkout-optimization' );
         echo '</h3><p class="description">';
-        echo esc_html__( '兩種外掛使用不同的原生兌換合約：YITH 可直接輸入點數；WPLoyalty 仍由兌換視窗選擇活動。', 'yangsheep-checkout-optimization' );
+        echo esc_html__( '兩種外掛使用不同的原生兌換合約：YITH 可直接輸入點數並顯示官方即時換算金額；WPLoyalty 仍由兌換視窗選擇活動。', 'yangsheep-checkout-optimization' );
         echo '</p>';
     }
 
@@ -1089,14 +1089,19 @@ class YSCheckoutSettings {
         ?>
         <div class="ys-loyalty-preview" style="<?php echo esc_attr( $style ); ?>">
             <div class="ys-loyalty-preview-provider ys-loyalty-preview--yith">
-                <h4>YITH Points &amp; Rewards</h4>
-                <div class="ys-loyalty-preview-row">
-                    <label><?php esc_html_e( '折抵點數', 'yangsheep-checkout-optimization' ); ?></label>
-                    <input type="number" value="500" min="0" step="1" disabled />
-                    <button type="button" disabled><?php esc_html_e( '套用折抵', 'yangsheep-checkout-optimization' ); ?></button>
+                <div class="ys-loyalty-preview-header">
+                    <h4>YITH Points &amp; Rewards</h4>
+                    <span class="ys-loyalty-preview-limit"><?php esc_html_e( '本次最多可使用 500 點', 'yangsheep-checkout-optimization' ); ?></span>
                 </div>
-                <button type="button" class="ys-yith-use-all" disabled><?php esc_html_e( '全部使用', 'yangsheep-checkout-optimization' ); ?></button>
-                <p><?php esc_html_e( '本次最多可使用 500 點', 'yangsheep-checkout-optimization' ); ?></p>
+                <div class="ys-loyalty-preview-row">
+                    <input type="number" value="500" min="0" step="1" aria-label="<?php esc_attr_e( '折抵點數', 'yangsheep-checkout-optimization' ); ?>" disabled />
+                    <button type="button" disabled><?php esc_html_e( '套用折抵', 'yangsheep-checkout-optimization' ); ?></button>
+                    <button type="button" class="ys-yith-use-all" disabled><?php esc_html_e( '全部使用', 'yangsheep-checkout-optimization' ); ?></button>
+                </div>
+                <p class="ys-yith-conversion">
+                    <?php esc_html_e( '目前輸入 500 點，可折抵 NT$5', 'yangsheep-checkout-optimization' ); ?>
+                </p>
+                <p class="description"><?php esc_html_e( '預覽金額僅供示意；前台會依 YITH 兌換規則即時換算。', 'yangsheep-checkout-optimization' ); ?></p>
             </div>
             <div class="ys-loyalty-preview-provider ys-loyalty-preview--wployalty">
                 <h4>WPLoyalty</h4>
@@ -1721,11 +1726,30 @@ class YSCheckoutSettings {
         .ys-loyalty-preview-provider p {
             margin: 10px 0 0;
         }
+        .ys-loyalty-preview .ys-yith-conversion {
+            color: var(--ys-preview-action-bg, #8fa8b8);
+            font-weight: 600;
+        }
+        .ys-loyalty-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+        }
+        .ys-loyalty-preview-header h4 {
+            margin: 0;
+        }
+        .ys-loyalty-preview-limit {
+            font-size: 12px;
+            color: var(--ys-preview-muted, #667085);
+        }
         .ys-loyalty-preview-row {
             display: grid;
-            grid-template-columns: max-content minmax(72px, 1fr) auto;
+            grid-template-columns: minmax(72px, 1fr) auto auto;
             align-items: center;
             gap: 8px;
+            margin-top: 10px;
         }
         .ys-loyalty-preview input {
             width: 100%;
@@ -1744,7 +1768,6 @@ class YSCheckoutSettings {
             color: var(--ys-preview-action-color, #fff);
         }
         .ys-loyalty-preview .ys-yith-use-all {
-            margin-top: 10px;
             background: transparent;
             color: var(--ys-preview-action-bg, #8fa8b8);
         }

@@ -120,13 +120,25 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.5')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.5'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.5'")
-    && str_contains($readme, '**當前版本**：1.7.5')
-    && str_contains($readme, '### v1.7.5 (2026-07-25)')
+    str_contains($bootstrap, 'Version:           1.7.6')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.6'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.6'")
+    && str_contains($readme, '**當前版本**：1.7.6')
+    && str_contains($readme, '### v1.7.6 (2026-07-25)')
     && str_contains($readme, '**最後更新**：2026-07-25'),
-    'v1.7.5 candidate version markers stay synchronized'
+    'v1.7.6 candidate version markers stay synchronized'
+);
+// v1.7.6 使用者指定版面：無文字 label（aria-label 保留）、上限文字在標題列
+// 靠右垂直置中、全部使用與套用折抵同列。
+check(
+    str_contains($checkoutJs, 'ys-loyalty-header')
+    && !str_contains($checkoutJs, 'ys-loyalty-field-label')
+    && str_contains($checkoutJs, '$header.append($limit)')
+    && str_contains($checkoutJs, '$row.append($pointsInput, $applyBtn)')
+    && str_contains($checkoutJs, '$row.append($useAll)')
+    && preg_match('/\.ys-loyalty-header\s*\{[^}]*justify-content:\s*space-between[^}]*\}/s', $checkoutCss)
+    && preg_match('/\.ys-loyalty-header\s*\{[^}]*align-items:\s*center[^}]*\}/s', $checkoutCss),
+    'YITH proxy layout: no text label, limit sits right of the title, use-all shares the redeem row'
 );
 check(
     str_contains($bootstrap, 'Requires PHP:     8.0'),
@@ -1032,7 +1044,7 @@ check(
     'residual YITH native input synchronization is disabled with the integration'
 );
 check(
-    str_contains($checkoutJs, "children('.ys-yith-proxy').remove()")
+    str_contains($checkoutJs, "disposeYithProxy(\$pointBlock.children('.ys-yith-proxy'))")
     && str_contains($checkoutJs, "else if (!$('.ys-yith-points-proxied').length)"),
     'YITH removes stale proxy controls when the provider no longer exposes a redeem surface'
 );
@@ -1042,6 +1054,17 @@ check(
     && str_contains($checkoutCss, '.yangsheep-coupon-point .ys-yith-proxy-apply')
     && str_contains($checkoutCss, 'width: auto;'),
     'provider-specific YITH controls override the generic coupon button layout'
+);
+check(
+    str_contains($checkoutJs, 'ys-yith-conversion')
+    && str_contains($checkoutJs, '.woocommerce-Price-amount')
+    && str_contains($checkoutJs, 'MutationObserver')
+    && str_contains($checkoutJs, ".trigger('keyup')")
+    && str_contains($checkoutJs, 'ysYithConversionFallbackTimer')
+    && str_contains($yithCompat, "'conversion_unavailable'")
+    && str_contains($settings, '目前輸入 500 點，可折抵 NT$5')
+    && str_contains($readme, 'YITH 官方即時換算'),
+    'YITH proxy mirrors provider-calculated points-to-money conversion without guessing the exchange rate'
 );
 
 $total = (int) ($GLOBALS['ys_contract_total'] ?? 0);
