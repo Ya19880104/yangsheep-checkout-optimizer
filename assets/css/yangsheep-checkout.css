@@ -1,14 +1,14 @@
-/* ===== 莫蘭迪配色系統 - 固定文字色彩變數 ===== */
-/* 這些是不連動後台的固定文字色彩，用於統一視覺 */
+/* ===== 結帳文字色彩變數 ===== */
+/* 後台動態 CSS 會覆寫這些安全 fallback。 */
 :root {
     /* 主要文字色 - 深灰（高對比） */
-    --ys-text-primary: #3d4852;
+    --ys-text-primary: #2d3748;
     /* 次要文字色 - 中灰 */
-    --ys-text-secondary: #5a6570;
+    --ys-text-secondary: #4b5563;
     /* 輔助文字色 - 淺灰（說明文字、placeholder） */
-    --ys-text-muted: #8a939c;
+    --ys-text-muted: #667085;
     /* 標題文字色 */
-    --ys-text-heading: #2d3748;
+    --ys-text-heading: #1f2937;
     /* 錯誤/刪除色 */
     --ys-text-danger: #c53030;
     /* 白色文字 */
@@ -280,8 +280,8 @@ ul#shipping_method li {
 .woocommerce-shipping-fields,
 .woocommerce-additional-fields,
 .yangsheep-checkout-country {
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
-    background-color: var(--section-bg-color, #f9f9f9);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
+    background-color: var(--section-bg-color, #f5f8fa);
     margin-bottom: 20px;
     border-radius: var(--block-border-radius, 8px);
     /* padding 由 RWD 區塊統一控制 */
@@ -345,9 +345,9 @@ h3#order_review_heading,
     flex-shrink: 0;
     width: 22px;
     height: 22px;
-    border: 2px solid var(--theme-form-field-border-initial-color, #d0d0d0);
+    border: 2px solid var(--theme-form-field-border-initial-color, #7d929e);
     border-radius: 4px;
-    background: #ffffff;
+    background: var(--form-field-bg-color, #ffffff);
     position: relative;
     transition: all 0.2s ease;
     display: inline-block;
@@ -356,14 +356,14 @@ h3#order_review_heading,
 /* Hover 狀態 */
 .yangsheep-same-as-billing:hover::before,
 .yangsheep-order-notes-toggle:hover::before {
-    border-color: var(--theme-button-background-initial-color, #6b7a95);
+    border-color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 /* 勾選狀態 - 勾選框背景 */
 .yangsheep-same-as-billing:has(input:checked)::before,
 .yangsheep-order-notes-toggle:has(input:checked)::before {
-    border-color: var(--theme-button-background-initial-color, #6b7a95);
-    background: var(--theme-button-background-initial-color, #6b7a95);
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+    background: var(--theme-button-background-initial-color, #5f7482);
 }
 
 /* 勾勾符號（使用 after 偽元素）*/
@@ -376,7 +376,7 @@ h3#order_review_heading,
     margin-top: -6px;
     width: 6px;
     height: 11px;
-    border: solid #ffffff;
+    border: solid var(--theme-button-text-initial-color, #ffffff);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg) scale(0);
     transition: all 0.2s ease;
@@ -477,7 +477,8 @@ a.woocommerce-remove-coupon {
 }
 
 .yangsheep-coupon input {
-    background: #fff !important;
+    background: var(--form-field-bg-color, #fff) !important;
+    border-color: var(--theme-form-field-border-initial-color, #7d929e);
 }
 
 .yangsheep_checkout_coupon {
@@ -523,7 +524,7 @@ a.woocommerce-remove-coupon {
     padding: 10px 0;
     width: 100%;
     color: var(--theme-button-text-initial-color) !important;
-    border-radius: 2px;
+    border-radius: var(--block-border-radius, 8px);
     margin-bottom: 0;
 }
 
@@ -554,51 +555,105 @@ a.woocommerce-remove-coupon {
     display: none !important;
 }
 
-/* YITH proxy（v1.7.1）：只樣式 YS 自有 proxy 結構，不硬改第三方
-   .ywpar_apply_discounts —— 舊的 flex-direction:column 會把直接文字節點
-   拆成獨立 flex item（You have / 1800 / 點數 逐行碎裂、手機高度爆增）。
-   訊息文字自然流排、點數輸入框行內、套用按鈕全寬。 */
-.yangsheep-coupon-point .ys-yith-proxy {
-    display: block;
-    color: var(--ys-text-secondary);
-}
-
-.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-form {
-    display: block;
-    margin-top: 8px;
-    line-height: 1.9;
-}
-
-.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-form > span {
-    display: inline;
-}
-
-.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-points {
-    display: inline-block;
-    width: 96px;
-    height: 40px;
-    padding: 0 10px !important;
-    box-sizing: border-box;
-    background: #fff;
-    text-align: center;
-    margin: 0 4px;
-    vertical-align: middle;
-}
-
-.yangsheep-coupon-point .ys-yith-proxy .ys-yith-proxy-apply {
-    display: block;
-    width: 100%;
-    margin-top: 10px;
-}
-
 .yangsheep-coupon-point .button {
-    padding: 12px 0;
     width: 100%;
+    margin-bottom: 0;
+    padding: 12px 0;
+    border-radius: var(--block-border-radius, 8px);
     color: var(--theme-button-text-initial-color) !important;
-    border-radius: 0;
     font-size: 16px;
     line-height: 16px;
-    margin-bottom: 0;
+}
+
+/* Provider-neutral loyalty surface. YITH and WPLoyalty keep different provider
+   contracts but share the same checkout design tokens. */
+.yangsheep-coupon-point .ys-loyalty-provider {
+    display: block;
+    min-width: 0;
+    color: var(--ys-text-secondary, #4b5563);
+}
+
+.yangsheep-coupon-point .ys-loyalty-provider + .ys-loyalty-provider {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--theme-section-border-color, #7d929e);
+}
+
+.yangsheep-coupon-point .ys-loyalty-title {
+    margin: 0 0 12px;
+}
+
+.yangsheep-coupon-point .ys-loyalty-redeem-row {
+    display: grid;
+    grid-template-columns: max-content minmax(76px, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.yangsheep-coupon-point .ys-loyalty-field-label {
+    font-weight: 600;
+    color: var(--ys-text-primary, #2d3748);
+}
+
+.yangsheep-coupon-point .ys-yith-proxy-points {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 12px !important;
+    box-sizing: border-box;
+    background: var(--form-field-bg-color, #fff);
+    border: 1px solid var(--theme-form-field-border-initial-color, #7d929e);
+    border-radius: var(--block-border-radius, 8px);
+    color: var(--ys-text-primary, #2d3748);
+    text-align: center;
+}
+
+.yangsheep-coupon-point .ys-yith-proxy-points:focus {
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+    outline: 2px solid var(--theme-button-background-initial-color, #5f7482);
+    outline-offset: 1px;
+}
+
+.yangsheep-coupon-point .ys-yith-proxy-apply {
+    width: auto;
+    min-width: 104px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 16px !important;
+    border-radius: var(--block-border-radius, 8px);
+    white-space: nowrap;
+}
+
+.yangsheep-coupon-point .ys-yith-use-all {
+    width: auto;
+    min-height: 36px;
+    margin-top: 10px;
+    padding: 7px 14px !important;
+    background: transparent !important;
+    border: 1px solid var(--theme-button-background-initial-color, #5f7482) !important;
+    border-radius: var(--block-border-radius, 8px);
+    color: var(--theme-button-background-initial-color, #5f7482) !important;
+}
+
+.yangsheep-coupon-point .ys-yith-limit,
+.yangsheep-coupon-point .ys-yith-feedback {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ys-text-muted, #667085);
+}
+
+.yangsheep-coupon-point .ys-yith-limit strong {
+    color: var(--theme-button-background-initial-color, #5f7482);
+}
+
+.yangsheep-coupon-point .ys-yith-feedback:empty {
+    display: none;
+}
+
+.yangsheep-coupon-point .ys-yith-feedback {
+    color: var(--ys-text-danger, #c53030);
 }
 
 /* 智慧折扣券 */
@@ -627,7 +682,7 @@ a.woocommerce-remove-coupon {
 
 /* 付款方式 Radio 樣式 - 與主題色一致 */
 .wc_payment_methods .wc_payment_method input[type="radio"] {
-    accent-color: var(--theme-button-background-initial-color, #6b7a95);
+    accent-color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 /* === 超商同步按鈕區塊 === */
@@ -638,7 +693,7 @@ a.woocommerce-remove-coupon {
 
 .choose-cvs-shipping {
     width: 100%;
-    background: var(--theme-button-background-initial-color, #6b7a95);
+    background: var(--theme-button-background-initial-color, #5f7482);
     color: var(--theme-button-text-initial-color, #fff);
     border: none;
     padding: 12px 0;
@@ -649,7 +704,8 @@ a.woocommerce-remove-coupon {
 }
 
 .choose-cvs-shipping:hover {
-    background: #425075;
+    background: var(--theme-button-background-hover-color, #506776);
+    color: var(--theme-button-text-hover-color, #fff);
 }
 
 /* RWD: >=1000px */
@@ -878,7 +934,7 @@ a.woocommerce-remove-coupon {
 .yangsheep-quantity-control {
     display: inline-flex;
     align-items: center;
-    border: 1px solid var(--theme-section-border-color, #e0e0e0);
+    border: 1px solid var(--theme-section-border-color, #7d929e);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -887,7 +943,7 @@ a.woocommerce-remove-coupon {
     width: 28px;
     height: 28px;
     border: none;
-    background: #f5f5f5;
+    background: var(--form-field-bg-color, #ffffff);
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
@@ -900,7 +956,7 @@ a.woocommerce-remove-coupon {
 }
 
 .yangsheep-qty-btn:hover {
-    background: var(--theme-button-background-initial-color, #6b7a95);
+    background: var(--theme-button-background-initial-color, #5f7482);
     color: var(--ys-text-white);
 }
 
@@ -916,7 +972,7 @@ a.woocommerce-remove-coupon {
 .yangsheep-cart-item .yangsheep-item-subtotal {
     font-size: 14px;
     font-weight: 600;
-    color: var(--theme-button-background-initial-color, #6b7a95);
+    color: var(--theme-button-background-initial-color, #5f7482);
     flex-shrink: 0;
     min-width: 70px;
     text-align: right;
@@ -931,8 +987,8 @@ a.woocommerce-remove-coupon {
 
 /* 商品明細外層容器 */
 .yangsheep-order-review {
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
-    background-color: var(--section-bg-color, #f9f9f9);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
+    background-color: var(--section-bg-color, #f5f8fa);
     border-radius: var(--block-border-radius, 8px);
     /* padding 由 RWD 區塊統一控制 */
     margin-bottom: 0;
@@ -961,7 +1017,7 @@ a.woocommerce-remove-coupon {
     align-items: center !important;
     gap: 12px;
     padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--theme-section-border-color, #7d929e);
 }
 
 .yangsheep-order-item:last-child {
@@ -1037,7 +1093,7 @@ a.woocommerce-remove-coupon {
 }
 
 .yangsheep-order-item .yangsheep-item-name a:hover {
-    color: var(--theme-button-background-initial-color, #6b7a95);
+    color: var(--theme-button-background-initial-color, #5f7482);
     text-decoration: underline;
 }
 
@@ -1055,7 +1111,7 @@ a.woocommerce-remove-coupon {
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--theme-section-border-color, #7d929e);
     border-radius: 4px;
     padding: 4px 8px;
 }
@@ -1072,7 +1128,7 @@ a.woocommerce-remove-coupon {
 }
 
 .yangsheep-order-item .yangsheep-qty-btn:hover {
-    color: var(--theme-button-background-initial-color, #6b7a95);
+    color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 .yangsheep-order-item .yangsheep-qty-value {
@@ -1087,7 +1143,7 @@ a.woocommerce-remove-coupon {
     flex-shrink: 0;
     font-size: 14px;
     font-weight: 600;
-    color: var(--theme-button-background-initial-color, #6b7a95);
+    color: var(--theme-button-background-initial-color, #5f7482);
     min-width: 70px;
     text-align: right;
 }
@@ -1344,7 +1400,7 @@ body.yangsheep-cvs-mode #shipping_phone_field {
 /* ============================================================
    v1.6.29 修正
    1. HFCM #customer_details max-width:90% mismatch
-      wecoware / 類似客戶站在 HFCM 內注入 max-width:90% 給
+   第三方 HFCM snippet 可能注入 max-width:90% 給
       form.checkout #customer_details，造成付款區 960、收件人 864 的
       區塊寬度不齊。直接用高特異性 override 蓋回 100%。
    ============================================================ */
@@ -1362,6 +1418,20 @@ body.ys-checkout-enhanced form.checkout .yangsheep-payment {
 
 /* YITH 自己可能以 display:flex !important 顯示兩個兌換 wrapper。
    此 class 只會在 JS 已成功掛入主要兌換 surface 後加上，保持 fail-open。 */
-body.ys-checkout-enhanced .yangsheep-coupon-point .ys-yith-points-duplicate {
+body.ys-checkout-enhanced .ys-yith-points-duplicate {
     display: none !important;
+}
+
+@media (max-width: 479.9px) {
+    .yangsheep-coupon-point .ys-loyalty-redeem-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .yangsheep-coupon-point .ys-loyalty-field-label {
+        grid-column: 1 / -1;
+    }
+
+    .yangsheep-coupon-point .ys-yith-proxy-apply {
+        min-width: 96px;
+    }
 }

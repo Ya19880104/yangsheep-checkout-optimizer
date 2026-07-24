@@ -67,7 +67,7 @@ class YSYithPointsIntegration {
         // 決定是否把 YITH `#yith-par-message-cart` 一併搬進 `.yangsheep-coupon-point`）
         add_action( 'wp_enqueue_scripts', array( $this, 'localize_flag' ), 20 );
         add_action( 'wp_loaded', array( $this, 'capture_checkout_fields' ), 20 );
-        add_filter( 'woocommerce_checkout_get_value', array( $this, 'restore_checkout_field' ), 9999, 2 );
+        add_filter( 'woocommerce_checkout_get_value', array( $this, 'restore_checkout_field' ), PHP_INT_MAX, 2 );
         add_action( 'wp_footer', array( $this, 'clear_checkout_field_snapshot' ), 999 );
 
     }
@@ -78,8 +78,8 @@ class YSYithPointsIntegration {
     public function capture_checkout_fields() {
         if (
             empty( $_POST['ys_yith_checkout_field_names'] )
-            || empty( $_POST['ywpar_input_points_nonce'] )
-            || empty( $_POST['ywpar_input_points_check'] )
+            || ! isset( $_POST['ywpar_input_points_nonce'] )
+            || ! array_key_exists( 'ywpar_input_points_check', $_POST )
             || ! function_exists( 'WC' )
             || ! WC()->session
         ) {
@@ -266,6 +266,16 @@ class YSYithPointsIntegration {
                 'enabled'         => true,
                 'selectors'       => self::get_selectors(),
                 'preservedFields' => $snapshot ? $snapshot['fields'] : array(),
+                'i18n'            => array(
+                    'title'          => __( '購物金折抵', 'yangsheep-checkout-optimization' ),
+                    'points_label'   => __( '折抵點數', 'yangsheep-checkout-optimization' ),
+                    'apply'          => __( '套用折抵', 'yangsheep-checkout-optimization' ),
+                    'use_all'        => __( '全部使用', 'yangsheep-checkout-optimization' ),
+                    'maximum_prefix' => __( '本次最多可使用', 'yangsheep-checkout-optimization' ),
+                    'points_unit'    => __( '點', 'yangsheep-checkout-optimization' ),
+                    'invalid'        => __( '請輸入有效的整數點數。', 'yangsheep-checkout-optimization' ),
+                    'over_limit'     => __( '輸入點數不可超過本次可使用上限。', 'yangsheep-checkout-optimization' ),
+                ),
             )
         );
     }

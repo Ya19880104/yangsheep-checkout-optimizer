@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.4
-**最後更新**：2026-07-24
+**當前版本**：1.7.5
+**最後更新**：2026-07-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -69,10 +69,17 @@
 
 ### 7. 後台樣式設定
 - 按鈕顏色（主色、Hover 色）
+- 主要、標題、次要與輔助文字顏色
 - 物流卡片顏色
 - 側邊欄背景色
 - 區塊圓角設定
 - 一鍵恢復預設配色
+
+### 8. 購物金與設定移轉
+- YITH Points & Rewards 以安全代理介面直接輸入點數、全部使用及顯示上限
+- WPLoyalty 保留原生兌換視窗與活動規則，套用一致的結帳視覺
+- 完整設定 JSON 匯入／匯出，包含所有功能、配色、物流與 WPLoyalty 顯示文字
+- 嚴格 schema、值驗證、寫入鎖與失敗回滾，拒絕未知或不完整的設定檔
 
 ---
 
@@ -92,6 +99,7 @@ yangsheep-checkout-optimizer/
 │   │   └── yangsheep-order-enhancer.css   # 訂單強化樣式
 │   └── js/
 │       ├── jquery.twzipcode.min.js        # TWzipcode 套件
+│       ├── yangsheep-admin-settings.js    # 設定匯入／匯出
 │       ├── yangsheep-checkout.js          # 結帳頁面 JS
 │       ├── yangsheep-shipping-cards.js    # 物流卡片 JS
 │       ├── yangsheep-wployalty.js          # WPLoyalty 整合 JS
@@ -117,7 +125,8 @@ yangsheep-checkout-optimizer/
 │       ├── YSSettingsManager.php          # 設定管理門面（Facade）
 │       ├── YSSettingsRepository.php       # 設定 CRUD 操作
 │       ├── YSSettingsTableMaker.php       # 設定資料表建立
-│       └── YSSettingsMigrator.php         # 設定資料遷移
+│       ├── YSSettingsMigrator.php         # 設定資料遷移
+│       └── YSSettingsTransfer.php         # 完整設定匯入／匯出、驗證與回滾
 ├── templates/
 │   └── checkout/
 │       └── shipping-cards.php             # 直接 include 的視覺 proxy partial
@@ -167,6 +176,12 @@ yangsheep-checkout-optimizer/
 - `YSSettingsManager::get( $key, $default )` - 讀取設定
 - `YSSettingsManager::set( $key, $value )` - 寫入設定
 - 底層使用自訂資料表 `wp_ys_checkout_settings`
+
+### YSSettingsTransfer (`Settings\YSSettingsTransfer`)
+完整設定移轉服務：
+- 依 canonical key 清單輸出完整、版本化 JSON
+- 嚴格拒絕未知 key、缺少 key、非法 CSS、HTML 與不支援的 schema
+- 匯入寫入失敗時還原先前設定；與一般儲存、遷移及清理共用寫入鎖
 
 ---
 
@@ -228,6 +243,15 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.5 (2026-07-25)
+
+- **購物金整合重整**：WPLoyalty 與 YITH Points & Rewards 集中在「購物金整合」分頁，各自提供外掛狀態、啟用開關與正確的操作說明；共同預覽會直接反映結帳頁按鈕、欄位、邊框、背景與圓角設定。
+- **YITH 安全直接折抵介面**：不再複製第三方表單。原生 YITH form 留在結帳 form 外作為唯一提交來源，YS 只建立無 `form/name/id` 的數字代理，支援直接輸入、Enter、全部使用、上限與錯誤提示；原生合約、樣式或增強任一失敗即保留原生介面。
+- **WPLoyalty 共存硬化**：只接管一個可見且具有原生 reward link 的訊息來源，仍由 WPLoyalty 視窗選擇活動；停用整合時完全不搬移或隱藏原生內容，可與 YITH 同時顯示。
+- **結帳設計 token 完整化**：新增主要、標題、次要、輔助文字配色；購物金、物流卡、側邊欄與相容面板統一取用後台按鈕、欄位、區塊及圓角設定。所有 runtime CSS 值先經共用 validator，舊資料若不合法會回到安全預設值。
+- **完整設定匯入／匯出**：資料庫管理頁可下載及匯入版本化 JSON，涵蓋全部 canonical 設定與 WPLoyalty 顯示文字；採 exact-key schema、1 MB 上限、CSS／物流 rate id／placeholder 驗證、管理員 nonce、共享寫入鎖與補償回滾。
+- **設定儲存安全**：一般後台儲存改與匯入共用 validator；遷移會補齊自訂表缺少但仍存在於 `wp_options` 的 fallback 值，確認完整前禁止清除舊資料。
 
 ### v1.7.4 (2026-07-24)
 
@@ -325,7 +349,7 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ### v1.6.32 (2026-07-15)
 
 #### 修 YITH Points reward-cart 實際可見 UI 未搬移
-**問題**：v1.6.30 誤判 `#yith-par-message-reward-cart` 一律只是 hidden submit target，因此從 default selectors 移除；但 wecoware 的 YITH Points Premium 4.27.0 實際把可見折抵表單放在 `#yith-par-message-reward-cart`。結果沒有自動搬到 `.yangsheep-coupon-point`，且主 CSS 仍以 `display:none !important` 隱藏原始區塊。
+**問題**：v1.6.30 誤判 `#yith-par-message-reward-cart` 一律只是 hidden submit target，因此從 default selectors 移除；但 YITH Points Premium 4.27.0 會把可見折抵表單放在 `#yith-par-message-reward-cart`。結果沒有自動搬到 `.yangsheep-coupon-point`，且主 CSS 仍以 `display:none !important` 隱藏原始區塊。
 
 **修法**：
 - `YSYithPointsIntegration` default selectors 同時支援 `#yith-par-message-cart` 與 `#yith-par-message-reward-cart`
@@ -385,7 +409,7 @@ WPLoyalty on + YITH on 情境下實際跑起來仍可能 YITH 訊息先被搬進
 - 修法：`$ecpayFields.each()` 檢查內部有 `input/textarea/select` 才 `.show()`，否則 `.hide()`
 
 #### 2. HFCM `#customer_details max-width:90%` scoped override
-- wecoware 等客戶站 HFCM snippet 注入 `max-width: 90%` 給 `form.checkout #customer_details`，造成付款區 960px / 收件人 864px 區塊寬度不齊
+- 第三方 HFCM snippet 若注入 `max-width: 90%` 給 `form.checkout #customer_details`，會造成付款區與收件人區塊寬度不齊
 - 加 3 層 CSS selector（`body.woocommerce-checkout`、`.yangsheep-design-checkout-page`、`form.checkout`）+ `!important` 覆蓋回 `max-width: 100%`
 - 順便讓 `.woocommerce-checkout-payment` / `.yangsheep-payment` 一致
 

@@ -11,8 +11,8 @@
    共用同一個「選擇運送方式」視覺區塊（參考設計＝單一運送區塊） */
 .yangsheep-shipping-cards-wrapper {
     margin-bottom: 20px;
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
-    background-color: var(--section-bg-color, #ffffff);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
+    background-color: var(--section-bg-color, #f5f8fa);
     border-radius: var(--block-border-radius, 8px);
     /* padding 由 RWD 區塊統一控制 */
     overflow: hidden;
@@ -60,7 +60,7 @@
 }
 
 .yangsheep-shipping-card:focus-visible {
-    outline: 2px solid var(--theme-button-background-initial-color, #6b7a95);
+    outline: 2px solid var(--theme-button-background-initial-color, #5f7482);
     outline-offset: 3px;
 }
 
@@ -69,8 +69,8 @@
     align-items: center;
     gap: 15px;
     padding: 16px 20px;
-    background: #ffffff;
-    border: 2px solid var(--theme-form-field-border-initial-color, #d0d0d0);
+    background: var(--yangsheep-shipping-card-bg, #ffffff);
+    border: 2px solid var(--theme-form-field-border-initial-color, #7d929e);
     border-radius: var(--block-border-radius, 8px);
     transition: all 0.2s ease;
     overflow: hidden; /* 防止背景色溢出圓角 */
@@ -81,9 +81,9 @@
     flex-shrink: 0;
     width: 22px;
     height: 22px;
-    border: 2px solid var(--theme-form-field-border-initial-color, #d0d0d0);
+    border: 2px solid var(--theme-form-field-border-initial-color, #7d929e);
     border-radius: 4px;
-    background: #ffffff;
+    background: var(--form-field-bg-color, #ffffff);
     position: relative;
     transition: all 0.2s ease;
 }
@@ -96,7 +96,7 @@
     left: 6px;
     width: 6px;
     height: 11px;
-    border: solid #ffffff;
+    border: solid var(--theme-button-text-initial-color, #ffffff);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg) scale(0);
     transition: all 0.2s ease;
@@ -113,7 +113,7 @@
 .yangsheep-shipping-label {
     font-size: 16px;
     font-weight: 500;
-    color: #333;
+    color: var(--ys-text-primary, #2d3748);
     line-height: 1.4;
 }
 
@@ -127,7 +127,7 @@
     flex-shrink: 0;
     font-size: 16px;
     font-weight: 600;
-    color: var(--theme-button-background-initial-color, #6b7a95);
+    color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 .yangsheep-shipping-free {
@@ -141,24 +141,24 @@
 
 /* ===== Hover 狀態 ===== */
 .yangsheep-shipping-card:hover .yangsheep-shipping-card-inner {
-    border-color: var(--theme-button-background-initial-color, #6b7a95);
+    border-color: var(--theme-button-background-initial-color, #5f7482);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .yangsheep-shipping-card:hover .yangsheep-shipping-radio-indicator {
-    border-color: var(--theme-button-background-initial-color, #6b7a95);
+    border-color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 /* ===== 選中狀態 ===== */
 .yangsheep-shipping-card.selected .yangsheep-shipping-card-inner {
-    border-color: var(--yangsheep-shipping-border-active, #6b7a95);
-    background: #f5f7f9;
-    box-shadow: 0 4px 16px rgba(107, 122, 149, 0.25);
+    border-color: var(--yangsheep-shipping-border-active, #5f7482);
+    background: var(--yangsheep-shipping-card-active-bg, #e8eff5);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .yangsheep-shipping-card.selected .yangsheep-shipping-radio-indicator {
-    border-color: var(--yangsheep-shipping-radio-color, #6b7a95);
-    background: var(--yangsheep-shipping-radio-color, #6b7a95);
+    border-color: var(--yangsheep-shipping-radio-color, #5f7482);
+    background: var(--yangsheep-shipping-radio-color, #5f7482);
 }
 
 .yangsheep-shipping-card.selected .yangsheep-shipping-radio-indicator::after {

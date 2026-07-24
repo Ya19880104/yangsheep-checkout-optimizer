@@ -3,7 +3,8 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.7.4
+ * Version:           1.7.5
+ * Requires PHP:     8.0
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +13,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.4' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.5' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -80,6 +81,7 @@ add_action( 'plugins_loaded', function () {
 
 // use 語句放在檔案頂層仍然安全（PSR-4 autoloader 已註冊，class 只在實際使用時載入）
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsTransfer;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsTableMaker;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
 use YangSheep\CheckoutOptimizer\Admin\YSCheckoutSettings;
@@ -443,55 +445,67 @@ add_action('wp_head',function(){
     if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url() ) {
         return;
     }
-    /**
-     * 莫蘭迪配色方案
-     * 主色：淡藍色 #8fa8b8 (按鈕、選中狀態)
-     * 輔色：淡綠色 #9db4a0 (背景、高亮)
-     * 背景淡藍：#e8eef2
-     * 背景淡綠：#e8f0ea
-     * 邊框色：#c5d1d8
-     */
+    $safe_setting = static function ( $key ) {
+        $value      = YSSettingsManager::get( $key, YSSettingsManager::get_default( $key ) );
+        $normalized = YSSettingsTransfer::normalize_setting_value( $key, $value );
 
-    // 讀取所有設定值 - 莫蘭迪淡藍主色 + 淡綠輔色
-    $btn_bg = YSSettingsManager::get('yangsheep_checkout_button_bg_color');           // 主色：莫蘭迪淡藍
-    $btn_txt = YSSettingsManager::get('yangsheep_checkout_button_text_color');
-    $btn_hover_bg = YSSettingsManager::get('yangsheep_checkout_button_hover_bg');     // 主色深
-    $btn_hover_txt = YSSettingsManager::get('yangsheep_checkout_button_hover_text');
-    $sec_bd = YSSettingsManager::get('yangsheep_checkout_section_border_color');      // 邊框淡藍灰
-    $sec_bg = YSSettingsManager::get('yangsheep_checkout_section_bg_color');
-    $fld_bg = YSSettingsManager::get('yangsheep_checkout_form_field_bg_color');       // 欄位背景淡藍
-    $fld_bd = YSSettingsManager::get('yangsheep_checkout_form_field_border_color');
-    $cp_bg = YSSettingsManager::get('yangsheep_checkout_coupon_block_bg_color');      // 折扣區淡藍
-    $rad = YSSettingsManager::get('yangsheep_checkout_block_border_radius');
-    $ship_radio = YSSettingsManager::get('yangsheep_shipping_card_radio_color');      // 主色
-    $ship_border = YSSettingsManager::get('yangsheep_shipping_card_border_active');   // 主色
-    $sidebar_bg = YSSettingsManager::get('yangsheep_sidebar_bg_color');
+        return $normalized['valid'] ? $normalized['value'] : YSSettingsManager::get_default( $key );
+    };
+
+    // 讀取並驗證所有 CSS 設定，舊資料若含無效宣告則回到 canonical default。
+    $btn_bg = $safe_setting('yangsheep_checkout_button_bg_color');
+    $btn_txt = $safe_setting('yangsheep_checkout_button_text_color');
+    $btn_hover_bg = $safe_setting('yangsheep_checkout_button_hover_bg');
+    $btn_hover_txt = $safe_setting('yangsheep_checkout_button_hover_text');
+    $sec_bd = $safe_setting('yangsheep_checkout_section_border_color');
+    $sec_bg = $safe_setting('yangsheep_checkout_section_bg_color');
+    $fld_bg = $safe_setting('yangsheep_checkout_form_field_bg_color');
+    $fld_bd = $safe_setting('yangsheep_checkout_form_field_border_color');
+    $cp_bg = $safe_setting('yangsheep_checkout_coupon_block_bg_color');
+    $text_color = $safe_setting('yangsheep_checkout_text_color');
+    $heading_color = $safe_setting('yangsheep_checkout_heading_color');
+    $secondary_text_color = $safe_setting('yangsheep_checkout_secondary_text_color');
+    $muted_text_color = $safe_setting('yangsheep_checkout_muted_text_color');
+    $rad = $safe_setting('yangsheep_checkout_block_border_radius');
+    $ship_radio = $safe_setting('yangsheep_shipping_card_radio_color');
+    $ship_border = $safe_setting('yangsheep_shipping_card_border_active');
+    $sidebar_bg = $safe_setting('yangsheep_sidebar_bg_color');
 
     // 新增配色設定 - 統一淡藍色系
-    $payment_bg = YSSettingsManager::get('yangsheep_checkout_payment_bg_color');      // 淡藍背景
-    $order_items_bg = YSSettingsManager::get('yangsheep_checkout_order_items_bg_color'); // 淡藍背景
-    $ship_card_bg = YSSettingsManager::get('yangsheep_shipping_card_bg_color');
-    $ship_card_active = YSSettingsManager::get('yangsheep_shipping_card_bg_active');  // 選中淡藍
+    $payment_bg = $safe_setting('yangsheep_checkout_payment_bg_color');
+    $order_items_bg = $safe_setting('yangsheep_checkout_order_items_bg_color');
+    $ship_card_bg = $safe_setting('yangsheep_shipping_card_bg_color');
+    $ship_card_active = $safe_setting('yangsheep_shipping_card_bg_active');
 
     // 付款方式卡片設定
-    $pm_bg = YSSettingsManager::get('yangsheep_payment_method_bg');
-    $pm_bg_active = YSSettingsManager::get('yangsheep_payment_method_bg_active');
-    $pm_border = YSSettingsManager::get('yangsheep_payment_method_border');
-    $pm_border_active = YSSettingsManager::get('yangsheep_payment_method_border_active');
-    $pm_desc_bg = YSSettingsManager::get('yangsheep_payment_method_desc_bg');
+    $pm_bg = $safe_setting('yangsheep_payment_method_bg');
+    $pm_bg_active = $safe_setting('yangsheep_payment_method_bg_active');
+    $pm_border = $safe_setting('yangsheep_payment_method_border');
+    $pm_border_active = $safe_setting('yangsheep_payment_method_border_active');
+    $pm_desc_bg = $safe_setting('yangsheep_payment_method_desc_bg');
 
     echo '<style>';
     // CSS 變數定義
     echo 'body.ys-checkout-enhanced{';
     echo "--theme-button-background-initial-color:{$btn_bg};";
     echo "--theme-button-text-initial-color:{$btn_txt};";
+    echo "--theme-button-background-hover-color:{$btn_hover_bg};";
+    echo "--theme-button-text-hover-color:{$btn_hover_txt};";
+    echo "--ys-text-primary:{$text_color};";
+    echo "--ys-text-heading:{$heading_color};";
+    echo "--ys-text-secondary:{$secondary_text_color};";
+    echo "--ys-text-muted:{$muted_text_color};";
     echo "--theme-section-border-color:{$sec_bd};";
     echo "--section-bg-color:{$sec_bg};";
     echo "--form-field-bg-color:{$fld_bg};";
     echo "--theme-form-field-border-initial-color:{$fld_bd};";
     echo "--block-border-radius:{$rad};";
+    echo "--ys-checkout-coupon-bg:{$cp_bg};";
+    echo "--ys-checkout-order-items-bg:{$order_items_bg};";
     echo "--yangsheep-shipping-radio-color:{$ship_radio};";
     echo "--yangsheep-shipping-border-active:{$ship_border};";
+    echo "--yangsheep-shipping-card-bg:{$ship_card_bg};";
+    echo "--yangsheep-shipping-card-active-bg:{$ship_card_active};";
     echo "--yangsheep-sidebar-bg:{$sidebar_bg};";
     echo '}';
 

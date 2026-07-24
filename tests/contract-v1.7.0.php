@@ -62,6 +62,12 @@ $wployaltyJs = source($root . '/assets/js/yangsheep-wployalty.js');
 $wployaltyCompat = source($root . '/src/Compat/YSWPLoyaltyIntegration.php');
 $shippingCompat = source($root . '/src/Compat/YSThirdPartyShippingCompat.php');
 $settings = source($root . '/src/Admin/YSCheckoutSettings.php');
+$settingsTransfer = is_file($root . '/src/Settings/YSSettingsTransfer.php')
+    ? source($root . '/src/Settings/YSSettingsTransfer.php')
+    : '';
+$adminSettingsJs = is_file($root . '/assets/js/yangsheep-admin-settings.js')
+    ? source($root . '/assets/js/yangsheep-admin-settings.js')
+    : '';
 $settingsManager = source($root . '/src/Settings/YSSettingsManager.php');
 $settingsMigrator = source($root . '/src/Settings/YSSettingsMigrator.php');
 $yithCompat = source($root . '/src/Compat/YSYithPointsIntegration.php');
@@ -114,12 +120,17 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.4')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.4'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.4'")
-    && str_contains($readme, '**當前版本**：1.7.4')
-    && str_contains($readme, '### v1.7.4 (2026-07-24)'),
-    'v1.7.4 candidate version markers stay synchronized'
+    str_contains($bootstrap, 'Version:           1.7.5')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.5'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.5'")
+    && str_contains($readme, '**當前版本**：1.7.5')
+    && str_contains($readme, '### v1.7.5 (2026-07-25)')
+    && str_contains($readme, '**最後更新**：2026-07-25'),
+    'v1.7.5 candidate version markers stay synchronized'
+);
+check(
+    str_contains($bootstrap, 'Requires PHP:     8.0'),
+    'WordPress package metadata enforces the Composer PHP 8.0 runtime floor'
 );
 check(
     str_contains($bootstrap, "add_filter( 'body_class', 'yangsheep_checkout_pending_body_class' )")
@@ -219,8 +230,8 @@ check(
     'admin CVS guidance documents exact instances, mixed-package safety, and the non-input PayNow summary'
 );
 check(
-    str_contains($settings, 'array_filter( $methods, \'strlen\' )')
-    && str_contains($settings, 'array_unique( $methods )')
+    str_contains($settings, 'YSSettingsTransfer::normalize_setting_value( $key, $raw_value )')
+    && str_contains($settingsTransfer, "array_values( array_unique( \$methods ) )")
     && str_contains($settings, 'in_array( $method_id, $saved_methods, true )'),
     'admin CVS settings discard empty duplicates and compare saved full rate ids strictly'
 );
@@ -292,14 +303,16 @@ check(
     'the form-bearing YITH node is never moved inside form.checkout'
 );
 check(
-    preg_match('/\.removeAttr\(\'name\'\)/', $checkoutJs) === 1
-    && str_contains($checkoutJs, "find('input, button, select, textarea').removeAttr('name')")
-    && str_contains($checkoutJs, "find('[id]').addBack('[id]').removeAttr('id')"),
-    'proxy nodes are stripped of name/id so they can never join a checkout submission'
+    str_contains($checkoutJs, "type: 'number'")
+    && str_contains($checkoutJs, "type: 'button'")
+    && !str_contains($checkoutJs, '$source.clone(')
+    && !str_contains($checkoutJs, "name: 'ywpar_input_points'"),
+    'YITH proxy is built without form, submit, name or id ownership'
 );
 check(
-    str_contains($checkoutJs, "\$wlrMessage.is('form') || \$wlrMessage.find('form').length"),
-    'form-bearing WPLoyalty blocks are refused entry into the checkout form'
+    !str_contains($checkoutJs, "var \$wlrMessage = \$('.wlr_point_redeem_message")
+    && str_contains($wployaltyJs, 'ys-loyalty-provider--wployalty'),
+    'disabled WPLoyalty stays native and the provider script exclusively owns enabled enhancement'
 );
 check(
     str_contains($checkoutJs, "if (!\$('form.checkout').hasClass('ys-checkout-enhanced')) {")
@@ -460,9 +473,9 @@ check(
 );
 // v1.7.1：YITH proxy 版面只作用於 YS 自有結構，不硬改第三方 class
 check(
-    str_contains($checkoutJs, 'ys-yith-proxy-form')
-    && str_contains($checkoutCss, '.ys-yith-proxy .ys-yith-proxy-form')
-    && str_contains($checkoutCss, '.ys-yith-proxy .ys-yith-proxy-points')
+    str_contains($checkoutJs, 'ys-loyalty-redeem-row')
+    && str_contains($checkoutCss, '.ys-loyalty-redeem-row')
+    && str_contains($checkoutCss, '.ys-yith-proxy-points')
     && !preg_match('/\.yangsheep-coupon-point\s+\.ywpar_apply_discounts\s*\{/', $checkoutCss),
     'YITH proxy layout styles its own structure without forcing third-party classes'
 );
@@ -526,7 +539,7 @@ check(
     'successful YITH mount deduplicates interactive redeem surfaces without consuming informational messages'
 );
 check(
-    preg_match('/\.yangsheep-coupon-point\s+\.ys-yith-points-duplicate\s*\{\s*display:\s*none\s*!important;/s', $checkoutCss) === 1,
+    preg_match('/body\.ys-checkout-enhanced\s+\.ys-yith-points-duplicate\s*\{\s*display:\s*none\s*!important;/s', $checkoutCss) === 1,
     'YITH duplicate class overrides plugin important display rules only after JavaScript marks it'
 );
 check(
@@ -564,7 +577,7 @@ check(
 check(str_contains($yithCompat, 'get_active_redeeming_rule_count') && str_contains($yithCompat, "'enable_rewards_points'"), 'YITH diagnostics inspect the global reward switch and active redeeming rules');
 check(
     str_contains($yithCompat, "add_action( 'wp_loaded', array( \$this, 'capture_checkout_fields' ), 20 )")
-    && str_contains($yithCompat, "add_filter( 'woocommerce_checkout_get_value', array( \$this, 'restore_checkout_field' ), 9999, 2 )")
+    && str_contains($yithCompat, "add_filter( 'woocommerce_checkout_get_value', array( \$this, 'restore_checkout_field' ), PHP_INT_MAX, 2 )")
     && str_contains($yithCompat, 'yangsheep_yith_checkout_fields')
     && str_contains($yithCompat, "'preservedFields'")
     && str_contains($checkoutJs, 'restoreYithCheckoutFields')
@@ -573,6 +586,24 @@ check(
     && str_contains($checkoutJs, 'preservedFields')
     && str_contains($checkoutJs, 'ys_yith_checkout_field_names[]'),
     'non-AJAX YITH POST values are restored through a short-lived Woo session snapshot before custom defaults'
+);
+check(
+    str_contains($yithCompat, "array_key_exists( 'ywpar_input_points_check', \$_POST )")
+    && !str_contains($yithCompat, "empty( \$_POST['ywpar_input_points_check'] )"),
+    'YITH snapshot capture accepts the provider valid zero-valued input_points_check field'
+);
+check(
+    str_contains($checkoutJs, 'YITH_FIELD_RESTORE_WINDOW_MS')
+    && str_contains($checkoutJs, 'YITH_FIELD_RESTORE_INTERVAL_MS')
+    && str_contains($checkoutJs, 'Date.now() - yithCheckoutFieldRestoreStartedAt')
+    && str_contains($checkoutJs, 'setTimeout(restoreYithCheckoutFields, YITH_FIELD_RESTORE_INTERVAL_MS)'),
+    'YITH checkout-field restoration retries within one bounded settling window'
+);
+check(
+    str_contains($checkoutJs, "replace(/\\[\\]$/, '')")
+    && str_contains($checkoutJs, 'var expectedValues = Array.isArray(value)')
+    && str_contains($checkoutJs, 'expectedValues.indexOf(String($(this).val())) !== -1'),
+    'YITH checkout-field restoration preserves array checkbox values without checking every same-name option'
 );
 check(
     !str_contains($checkoutCss, '.yangsheep-design-pay-page')
@@ -652,11 +683,13 @@ check(
     'six no-op settings are retired from UI/runtime/defaults and cleaned from both storage backends'
 );
 check(
-    str_contains($settingsMigrator, '$from_version < 1')
+    str_contains($settingsMigrator, '$this->repository->exists( $key )')
     && str_contains($settingsMigrator, '$from_version < 2')
+    && str_contains($settingsMigrator, 'can_cleanup_wp_options')
+    && str_contains($settingsMigrator, 'get_fallback_only_keys')
     && str_contains($settingsMigrator, "if ( empty( \$result['errors'] ) )")
     && substr_count($bootstrap, 'migration_required()') >= 2,
-    'upgrade path runs v2 cleanup without replaying stale wp_options and failed migrations remain retryable'
+    'upgrade path backfills only missing rows, protects fallback-only values, and remains retryable'
 );
 check(
     !str_contains($settings, 'private static $default_colors')
@@ -707,6 +740,10 @@ foreach (array_unique($defaultSettingMatches['key'] ?? []) as $settingKey) {
             "/YSSettingsManager::get\(\s*'" . preg_quote($settingKey, '/') . "'/",
             $runtimeSettingSources
         ) !== 1
+        && preg_match(
+            "/\\\$safe_setting\(\s*'" . preg_quote($settingKey, '/') . "'\s*\)/",
+            $runtimeSettingSources
+        ) !== 1
     ) {
         $settingsWithoutConsumers[] = $settingKey;
     }
@@ -714,6 +751,24 @@ foreach (array_unique($defaultSettingMatches['key'] ?? []) as $settingKey) {
 check(
     $settingsWithoutConsumers === [],
     'every canonical setting has an explicit runtime consumer'
+);
+
+preg_match(
+    '/public const ALL_SETTING_KEYS = array\((?<body>.*?)\n\s*\);/s',
+    $settingsManager,
+    $allSettingKeyBlock
+);
+preg_match_all("/'(?<key>yangsheep_[^']+)'/", $allSettingKeyBlock['body'] ?? '', $allSettingKeyMatches);
+preg_match_all(
+    "/(?:add_(?:checkbox|color|text)_field|add_settings_field)\(\s*'(?<key>yangsheep_[^']+)'/",
+    $settings,
+    $registeredSettingMatches
+);
+$canonicalSettingKeys = array_values(array_unique($allSettingKeyMatches['key'] ?? []));
+$registeredSettingKeys = array_values(array_unique($registeredSettingMatches['key'] ?? []));
+check(
+    array_values(array_diff($canonicalSettingKeys, $registeredSettingKeys)) === [],
+    'every canonical setting is represented by a backend control'
 );
 
 $ownedCssSources = '';
@@ -814,6 +869,179 @@ check(
     && str_contains($bootstrap, "yangsheep_checkout_asset_version( 'assets/js/yangsheep-checkout.js' )")
     && str_contains($wployaltyCompat, "yangsheep_checkout_asset_version( 'assets/js/yangsheep-wployalty.js' )"),
     'changed checkout assets use file-based cache-busting versions'
+);
+check(
+    str_contains($settings, "'ys_wployalty_section'")
+    && str_contains($settings, "'ys_yith_loyalty_section'")
+    && str_contains($settings, "'yangsheep_tab_loyalty', 'ys_yith_loyalty_section'")
+    && !str_contains($settings, "'yangsheep_tab_checkout', 'ys_checkout_fields_section' );\n        add_settings_field( 'ys_yith_points_diagnostics'"),
+    'YITH and WPLoyalty are grouped as separate provider cards under the loyalty tab'
+);
+check(
+    str_contains($settings, 'loyalty_preview_callback')
+    && str_contains($settings, 'ys-loyalty-preview--yith')
+    && str_contains($settings, 'ys-loyalty-preview--wployalty')
+    && str_contains($settings, 'ys-yith-use-all'),
+    'loyalty admin preview represents the YITH direct-input and WPLoyalty reward-picker workflows'
+);
+check(
+    str_contains($checkoutJs, 'ys-loyalty-provider--yith')
+    && str_contains($checkoutJs, 'ys-loyalty-redeem-row')
+    && str_contains($checkoutJs, 'ys-yith-use-all')
+    && str_contains($checkoutJs, 'ys-yith-limit')
+    && str_contains($checkoutJs, "type: 'number'")
+    && str_contains($checkoutJs, "inputmode: 'numeric'")
+    && !str_contains($checkoutJs, '$source.clone('),
+    'YITH renders a deterministic numeric proxy with apply, use-all and maximum guidance'
+);
+check(
+    str_contains($checkoutCss, '.ys-loyalty-provider')
+    && str_contains($checkoutCss, 'var(--form-field-bg-color')
+    && str_contains($checkoutCss, 'var(--theme-form-field-border-initial-color')
+    && str_contains($checkoutCss, 'var(--theme-button-background-initial-color')
+    && str_contains($checkoutCss, 'var(--block-border-radius')
+    && str_contains($wployaltyCss, '.ys-loyalty-provider--wployalty'),
+    'loyalty controls consume the backend checkout field, border, button and radius tokens'
+);
+check(
+    str_contains($settingsTransfer, "FORMAT = 'yangsheep-checkout-optimizer-settings'")
+    && str_contains($settingsTransfer, 'SCHEMA_VERSION = 1')
+    && str_contains($settingsTransfer, 'validate_package')
+    && str_contains($settingsTransfer, 'rollback')
+    && str_contains($settingsTransfer, 'unknown'),
+    'settings transfer uses a versioned whitelist schema and compensating rollback'
+);
+check(
+    str_contains($settings, 'wp_ajax_yangsheep_export_settings')
+    && str_contains($settings, 'wp_ajax_yangsheep_import_settings')
+    && str_contains($settings, 'check_ajax_referer')
+    && str_contains($settings, "current_user_can( 'manage_options' )")
+    && str_contains($settings, 'YSSettingsTransfer'),
+    'settings transfer AJAX endpoints enforce nonce and administrator capability checks'
+);
+check(
+    str_contains($adminSettingsJs, 'ys-settings-export')
+    && str_contains($adminSettingsJs, 'ys-settings-import-file')
+    && str_contains($adminSettingsJs, 'FormData')
+    && str_contains($adminSettingsJs, 'application/json'),
+    'database tab exposes file-based settings export and import controls'
+);
+check(
+    str_contains($checkoutJs, 'input[type="submit"][name="ywpar_apply_discounts"]')
+    && str_contains($checkoutJs, 'form.ywpar_apply_discounts')
+    && str_contains($checkoutJs, 'YITH native redeem contract incomplete; keeping native UI'),
+    'YITH proxy requires the complete native input, submit action and form contract'
+);
+check(
+    str_contains($checkoutJs, "event.key !== 'Enter'")
+    && str_contains($checkoutJs, 'event.preventDefault()')
+    && str_contains($checkoutJs, 'event.stopPropagation()')
+    && str_contains($checkoutJs, ".find('.ys-yith-proxy-apply').trigger('click')"),
+    'YITH numeric input intercepts Enter without submitting the WooCommerce checkout form'
+);
+$yithProxyApplyHandler = strstr(
+    $checkoutJs,
+    "$(document).on('click', '.ys-yith-proxy-apply'",
+);
+$yithProxyApplyHandler = is_string($yithProxyApplyHandler)
+    ? strstr($yithProxyApplyHandler, 'function initPointRedeemBlock()', true)
+    : '';
+check(
+    is_string($yithProxyApplyHandler)
+    && strpos($yithProxyApplyHandler, 'mirrorCheckoutFieldsIntoYithForm(') !== false
+    && strpos($yithProxyApplyHandler, 'mirrorCheckoutFieldsIntoYithForm(')
+        < strpos($yithProxyApplyHandler, '$realBtn[0].click()'),
+    'YITH proxy mirrors checkout fields immediately before invoking the native redeem action'
+);
+check(
+    str_contains($checkoutJs, 'if (!isYithIntegrationEnabled())')
+    && str_contains($checkoutJs, 'mirrorCheckoutFieldsIntoYithForm')
+    && str_contains($checkoutJs, "enabled === '1'"),
+    'disabled YITH integration does not mirror or mutate checkout fields'
+);
+check(
+    str_contains($checkoutJs, 'ywpar_update_cart_rewards_messages')
+    && str_contains($checkoutJs, 'ajaxComplete.ysYithRedeemSurface'),
+    'YITH proxy retries after the provider asynchronously refreshes its redeem surface'
+);
+check(
+    str_contains($wployaltyJs, ".filter('.ys-wployalty-source-mounted').first()")
+    && str_contains($wployaltyJs, '$message.is(\':visible\')')
+    && str_contains($wployaltyJs, "a#wlr-reward-link, a[href*=\"void\"]")
+    && str_contains($wployaltyJs, '.first();'),
+    'WPLoyalty enhances only one visible source that retains its native reward-link contract'
+);
+check(
+    substr_count($settings, 'YSSettingsTransfer::acquire_lock()') >= 6
+    && substr_count($settings, 'YSSettingsTransfer::release_lock(') >= 6
+    && str_contains($settingsTransfer, 'LOCK_TTL')
+    && str_contains($settingsTransfer, 'hash_equals'),
+    'all settings mutation and transfer paths share a token-owned expiring write lock'
+);
+check(
+    str_contains($bootstrap, "'yangsheep_checkout_text_color'")
+    && str_contains($bootstrap, "'yangsheep_checkout_heading_color'")
+    && str_contains($bootstrap, "'yangsheep_checkout_secondary_text_color'")
+    && str_contains($bootstrap, "'yangsheep_checkout_muted_text_color'")
+    && str_contains($bootstrap, '--ys-text-primary')
+    && str_contains($bootstrap, '--ys-text-heading')
+    && str_contains($bootstrap, '--ys-text-secondary')
+    && str_contains($bootstrap, '--ys-text-muted'),
+    'frontend primary, heading, secondary and muted text colors are emitted from backend settings'
+);
+check(
+    str_contains($settings, "'yangsheep_checkout_text_color'")
+    && str_contains($settings, "'yangsheep_checkout_heading_color'")
+    && str_contains($settings, "'yangsheep_checkout_secondary_text_color'")
+    && str_contains($settings, "'yangsheep_checkout_muted_text_color'")
+    && str_contains($bootstrap, 'YSSettingsTransfer::normalize_setting_value'),
+    'text color controls are configurable and invalid stored CSS values fall back through the shared validator'
+);
+check(
+    !str_contains($shippingCardsCss, 'rgba(107, 122, 149, 0.25)'),
+    'selected shipping-card decoration does not retain a fixed palette outside backend color settings'
+);
+check(
+    !str_contains($settings, 'function sanitize_checkbox')
+    && !str_contains($settings, 'function sanitize_cvs_shipping_methods')
+    && !str_contains($settings, 'function intercept_option_save'),
+    'obsolete settings sanitization and option interception helpers are removed'
+);
+check(
+    substr_count($settings, '$transfer->import_package( $package )') >= 2
+    && str_contains($settings, '$package  = $transfer->export_package();')
+    && str_contains($settings, '$package[\'settings\'][ $opt ] = $default;'),
+    'normal settings save and color reset use the same validated atomic package writer'
+);
+check(
+    str_contains($settings, '<label class="ys-settings-import-picker"')
+    && str_contains($settings, 'id="ys-settings-import-file"')
+    && str_contains($settings, 'type="file"')
+    && str_contains($settings, 'accept="application/json,.json"')
+    && str_contains($settings, '.ys-settings-import-picker:focus-within'),
+    'settings import keeps the native file control inside its visible focusable label'
+);
+check(
+    str_contains($readme, 'yangsheep-admin-settings.js')
+    && str_contains($readme, 'YSSettingsTransfer.php'),
+    'README file tree lists both settings transfer runtime files'
+);
+check(
+    str_contains($checkoutJs, "$(document).on('change', 'input[name=\"ywpar_input_points\"]'")
+    && str_contains($checkoutJs, 'if (!isYithIntegrationEnabled())'),
+    'residual YITH native input synchronization is disabled with the integration'
+);
+check(
+    str_contains($checkoutJs, "children('.ys-yith-proxy').remove()")
+    && str_contains($checkoutJs, "else if (!$('.ys-yith-points-proxied').length)"),
+    'YITH removes stale proxy controls when the provider no longer exposes a redeem surface'
+);
+check(
+    strpos($checkoutCss, '.yangsheep-coupon-point .button {')
+        < strpos($checkoutCss, '.yangsheep-coupon-point .ys-yith-proxy-apply {')
+    && str_contains($checkoutCss, '.yangsheep-coupon-point .ys-yith-proxy-apply')
+    && str_contains($checkoutCss, 'width: auto;'),
+    'provider-specific YITH controls override the generic coupon button layout'
 );
 
 $total = (int) ($GLOBALS['ys_contract_total'] ?? 0);

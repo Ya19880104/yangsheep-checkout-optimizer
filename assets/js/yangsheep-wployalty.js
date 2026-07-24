@@ -115,19 +115,26 @@ jQuery(function($) {
          * 處理 WLR 訊息
          */
         processWLRMessage: function() {
-            var self = this;
-            var $wlrMessage = $(this.selectors.wlrMessage);
+            var $allWlrMessages = $(this.selectors.wlrMessage);
+            var $mountedSource = $allWlrMessages.filter('.ys-wployalty-source-mounted').first();
+            var $wlrMessage = $mountedSource.length ? $mountedSource : $allWlrMessages.filter(function() {
+                var $message = $(this);
+                return $message.is(':visible') &&
+                    $message.find('a#wlr-reward-link, a[href*="void"]').length > 0;
+            }).first();
             var $couponPoint = $(this.selectors.couponPoint);
             var $couponBlock = $(this.selectors.couponBlock);
 
-            console.log('[YS WPLoyalty] Processing, found WLR messages:', $wlrMessage.length);
+            console.log('[YS WPLoyalty] Processing, found valid WLR source:', $wlrMessage.length);
 
             // P1 fail-open gate：主結帳 JS 未成功增強（被擋/失敗/尚未執行）時，
             // YS 容器仍是 hidden — 不得建立替代介面、更不得隱藏原生 WLR。
             // 若先前已建過替代介面（增強後又失效的邊緣情境），還原原生顯示。
             if (!$('form.checkout').hasClass('ys-checkout-enhanced')) {
                 $couponPoint.find('.ys-wployalty-block').remove();
-                $wlrMessage.removeClass('ys-wployalty-source-mounted').show();
+                $allWlrMessages.filter('.ys-wployalty-source-mounted')
+                    .removeClass('ys-wployalty-source-mounted')
+                    .show();
                 console.log('[YS WPLoyalty] checkout not enhanced; native WLR message stays visible');
                 return;
             }
@@ -141,6 +148,9 @@ jQuery(function($) {
             if (!$wlrMessage.length) {
                 // v1.6.31：先移除自己既有的 .ys-wployalty-block（若之前建過）
                 $couponPoint.find('.ys-wployalty-block').remove();
+                $allWlrMessages.filter('.ys-wployalty-source-mounted')
+                    .removeClass('ys-wployalty-source-mounted')
+                    .show();
 
                 // 檢查是否還有其他外掛（例如 YITH Points）掛在 couponPoint 內的內容
                 var $othersRemaining = $couponPoint.children().not('.ys-wployalty-block, script, style');
@@ -162,7 +172,20 @@ jQuery(function($) {
 
             if (!pointsData) {
                 console.log('[YS WPLoyalty] Could not parse WLR message');
-                $wlrMessage.removeClass('ys-wployalty-source-mounted').show();
+                $couponPoint.find('.ys-wployalty-block').remove();
+                $allWlrMessages.filter('.ys-wployalty-source-mounted')
+                    .removeClass('ys-wployalty-source-mounted')
+                    .show();
+                $wlrMessage.show();
+
+                var $otherProviderContent = $couponPoint.children().not('.ys-wployalty-block, script, style');
+                if ($otherProviderContent.length > 0) {
+                    $couponPoint.addClass('has-content').show();
+                    $couponBlock.addClass('has-point');
+                } else {
+                    $couponPoint.removeClass('has-content').hide();
+                    $couponBlock.removeClass('has-point');
+                }
                 return;
             }
 
@@ -207,7 +230,10 @@ jQuery(function($) {
 
             // 嘗試提取數字（購物金點數）
             var pointsMatch = text.match(/(\d+[\d,]*)\s*(points?|點|購物金)?/i);
-            var points = pointsMatch ? pointsMatch[1].replace(/,/g, '') : '0';
+            if (!pointsMatch || !$link.length) {
+                return null;
+            }
+            var points = pointsMatch[1].replace(/,/g, '');
 
             // 嘗試提取 label（points / 點 / 購物金 等）
             var labelMatch = text.match(/\d+[\d,]*\s*(points?|點|購物金)/i);
@@ -230,23 +256,26 @@ jQuery(function($) {
         createCustomPointsBlock: function(data) {
             var i18n = this.settings.i18n || {};
 
-            var $block = $('<div class="ys-wployalty-block"></div>');
+            var $block = $('<div class="ys-wployalty-block ys-loyalty-provider ys-loyalty-provider--wployalty"></div>');
 
             // 標題
-            var $title = $('<h3 class="yangsheep-h3-title">' + escHtml(i18n.points || '購物金') + '</h3>');
+            var pointsLabel = this.settings.points_label || i18n.points || '購物金';
+            var $title = $('<h3 class="yangsheep-h3-title ys-loyalty-title">' + escHtml(pointsLabel) + '</h3>');
 
             // 可用點數文字
-            var availableText = escHtml(i18n.available || '目前有') + ' <strong class="ys-points-value">' +
-                                escHtml(data.points) + ' ' + escHtml(data.label) + '</strong> ' +
-                                escHtml(i18n.can_use || '可用');
-            var $available = $('<p class="ys-points-available">' + availableText + '</p>');
+            var availableTemplate = this.settings.available_text || '目前有 {points} {label} 可用';
+            var availableText = availableTemplate
+                .replace('{points}', data.points)
+                .replace('{label}', data.label || pointsLabel);
+            var $available = $('<p class="ys-points-available"></p>').text(availableText);
 
             // 說明文字
             var $hint = $('<p class="ys-points-hint">' + escHtml(i18n.hint || '按下兌換按鈕，於彈出視窗中兌換') + '</p>');
 
             // 兌換按鈕（加上 button class 以繼承佈景主題按鈕樣式）
+            var buttonText = this.settings.button_text || i18n.redeem || '點此兌換折扣';
             var $button = $('<button type="button" class="button ys-wployalty-button">' +
-                           escHtml(i18n.redeem || '點此兌換折扣') + '</button>');
+                           escHtml(buttonText) + '</button>');
 
             // 綁定按鈕事件
             $button.on('click', function(e) {

@@ -130,23 +130,26 @@ class YSSettingsMigrator {
             return $result;
         }
 
-        // v1 was the one-time wp_options -> custom-table migration. Never
-        // replay it on later schema versions: the custom table is authoritative
-        // and wp_options may contain stale values.
-        if ( $from_version < 1 ) {
-            foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
-                $value = get_option( $key, null );
+        // Backfill only missing custom-table rows. Existing table rows remain
+        // authoritative, so stale wp_options values can never overwrite them.
+        // Running this during a manual migration also closes the partial-table
+        // cleanup gap left by older migration versions.
+        foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+            if ( $this->repository->exists( $key ) ) {
+                $result['skipped']++;
+                continue;
+            }
 
-                if ( null !== $value && false !== $value ) {
-                    $success = $this->repository->set( $key, $value );
-                    if ( $success ) {
-                        $result['migrated']++;
-                    } else {
-                        $result['errors'][] = "遷移 {$key} 失敗";
-                    }
+            $value = get_option( $key, null );
+            if ( null !== $value && false !== $value ) {
+                $success = $this->repository->set( $key, $value );
+                if ( $success ) {
+                    $result['migrated']++;
                 } else {
-                    $result['skipped']++;
+                    $result['errors'][] = "遷移 {$key} 失敗";
                 }
+            } else {
+                $result['skipped']++;
             }
         }
 
@@ -214,6 +217,10 @@ class YSSettingsMigrator {
      * @return int 已刪除的設定數量
      */
     public function cleanup_wp_options(): int {
+        if ( ! $this->can_cleanup_wp_options() ) {
+            return -1;
+        }
+
         $deleted = 0;
 
         $managed_keys = array_merge( YSSettingsManager::ALL_SETTING_KEYS, self::RETIRED_SETTING_KEYS );
@@ -224,6 +231,32 @@ class YSSettingsMigrator {
         }
 
         return $deleted;
+    }
+
+    /**
+     * Legacy options may be deleted only after every option-backed value also
+     * has an authoritative custom-table row.
+     *
+     * @return bool
+     */
+    public function can_cleanup_wp_options(): bool {
+        return $this->table_maker->table_exists() && empty( $this->get_fallback_only_keys() );
+    }
+
+    /**
+     * Find canonical settings whose only stored value still lives in wp_options.
+     *
+     * @return array
+     */
+    public function get_fallback_only_keys(): array {
+        $keys = array();
+        foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+            if ( false !== get_option( $key, false ) && ! $this->repository->exists( $key ) ) {
+                $keys[] = $key;
+            }
+        }
+
+        return $keys;
     }
 
     /**
@@ -250,6 +283,7 @@ class YSSettingsMigrator {
      */
     public function get_status(): array {
         $table_exists = $this->table_maker->table_exists();
+        $fallback_only_keys = $table_exists ? $this->get_fallback_only_keys() : array();
 
         return array(
             'table_exists'       => $table_exists,
@@ -261,6 +295,8 @@ class YSSettingsMigrator {
             'settings_in_table'  => $table_exists ? $this->repository->count() : 0,
             'settings_in_options' => $this->count_wp_options(),
             'total_setting_keys' => count( YSSettingsManager::ALL_SETTING_KEYS ),
+            'fallback_only_keys' => $fallback_only_keys,
+            'cleanup_safe'       => $table_exists && empty( $fallback_only_keys ),
         );
     }
 

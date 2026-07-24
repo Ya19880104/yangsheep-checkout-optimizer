@@ -139,7 +139,10 @@ class YSCheckoutLayout {
     public function render_order_notes_control( $checkout ) {
         if (
             ! $this->is_main_checkout()
-            || YSSettingsManager::get( 'yangsheep_checkout_order_note', 'no' ) !== 'yes'
+            || YSSettingsManager::get(
+                'yangsheep_checkout_order_note',
+                YSSettingsManager::get_default( 'yangsheep_checkout_order_note' )
+            ) !== 'yes'
             || ! apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) )
         ) {
             return;

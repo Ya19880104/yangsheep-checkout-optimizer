@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
+use YangSheep\CheckoutOptimizer\Settings\YSSettingsTransfer;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
 
@@ -43,6 +44,8 @@ class YSCheckoutSettings {
         add_action( 'wp_ajax_yangsheep_reset_colors', array( $this, 'ajax_reset_colors' ) );
         add_action( 'wp_ajax_yangsheep_migrate_settings', array( $this, 'ajax_migrate_settings' ) );
         add_action( 'wp_ajax_yangsheep_cleanup_options', array( $this, 'ajax_cleanup_options' ) );
+        add_action( 'wp_ajax_yangsheep_export_settings', array( $this, 'ajax_export_settings' ) );
+        add_action( 'wp_ajax_yangsheep_import_settings', array( $this, 'ajax_import_settings' ) );
     }
 
     /**
@@ -82,15 +85,20 @@ class YSCheckoutSettings {
             wp_die( __( '權限不足', 'yangsheep-checkout-optimization' ) );
         }
 
-        // 取得所有要儲存的設定 keys
-        $all_keys = YSSettingsManager::ALL_SETTING_KEYS;
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_die( __( '另一個設定寫入作業正在進行，請稍後再試。', 'yangsheep-checkout-optimization' ) );
+        }
 
-        // 儲存每個設定
-        foreach ( $all_keys as $key ) {
+        $transfer = new YSSettingsTransfer();
+        $package  = $transfer->export_package();
+        $validation_errors = array();
+
+        // 先建立完整候選 package，再以同一套 validator + rollback 寫入。
+        foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
             // Checkbox 處理：未勾選時不會出現在 POST 中
             if ( in_array( $key, $this->checkbox_options, true ) ) {
-                $value = isset( $_POST[ $key ] ) ? 'yes' : 'no';
-                YSSettingsManager::set( $key, $value );
+                $package['settings'][ $key ] = isset( $_POST[ $key ] ) ? 'yes' : 'no';
                 continue;
             }
 
@@ -98,20 +106,33 @@ class YSCheckoutSettings {
             if ( $key === 'yangsheep_cvs_shipping_methods' ) {
                 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
                 $raw_value = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : array();
-                $value = $this->sanitize_cvs_shipping_methods( $raw_value );
-                YSSettingsManager::set( $key, $value );
+                $normalized = YSSettingsTransfer::normalize_setting_value( $key, $raw_value );
+                if ( $normalized['valid'] ) {
+                    $package['settings'][ $key ] = $normalized['value'];
+                } else {
+                    $validation_errors[] = $key;
+                }
                 continue;
             }
 
             // 一般文字設定
             if ( isset( $_POST[ $key ] ) ) {
-                $value = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
-                YSSettingsManager::set( $key, $value );
+                $raw_value  = wp_unslash( $_POST[ $key ] );
+                $normalized = YSSettingsTransfer::normalize_setting_value( $key, $raw_value );
+                if ( $normalized['valid'] ) {
+                    $package['settings'][ $key ] = $normalized['value'];
+                } else {
+                    $validation_errors[] = $key;
+                }
             }
         }
 
-        // 重新整理快取
-        YSSettingsManager::refresh();
+        $result = $transfer->import_package( $package );
+        $write_status = '';
+        if ( ! $result['success'] ) {
+            $write_status = ! empty( $result['rolled_back'] ) ? 'rolled_back' : 'rollback_failed';
+        }
+        YSSettingsTransfer::release_lock( $settings_lock );
 
         // 取得當前 tab
         $active_tab = isset( $_POST['active_tab'] ) ? sanitize_text_field( wp_unslash( $_POST['active_tab'] ) ) : 'general';
@@ -121,7 +142,9 @@ class YSCheckoutSettings {
             array(
                 'page'    => 'ys-checkout-optimizer',
                 'tab'     => $active_tab,
-                'updated' => 'true',
+                'updated' => $result['success'] ? 'true' : 'false',
+                'settings_error' => count( $validation_errors ),
+                'settings_write_status' => $write_status,
             ),
             admin_url( 'admin.php' )
         ) );
@@ -305,6 +328,32 @@ class YSCheckoutSettings {
         }
         wp_enqueue_style( 'wp-color-picker' );
         wp_enqueue_script( 'wp-color-picker' );
+
+        if ( false !== strpos( $hook, 'ys-checkout-optimizer' ) ) {
+            wp_enqueue_script(
+                'yangsheep-admin-settings',
+                YANGSHEEP_CHECKOUT_URL . 'assets/js/yangsheep-admin-settings.js',
+                array( 'jquery' ),
+                yangsheep_checkout_asset_version( 'assets/js/yangsheep-admin-settings.js' ),
+                true
+            );
+            wp_localize_script(
+                'yangsheep-admin-settings',
+                'yangsheep_settings_transfer',
+                array(
+                    'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+                    'nonce'   => wp_create_nonce( 'yangsheep_settings_transfer' ),
+                    'i18n'    => array(
+                        'confirmImport' => __( '匯入會以檔案中的完整設定取代目前設定。確定繼續？', 'yangsheep-checkout-optimization' ),
+                        'exporting'     => __( '匯出中...', 'yangsheep-checkout-optimization' ),
+                        'importing'     => __( '驗證並匯入中...', 'yangsheep-checkout-optimization' ),
+                        'exportFailed'  => __( '設定匯出失敗。', 'yangsheep-checkout-optimization' ),
+                        'importFailed'  => __( '設定匯入失敗。', 'yangsheep-checkout-optimization' ),
+                        'imported'      => __( '設定已完整匯入，頁面將重新載入。', 'yangsheep-checkout-optimization' ),
+                    ),
+                )
+            );
+        }
     }
 
     // Checkbox 選項清單 (用於處理未勾選情況)
@@ -350,6 +399,10 @@ class YSCheckoutSettings {
             'yangsheep_checkout_form_field_border_color',
             'yangsheep_checkout_coupon_block_bg_color',
             'yangsheep_checkout_order_items_bg_color',
+            'yangsheep_checkout_text_color',
+            'yangsheep_checkout_heading_color',
+            'yangsheep_checkout_secondary_text_color',
+            'yangsheep_checkout_muted_text_color',
             'yangsheep_checkout_block_border_radius',
             'yangsheep_shipping_card_radio_color',
             'yangsheep_shipping_card_border_active',
@@ -438,13 +491,6 @@ class YSCheckoutSettings {
         $this->add_checkbox_field( 'yangsheep_validate_phone_shipping', __( '收件人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，收件人電話必須為 09 開頭的 10 碼台灣手機號碼（自動忽略空白、連字號）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
         $this->add_checkbox_field( 'yangsheep_validate_phone_billing', __( '訂購人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，訂購人電話也必須為 09 開頭的 10 碼台灣手機號碼。預設關閉以允許市話或國際號碼', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
-        // v1.6.28：YITH 折扣代碼顯示友善名稱
-        $this->add_checkbox_field( 'yangsheep_yith_coupon_friendly_label', __( 'YITH 折扣代碼顯示中文名稱', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points & Rewards / Subscriptions / Gift Cards 等外掛產生的系統代碼（如 ywpar_discount_1）會顯示為「購物金折抵」「YITH 訂閱折扣」等友善名稱', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
-
-        // v1.6.29：YITH Points and Rewards 結帳頁整合
-        $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( 'YITH 購物金結帳頁整合', 'yangsheep-checkout-optimization' ), __( '啟用後，YITH Points and Rewards 的購物金折抵訊息（#yith-par-message-cart 等）會自動搬移到結帳頁購物金區塊；僅在網站已安裝並啟用 YITH Points and Rewards 時實際生效', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
-        add_settings_field( 'ys_yith_points_diagnostics', __( 'YITH 購物金整合狀態', 'yangsheep-checkout-optimization' ), array( $this, 'yith_points_diagnostics_callback' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
-
         // 超取物流方式設定
         add_settings_section( 'ys_cvs_shipping_section', '', array( $this, 'cvs_shipping_section_header' ), 'yangsheep_tab_checkout' );
         add_settings_field( 'yangsheep_cvs_shipping_methods', __( '超取物流方式', 'yangsheep-checkout-optimization' ), array( $this, 'cvs_shipping_methods_callback' ), 'yangsheep_tab_checkout', 'ys_cvs_shipping_section' );
@@ -473,6 +519,10 @@ class YSCheckoutSettings {
         $this->add_color_field( 'yangsheep_checkout_order_items_bg_color', __( '商品明細背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_order_items_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
         $this->add_color_field( 'yangsheep_checkout_coupon_block_bg_color', __( '折扣區塊背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_coupon_block_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
         $this->add_color_field( 'yangsheep_sidebar_bg_color', __( '側邊欄背景', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_sidebar_bg_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_text_color', __( '主要文字顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_heading_color', __( '標題文字顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_heading_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_secondary_text_color', __( '次要文字顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_secondary_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
+        $this->add_color_field( 'yangsheep_checkout_muted_text_color', __( '輔助文字顏色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_checkout_muted_text_color'], 'yangsheep_tab_checkout', 'ys_checkout_block_section' );
 
         // 表單欄位
         add_settings_section( 'ys_checkout_form_section', '', array( $this, 'form_section_header' ), 'yangsheep_tab_checkout' );
@@ -514,9 +564,17 @@ class YSCheckoutSettings {
         $this->add_color_field( 'yangsheep_status_completed_text', __( '已完成 - 文字', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_status_completed_text'], 'yangsheep_tab_order_status', 'ys_order_status_colors_section' );
 
         // --- Tab 5: 購物金整合 ---
-        add_settings_section( 'ys_loyalty_section', '', array( $this, 'loyalty_section_header' ), 'yangsheep_tab_loyalty' );
-        add_settings_field( 'yangsheep_wployalty_enable', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), array( $this, 'loyalty_enable_callback' ), 'yangsheep_tab_loyalty', 'ys_loyalty_section' );
-        add_settings_field( 'yangsheep_wployalty_info', '', array( $this, 'loyalty_info_callback' ), 'yangsheep_tab_loyalty', 'ys_loyalty_section' );
+        add_settings_section( 'ys_wployalty_section', '', array( $this, 'wployalty_section_header' ), 'yangsheep_tab_loyalty' );
+        add_settings_field( 'yangsheep_wployalty_enable', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), array( $this, 'loyalty_enable_callback' ), 'yangsheep_tab_loyalty', 'ys_wployalty_section' );
+        add_settings_field( 'yangsheep_wployalty_info', '', array( $this, 'loyalty_info_callback' ), 'yangsheep_tab_loyalty', 'ys_wployalty_section' );
+
+        add_settings_section( 'ys_yith_loyalty_section', '', array( $this, 'yith_loyalty_section_header' ), 'yangsheep_tab_loyalty' );
+        $this->add_checkbox_field( 'yangsheep_yith_points_integration', __( '啟用結帳頁面整合', 'yangsheep-checkout-optimization' ), __( '以安全的數字代理介面顯示 YITH Points & Rewards 折抵功能；原生 YITH 表單保留為提交來源，強化失敗時會自動回到原生介面。', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
+        $this->add_checkbox_field( 'yangsheep_yith_coupon_friendly_label', __( '折扣代碼顯示中文名稱', 'yangsheep-checkout-optimization' ), __( 'YITH Points & Rewards / Subscriptions / Gift Cards 產生的系統代碼會顯示為「購物金折抵」「YITH 訂閱折扣」等友善名稱。', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
+        add_settings_field( 'ys_yith_points_diagnostics', __( '整合狀態', 'yangsheep-checkout-optimization' ), array( $this, 'yith_points_diagnostics_callback' ), 'yangsheep_tab_loyalty', 'ys_yith_loyalty_section' );
+
+        add_settings_section( 'ys_loyalty_preview_section', '', array( $this, 'loyalty_preview_section_header' ), 'yangsheep_tab_loyalty' );
+        add_settings_field( 'yangsheep_loyalty_preview', '', array( $this, 'loyalty_preview_callback' ), 'yangsheep_tab_loyalty', 'ys_loyalty_preview_section' );
     }
 
     // Section Headers
@@ -589,7 +647,7 @@ class YSCheckoutSettings {
             $opt_name,
             $label,
             function() use ( $opt_name, $placeholder ) {
-                $val = YSSettingsManager::get( $opt_name, '' );
+                $val = YSSettingsManager::get( $opt_name, YSSettingsManager::get_default( $opt_name ) );
                 echo '<input type="text" name="'.esc_attr($opt_name).'" value="'.esc_attr($val).'" placeholder="'.esc_attr($placeholder).'" class="regular-text" />';
             },
             $page,
@@ -619,71 +677,6 @@ class YSCheckoutSettings {
             $page,
             $section
         );
-    }
-
-    public function sanitize_checkbox( $value ) {
-        return ( $value === 'yes' ) ? 'yes' : 'no';
-    }
-
-    public function sanitize_cvs_shipping_methods( $value ) {
-        if ( ! is_array( $value ) ) {
-            return array();
-        }
-        $methods = array_map( 'sanitize_text_field', $value );
-        $methods = array_filter( $methods, 'strlen' );
-        return array_values( array_unique( $methods ) );
-    }
-
-    public function handle_checkbox_save( $value, $option, $old_value ) {
-        if ( in_array( $option, $this->checkbox_options ) ) {
-            if ( isset( $_POST[ $option . '_submitted' ] ) && $_POST[ $option . '_submitted' ] === '1' ) {
-                if ( ! isset( $_POST[ $option ] ) || $_POST[ $option ] !== 'yes' ) {
-                    return 'no';
-                }
-            }
-        }
-        return $value;
-    }
-
-    /**
-     * 讓 WordPress 認為選項已存在
-     * 這樣 update_option 不會調用 add_option
-     *
-     * @param mixed  $default 預設值
-     * @param string $option  選項名稱
-     * @param bool   $passed_default 是否傳入了預設值
-     * @return mixed
-     */
-    public function fake_existing_option( $default, $option, $passed_default ) {
-        // 只在後台設定儲存時生效
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        if ( ! is_admin() || empty( $_POST['option_page'] ) || $_POST['option_page'] !== 'yangsheep_checkout_optimization_group' ) {
-            return $default; // 前台或非設定頁面時返回原始預設值
-        }
-        // 後台儲存時返回空字串，讓 WordPress 認為選項已存在
-        return '';
-    }
-
-    /**
-     * 攔截設定儲存，寫入自訂資料表並阻止寫入 wp_options
-     *
-     * WordPress pre_update_option_{$option} filter 參數順序：
-     * @param mixed  $value     新值
-     * @param mixed  $old_value 舊值
-     * @param string $option    選項名稱
-     * @return mixed 返回舊值以阻止 wp_options 更新
-     */
-    public function intercept_option_save( $value, $old_value, $option ) {
-        // 只處理 yangsheep_ 開頭的設定
-        if ( ! is_string( $option ) || strpos( $option, 'yangsheep_' ) !== 0 ) {
-            return $value;
-        }
-
-        // 寫入自訂資料表
-        YSSettingsManager::set( $option, $value );
-
-        // 返回舊值，讓 WordPress 認為值沒有變化，跳過 wp_options 更新
-        return $old_value;
     }
 
     public function shipping_setting_check_callback() {
@@ -835,8 +828,24 @@ class YSCheckoutSettings {
             wp_send_json_error( '權限不足' );
         }
 
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_send_json_error( '另一個設定寫入作業正在進行，請稍後再試。' );
+        }
+
+        $transfer = new YSSettingsTransfer();
+        $package  = $transfer->export_package();
         foreach ( self::get_default_colors() as $opt => $default ) {
-            YSSettingsManager::set( $opt, $default );
+            $package['settings'][ $opt ] = $default;
+        }
+        $result = $transfer->import_package( $package );
+        YSSettingsTransfer::release_lock( $settings_lock );
+
+        if ( ! $result['success'] ) {
+            $message = ! empty( $result['rolled_back'] )
+                ? '恢復預設配色失敗，原設定已完整復原。'
+                : '恢復預設配色失敗，且無法確認原設定已完整復原。請立即檢查設定。';
+            wp_send_json_error( $message );
         }
 
         wp_send_json_success( '已恢復預設配色' );
@@ -850,8 +859,14 @@ class YSCheckoutSettings {
             wp_send_json_error( '權限不足' );
         }
 
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_send_json_error( '另一個設定寫入作業正在進行，請稍後再試。' );
+        }
+
         $migrator = YSSettingsMigrator::instance();
         $result = $migrator->migrate();
+        YSSettingsTransfer::release_lock( $settings_lock );
 
         if ( $result['success'] ) {
             wp_send_json_success( sprintf( '遷移完成！已遷移 %d 個設定。', $result['migrated'] ) );
@@ -868,16 +883,114 @@ class YSCheckoutSettings {
             wp_send_json_error( '權限不足' );
         }
 
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_send_json_error( '另一個設定寫入作業正在進行，請稍後再試。' );
+        }
+
         $migrator = YSSettingsMigrator::instance();
         $deleted = $migrator->cleanup_wp_options();
+        YSSettingsTransfer::release_lock( $settings_lock );
+
+        if ( $deleted < 0 ) {
+            wp_send_json_error( '自訂資料表仍缺少 fallback 設定，請先執行遷移後再清理。' );
+        }
 
         wp_send_json_success( sprintf( '已清理 %d 個舊設定。', $deleted ) );
     }
 
     /**
-     * 購物金整合 Section Header
+     * Download a complete versioned settings package.
      */
-    public function loyalty_section_header() {
+    public function ajax_export_settings() {
+        check_ajax_referer( 'yangsheep_settings_transfer', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( '權限不足', 'yangsheep-checkout-optimization' ) ), 403 );
+        }
+
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_send_json_error( array( 'message' => __( '另一個設定作業正在進行，請稍後再試。', 'yangsheep-checkout-optimization' ) ), 409 );
+        }
+
+        $json = ( new YSSettingsTransfer() )->export_json();
+        YSSettingsTransfer::release_lock( $settings_lock );
+        if ( '' === $json ) {
+            wp_send_json_error( array( 'message' => __( '設定匯出失敗。', 'yangsheep-checkout-optimization' ) ), 500 );
+        }
+
+        nocache_headers();
+        header( 'Content-Type: application/json; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="yangsheep-checkout-settings-' . gmdate( 'Ymd-His' ) . '.json"' );
+        header( 'X-Content-Type-Options: nosniff' );
+        echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON download generated from validated settings.
+        wp_die();
+    }
+
+    /**
+     * Validate and import a complete settings package.
+     */
+    public function ajax_import_settings() {
+        check_ajax_referer( 'yangsheep_settings_transfer', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( '權限不足', 'yangsheep-checkout-optimization' ) ), 403 );
+        }
+
+        if ( empty( $_FILES['settings_file'] ) || ! is_array( $_FILES['settings_file'] ) ) {
+            wp_send_json_error( array( 'message' => __( '請選擇 JSON 設定檔。', 'yangsheep-checkout-optimization' ) ), 400 );
+        }
+
+        $file = $_FILES['settings_file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $name = isset( $file['name'] ) ? sanitize_file_name( $file['name'] ) : '';
+        $size = isset( $file['size'] ) ? (int) $file['size'] : 0;
+        $error = isset( $file['error'] ) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+        $tmp_name = isset( $file['tmp_name'] ) ? (string) $file['tmp_name'] : '';
+
+        if (
+            UPLOAD_ERR_OK !== $error
+            || '' === $tmp_name
+            || ! is_uploaded_file( $tmp_name )
+            || 'json' !== strtolower( pathinfo( $name, PATHINFO_EXTENSION ) )
+            || $size < 1
+            || $size > YSSettingsTransfer::MAX_JSON_BYTES
+        ) {
+            wp_send_json_error( array( 'message' => __( '設定檔必須是 1 MB 以內的有效 JSON 上傳檔。', 'yangsheep-checkout-optimization' ) ), 400 );
+        }
+
+        $json = file_get_contents( $tmp_name );
+        if ( false === $json ) {
+            wp_send_json_error( array( 'message' => __( '無法讀取設定檔。', 'yangsheep-checkout-optimization' ) ), 400 );
+        }
+
+        $settings_lock = YSSettingsTransfer::acquire_lock();
+        if ( null === $settings_lock ) {
+            wp_send_json_error( array( 'message' => __( '另一個設定作業正在進行，請稍後再試。', 'yangsheep-checkout-optimization' ) ), 409 );
+        }
+
+        $result = ( new YSSettingsTransfer() )->import_json( $json );
+        YSSettingsTransfer::release_lock( $settings_lock );
+        if ( ! $result['success'] ) {
+            $message = implode( ' ', array_map( 'sanitize_text_field', $result['errors'] ) );
+            if ( ! empty( $result['rolled_back'] ) ) {
+                $message .= ' ' . __( '原設定已完整復原。', 'yangsheep-checkout-optimization' );
+            }
+            wp_send_json_error( array( 'message' => $message ), 422 );
+        }
+
+        wp_send_json_success(
+            array(
+                'message' => __( '設定已完整匯入。', 'yangsheep-checkout-optimization' ),
+                'updated' => (int) $result['updated'],
+            )
+        );
+    }
+
+    /**
+     * WPLoyalty provider card.
+     */
+    public function wployalty_section_header() {
         $is_wployalty_active = YSWPLoyaltyIntegration::is_wployalty_active();
         echo '<div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-star-filled"></span> WPLoyalty 整合</h3>';
 
@@ -888,6 +1001,32 @@ class YSCheckoutSettings {
             echo __( '請先安裝並啟用 WooCommerce Loyalty Rewards (WPLoyalty) 外掛才能使用此功能。', 'yangsheep-checkout-optimization' ) . '</p>';
             echo '</div>';
         }
+    }
+
+    /**
+     * YITH provider card.
+     */
+    public function yith_loyalty_section_header() {
+        echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-money-alt"></span> YITH Points &amp; Rewards 整合</h3>';
+
+        if ( ! YSYithPointsIntegration::is_yith_par_active() ) {
+            echo '<div class="notice notice-warning inline ys-provider-notice">';
+            echo '<p><span class="dashicons dashicons-warning"></span> ';
+            echo '<strong>' . esc_html__( '未偵測到 YITH Points & Rewards 外掛', 'yangsheep-checkout-optimization' ) . '</strong> - ';
+            echo esc_html__( '啟用外掛並建立折抵規則後，YS 才會在結帳頁提供直接輸入點數的安全代理介面。', 'yangsheep-checkout-optimization' ) . '</p>';
+            echo '</div>';
+        }
+    }
+
+    /**
+     * Shared provider preview card.
+     */
+    public function loyalty_preview_section_header() {
+        echo '</div><div class="ys-section-card"><h3 class="ys-section-title"><span class="dashicons dashicons-visibility"></span> ';
+        echo esc_html__( '結帳頁預覽', 'yangsheep-checkout-optimization' );
+        echo '</h3><p class="description">';
+        echo esc_html__( '兩種外掛使用不同的原生兌換合約：YITH 可直接輸入點數；WPLoyalty 仍由兌換視窗選擇活動。', 'yangsheep-checkout-optimization' );
+        echo '</p>';
     }
 
     /**
@@ -914,34 +1053,56 @@ class YSCheckoutSettings {
      */
     public function loyalty_info_callback() {
         ?>
-        <div class="ys-notice-box" style="background:#fff8e5;border-left:4px solid #ffb900;padding:12px 15px;margin:10px 0 20px;border-radius:4px;">
-            <p style="margin:0;"><strong><span class="dashicons dashicons-info" style="color:#ffb900;"></span> <?php _e( '重要設定說明', 'yangsheep-checkout-optimization' ); ?></strong></p>
-            <p style="margin:10px 0 0;">
+        <div class="ys-notice-box">
+            <p><strong><span class="dashicons dashicons-info"></span> <?php esc_html_e( '必要設定', 'yangsheep-checkout-optimization' ); ?></strong></p>
+            <p>
                 <?php _e( '請至 WPLoyalty 後台設定 > 結帳頁面 > 「兌換訊息 Redeem Message」保持以下原始文字：', 'yangsheep-checkout-optimization' ); ?>
             </p>
-            <code style="display:block;background:#f5f5f5;padding:10px;margin:10px 0;border-radius:4px;font-size:12px;">You have {wlr_redeem_cart_points} {wlr_points_label} earned choose your rewards {wlr_reward_link}</code>
-            <p style="margin:0;color:#666;font-size:13px;">
-                <?php _e( '系統將會自動偵測並顯示為中文，與結帳頁面視覺整合。', 'yangsheep-checkout-optimization' ); ?>
+            <code>You have {wlr_redeem_cart_points} {wlr_points_label} earned choose your rewards {wlr_reward_link}</code>
+            <p class="description">
+                <?php esc_html_e( 'YS 只重新呈現入口；實際活動、上限與扣點仍由 WPLoyalty 兌換視窗處理。', 'yangsheep-checkout-optimization' ); ?>
             </p>
         </div>
+        <?php
+    }
 
-        <div class="ys-preview-section" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:20px;margin:20px 0;">
-            <h4 style="margin:0 0 15px;color:#5a7080;"><span class="dashicons dashicons-visibility"></span> <?php _e( '預覽效果', 'yangsheep-checkout-optimization' ); ?></h4>
-            <div style="background:#fff;border:2px solid var(--theme-section-border-color, #c5d1d8);border-radius:8px;padding:20px;">
-                <div style="display:flex;gap:20px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:200px;">
-                        <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '折扣代碼', 'yangsheep-checkout-optimization' ); ?></h5>
-                        <p style="margin:0 0 10px;font-size:13px;color:#666;"><?php _e( '若您有折扣代碼，請直接輸入代碼折抵。', 'yangsheep-checkout-optimization' ); ?></p>
-                        <input type="text" placeholder="Coupon" style="width:100%;padding:8px 12px;border:1px solid #c5d1d8;border-radius:4px;margin-bottom:10px;" disabled />
-                        <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '使用折扣代碼', 'yangsheep-checkout-optimization' ); ?></button>
-                    </div>
-                    <div style="flex:1;min-width:200px;border-left:1px solid #e0e0e0;padding-left:20px;">
-                        <h5 style="margin:0 0 10px;font-size:16px;color:#3d4852;"><?php _e( '購物金', 'yangsheep-checkout-optimization' ); ?></h5>
-                        <p style="margin:0 0 8px;font-size:13px;color:#666;"><?php _e( '目前有', 'yangsheep-checkout-optimization' ); ?> <strong style="color:var(--theme-button-background-initial-color, #8fa8b8);">500 Points</strong> <?php _e( '可用', 'yangsheep-checkout-optimization' ); ?></p>
-                        <p style="margin:0 0 15px;font-size:12px;color:#718096;"><?php _e( '按下兌換按鈕，於彈出視窗中兌換', 'yangsheep-checkout-optimization' ); ?></p>
-                        <button type="button" style="width:100%;padding:10px;background:var(--theme-button-background-initial-color, #8fa8b8);color:#fff;border:none;border-radius:20px;cursor:default;"><?php _e( '點此兌換折扣', 'yangsheep-checkout-optimization' ); ?></button>
-                    </div>
+    /**
+     * Render a provider-correct, non-interactive preview.
+     */
+    public function loyalty_preview_callback() {
+        $token_keys = array(
+            '--ys-preview-action-bg'    => 'yangsheep_checkout_button_bg_color',
+            '--ys-preview-action-color' => 'yangsheep_checkout_button_text_color',
+            '--ys-preview-border'       => 'yangsheep_checkout_section_border_color',
+            '--ys-preview-surface'      => 'yangsheep_checkout_coupon_block_bg_color',
+            '--ys-preview-field-bg'     => 'yangsheep_checkout_form_field_bg_color',
+            '--ys-preview-field-border' => 'yangsheep_checkout_form_field_border_color',
+            '--ys-preview-radius'       => 'yangsheep_checkout_block_border_radius',
+        );
+        $style = '';
+        foreach ( $token_keys as $property => $setting_key ) {
+            $value      = YSSettingsManager::get( $setting_key, YSSettingsManager::get_default( $setting_key ) );
+            $normalized = YSSettingsTransfer::normalize_setting_value( $setting_key, $value );
+            $safe_value = $normalized['valid'] ? $normalized['value'] : YSSettingsManager::get_default( $setting_key );
+            $style     .= $property . ':' . $safe_value . ';';
+        }
+        ?>
+        <div class="ys-loyalty-preview" style="<?php echo esc_attr( $style ); ?>">
+            <div class="ys-loyalty-preview-provider ys-loyalty-preview--yith">
+                <h4>YITH Points &amp; Rewards</h4>
+                <div class="ys-loyalty-preview-row">
+                    <label><?php esc_html_e( '折抵點數', 'yangsheep-checkout-optimization' ); ?></label>
+                    <input type="number" value="500" min="0" step="1" disabled />
+                    <button type="button" disabled><?php esc_html_e( '套用折抵', 'yangsheep-checkout-optimization' ); ?></button>
                 </div>
+                <button type="button" class="ys-yith-use-all" disabled><?php esc_html_e( '全部使用', 'yangsheep-checkout-optimization' ); ?></button>
+                <p><?php esc_html_e( '本次最多可使用 500 點', 'yangsheep-checkout-optimization' ); ?></p>
+            </div>
+            <div class="ys-loyalty-preview-provider ys-loyalty-preview--wployalty">
+                <h4>WPLoyalty</h4>
+                <p><?php esc_html_e( '目前有 500 Points 可用', 'yangsheep-checkout-optimization' ); ?></p>
+                <p class="description"><?php esc_html_e( '按下兌換按鈕，於 WPLoyalty 視窗中選擇活動。', 'yangsheep-checkout-optimization' ); ?></p>
+                <button type="button" disabled><?php esc_html_e( '點此兌換折扣', 'yangsheep-checkout-optimization' ); ?></button>
             </div>
         </div>
         <?php
@@ -986,17 +1147,27 @@ class YSCheckoutSettings {
                         <td><strong>總設定項目</strong></td>
                         <td><?php echo esc_html( $status['total_setting_keys'] ); ?> 個</td>
                     </tr>
+                    <tr>
+                        <td><strong>僅存在 wp_options</strong></td>
+                        <td>
+                            <?php if ( empty( $status['fallback_only_keys'] ) ) : ?>
+                                <span class="ys-status-badge ys-status-success"><span class="dashicons dashicons-yes"></span> 0 個</span>
+                            <?php else : ?>
+                                <span class="ys-status-badge ys-status-warning"><span class="dashicons dashicons-warning"></span> <?php echo esc_html( count( $status['fallback_only_keys'] ) ); ?> 個待遷移</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
 
             <div class="ys-db-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
-                <?php if ( $status['migration_required'] || $status['settings_in_table'] < $status['settings_in_options'] ) : ?>
+                <?php if ( $status['migration_required'] || ! empty( $status['fallback_only_keys'] ) ) : ?>
                     <button type="button" id="ys-migrate-settings" class="button button-primary">
                         <span class="dashicons dashicons-database-import"></span> 遷移設定到自訂資料表
                     </button>
                 <?php endif; ?>
 
-                <?php if ( $status['settings_in_options'] > 0 && $status['settings_in_table'] > 0 ) : ?>
+                <?php if ( $status['settings_in_options'] > 0 && $status['cleanup_safe'] ) : ?>
                     <button type="button" id="ys-cleanup-options" class="button">
                         <span class="dashicons dashicons-trash"></span> 清理 wp_options 舊設定
                     </button>
@@ -1004,6 +1175,25 @@ class YSCheckoutSettings {
             </div>
 
             <div id="ys-db-message" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="ys-section-card">
+            <h3 class="ys-section-title"><span class="dashicons dashicons-migrate"></span> 完整設定匯入／匯出</h3>
+            <p>匯出檔包含本外掛全部有效設定與 WPLoyalty 顯示文字。匯入前會完整驗證版本、欄位、型別與 CSS 值；任一寫入失敗會自動復原。</p>
+            <div class="ys-settings-transfer-actions">
+                <button type="button" id="ys-settings-export" class="button button-secondary">
+                    <span class="dashicons dashicons-download"></span> 匯出全部設定
+                </button>
+                <label class="ys-settings-import-picker">
+                    <span class="dashicons dashicons-media-code"></span>
+                    <span class="ys-settings-import-name">選擇 JSON 設定檔</span>
+                    <input type="file" id="ys-settings-import-file" accept="application/json,.json" />
+                </label>
+                <button type="button" id="ys-settings-import" class="button button-primary" disabled>
+                    <span class="dashicons dashicons-upload"></span> 驗證並匯入
+                </button>
+            </div>
+            <div id="ys-settings-transfer-message" aria-live="polite"></div>
         </div>
 
         <div class="ys-section-card">
@@ -1072,6 +1262,10 @@ class YSCheckoutSettings {
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'general';
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $updated = isset( $_GET['updated'] ) && 'true' === $_GET['updated'];
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $settings_error_count = isset( $_GET['settings_error'] ) ? absint( $_GET['settings_error'] ) : 0;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $settings_write_status = isset( $_GET['settings_write_status'] ) ? sanitize_key( $_GET['settings_write_status'] ) : '';
         ?>
         <div class="wrap">
             <h1 class="wp-heading-inline" style="display:none;"><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -1079,6 +1273,20 @@ class YSCheckoutSettings {
             <?php if ( $updated ) : ?>
                 <div class="notice notice-success is-dismissible">
                     <p><?php esc_html_e( '設定已儲存', 'yangsheep-checkout-optimization' ); ?></p>
+                </div>
+            <?php endif; ?>
+            <?php if ( $settings_error_count > 0 ) : ?>
+                <div class="notice notice-error is-dismissible">
+                    <p><?php echo esc_html( sprintf( __( '%d 個設定值格式無效，已保留原值。', 'yangsheep-checkout-optimization' ), $settings_error_count ) ); ?></p>
+                </div>
+            <?php endif; ?>
+            <?php if ( 'rolled_back' === $settings_write_status ) : ?>
+                <div class="notice notice-error is-dismissible">
+                    <p><?php esc_html_e( '設定寫入失敗，原設定已完整復原。', 'yangsheep-checkout-optimization' ); ?></p>
+                </div>
+            <?php elseif ( 'rollback_failed' === $settings_write_status ) : ?>
+                <div class="notice notice-error is-dismissible">
+                    <p><?php esc_html_e( '設定寫入失敗，且無法確認原設定已完整復原。請立即檢查設定。', 'yangsheep-checkout-optimization' ); ?></p>
                 </div>
             <?php endif; ?>
         </div>
@@ -1465,6 +1673,141 @@ class YSCheckoutSettings {
             background: #7a95a6;
             border-color: #6a8596;
         }
+        /* Loyalty providers */
+        .ys-provider-notice {
+            margin: 15px 0;
+        }
+        .ys-notice-box {
+            margin: 10px 0 5px;
+            padding: 14px 16px;
+            background: #fff8e5;
+            border-left: 4px solid #dba617;
+            border-radius: 4px;
+        }
+        .ys-notice-box p {
+            margin: 0 0 10px;
+        }
+        .ys-notice-box p:last-child {
+            margin-bottom: 0;
+        }
+        .ys-notice-box code {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            overflow-wrap: anywhere;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .ys-loyalty-preview {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            padding: 18px;
+            background: var(--ys-preview-surface, #f5f8fa);
+            border: 2px solid var(--ys-preview-border, #c5d1d8);
+            border-radius: var(--ys-preview-radius, 12px);
+        }
+        .ys-loyalty-preview-provider {
+            min-width: 0;
+            padding: 16px;
+            background: var(--ys-preview-field-bg, #fff);
+            border: 1px solid var(--ys-preview-border, #c5d1d8);
+            border-radius: var(--ys-preview-radius, 12px);
+        }
+        .ys-loyalty-preview-provider h4 {
+            margin: 0 0 12px;
+        }
+        .ys-loyalty-preview-provider p {
+            margin: 10px 0 0;
+        }
+        .ys-loyalty-preview-row {
+            display: grid;
+            grid-template-columns: max-content minmax(72px, 1fr) auto;
+            align-items: center;
+            gap: 8px;
+        }
+        .ys-loyalty-preview input {
+            width: 100%;
+            min-width: 0;
+            height: 40px;
+            background: var(--ys-preview-field-bg, #fff);
+            border-color: var(--ys-preview-field-border, #c5d1d8);
+            text-align: center;
+        }
+        .ys-loyalty-preview button {
+            min-height: 40px;
+            padding: 6px 14px;
+            background: var(--ys-preview-action-bg, #8fa8b8);
+            border: 1px solid var(--ys-preview-action-bg, #8fa8b8);
+            border-radius: var(--ys-preview-radius, 12px);
+            color: var(--ys-preview-action-color, #fff);
+        }
+        .ys-loyalty-preview .ys-yith-use-all {
+            margin-top: 10px;
+            background: transparent;
+            color: var(--ys-preview-action-bg, #8fa8b8);
+        }
+        .ys-loyalty-preview--wployalty > button {
+            width: 100%;
+            margin-top: 14px;
+        }
+        /* Settings transfer */
+        .ys-settings-transfer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        .ys-settings-transfer-actions .button,
+        .ys-settings-import-picker {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 36px;
+        }
+        .ys-settings-import-picker {
+            max-width: 360px;
+            padding: 0 12px;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #8c8f94;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .ys-settings-import-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #ys-settings-import-file {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+        .ys-settings-import-picker:focus-within {
+            outline: 2px solid #2271b1;
+            outline-offset: 2px;
+        }
+        #ys-settings-transfer-message {
+            margin-top: 12px;
+        }
+        @media (max-width: 782px) {
+            .ys-loyalty-preview {
+                grid-template-columns: 1fr;
+            }
+            .ys-loyalty-preview-row {
+                grid-template-columns: 1fr auto;
+            }
+            .ys-loyalty-preview-row label {
+                grid-column: 1 / -1;
+            }
+        }
         /* Color Picker */
         .yangsheep-color-picker {
             width: 100px;
@@ -1555,27 +1898,33 @@ add_action( 'wp_head', function() {
     }
 
     $vars = array();
+    $safe_setting = static function ( string $key ) {
+        $value      = YSSettingsManager::get( $key, YSSettingsManager::get_default( $key ) );
+        $normalized = YSSettingsTransfer::normalize_setting_value( $key, $value );
+
+        return $normalized['valid'] ? $normalized['value'] : YSSettingsManager::get_default( $key );
+    };
 
     if ( $myaccount_visual_enabled ) {
-        $vars['--nav-btn-bg']       = YSSettingsManager::get( 'yangsheep_myaccount_button_bg_color' );
-        $vars['--nav-btn-txt']      = YSSettingsManager::get( 'yangsheep_myaccount_button_text_color' );
-        $vars['--nav-btn-hover']    = YSSettingsManager::get( 'yangsheep_nav_button_hover_color' );
-        $vars['--nav-btn-active']   = YSSettingsManager::get( 'yangsheep_nav_button_active_color' );
-        $vars['--myacc-link']       = YSSettingsManager::get( 'yangsheep_myaccount_link_color' );
-        $vars['--myacc-link-h']     = YSSettingsManager::get( 'yangsheep_myaccount_link_hover_color' );
+        $vars['--nav-btn-bg']       = $safe_setting( 'yangsheep_myaccount_button_bg_color' );
+        $vars['--nav-btn-txt']      = $safe_setting( 'yangsheep_myaccount_button_text_color' );
+        $vars['--nav-btn-hover']    = $safe_setting( 'yangsheep_nav_button_hover_color' );
+        $vars['--nav-btn-active']   = $safe_setting( 'yangsheep_nav_button_active_color' );
+        $vars['--myacc-link']       = $safe_setting( 'yangsheep_myaccount_link_color' );
+        $vars['--myacc-link-h']     = $safe_setting( 'yangsheep_myaccount_link_hover_color' );
     }
 
     if ( $order_enhancement_enabled ) {
-        $vars['--ys-status-pending-bg']     = YSSettingsManager::get( 'yangsheep_status_pending_bg' );
-        $vars['--ys-status-pending-text']   = YSSettingsManager::get( 'yangsheep_status_pending_text' );
-        $vars['--ys-status-preparing-bg']   = YSSettingsManager::get( 'yangsheep_status_preparing_bg' );
-        $vars['--ys-status-preparing-text'] = YSSettingsManager::get( 'yangsheep_status_preparing_text' );
-        $vars['--ys-status-shipping-bg']    = YSSettingsManager::get( 'yangsheep_status_shipping_bg' );
-        $vars['--ys-status-shipping-text']  = YSSettingsManager::get( 'yangsheep_status_shipping_text' );
-        $vars['--ys-status-arrived-bg']     = YSSettingsManager::get( 'yangsheep_status_arrived_bg' );
-        $vars['--ys-status-arrived-text']   = YSSettingsManager::get( 'yangsheep_status_arrived_text' );
-        $vars['--ys-status-completed-bg']   = YSSettingsManager::get( 'yangsheep_status_completed_bg' );
-        $vars['--ys-status-completed-text'] = YSSettingsManager::get( 'yangsheep_status_completed_text' );
+        $vars['--ys-status-pending-bg']     = $safe_setting( 'yangsheep_status_pending_bg' );
+        $vars['--ys-status-pending-text']   = $safe_setting( 'yangsheep_status_pending_text' );
+        $vars['--ys-status-preparing-bg']   = $safe_setting( 'yangsheep_status_preparing_bg' );
+        $vars['--ys-status-preparing-text'] = $safe_setting( 'yangsheep_status_preparing_text' );
+        $vars['--ys-status-shipping-bg']    = $safe_setting( 'yangsheep_status_shipping_bg' );
+        $vars['--ys-status-shipping-text']  = $safe_setting( 'yangsheep_status_shipping_text' );
+        $vars['--ys-status-arrived-bg']     = $safe_setting( 'yangsheep_status_arrived_bg' );
+        $vars['--ys-status-arrived-text']   = $safe_setting( 'yangsheep_status_arrived_text' );
+        $vars['--ys-status-completed-bg']   = $safe_setting( 'yangsheep_status_completed_bg' );
+        $vars['--ys-status-completed-text'] = $safe_setting( 'yangsheep_status_completed_text' );
     }
 
     if ( ! empty( $vars ) ) {

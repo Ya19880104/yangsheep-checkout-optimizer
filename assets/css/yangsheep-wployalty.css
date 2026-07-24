@@ -20,13 +20,17 @@
     padding: 0;
 }
 
+.ys-loyalty-provider--wployalty {
+    min-width: 0;
+}
+
 /* 標題 - 繼承 .yangsheep-coupon-block .yangsheep-h3-title 樣式 (18px) */
 /* 不需要額外設定，由主 CSS 統一控制 */
 
 /* 可用點數文字 */
 .ys-points-available {
     font-size: 14px;
-    color: var(--ys-text-secondary, #5a6570);
+    color: var(--ys-text-secondary, #4b5563);
     margin: 0 0 8px 0;
     line-height: 1.5;
 }
@@ -34,16 +38,9 @@
 /* 說明文字 */
 .ys-points-hint {
     font-size: 13px;
-    color: var(--ys-text-muted, #718096);
+    color: var(--ys-text-muted, #667085);
     margin: 0 0 15px 0;
     line-height: 1.4;
-}
-
-/* 點數數值強調 */
-.ys-points-value {
-    font-weight: 700;
-    color: var(--theme-button-background-initial-color, #c9a86c);
-    font-size: 16px;
 }
 
 /* 兌換按鈕 - 繼承佈景主題 .button 樣式，只補充必要屬性 */
@@ -54,16 +51,13 @@
     width: 100%;
     cursor: pointer;
     text-decoration: none;
+    border-radius: var(--block-border-radius, 8px);
 }
 
 /* ===== RWD: 手機版 ===== */
 @media (max-width: 767.9px) {
     .ys-points-available {
         font-size: 13px;
-    }
-
-    .ys-points-value {
-        font-size: 15px;
     }
 
     .ys-wployalty-button {

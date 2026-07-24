@@ -83,6 +83,10 @@ class YSSettingsManager {
         'yangsheep_checkout_form_field_border_color',
         'yangsheep_checkout_coupon_block_bg_color',
         'yangsheep_checkout_order_items_bg_color',
+        'yangsheep_checkout_text_color',
+        'yangsheep_checkout_heading_color',
+        'yangsheep_checkout_secondary_text_color',
+        'yangsheep_checkout_muted_text_color',
 
         // 付款區塊樣式
         'yangsheep_checkout_payment_bg_color',
@@ -150,30 +154,34 @@ class YSSettingsManager {
         'yangsheep_checkout_block_border_radius' => '12px',
 
         // 結帳按鈕樣式
-        'yangsheep_checkout_button_bg_color'    => '#8fa8b8',
+        'yangsheep_checkout_button_bg_color'    => '#5f7482',
         'yangsheep_checkout_button_text_color'  => '#ffffff',
-        'yangsheep_checkout_button_hover_bg'    => '#7a95a6',
+        'yangsheep_checkout_button_hover_bg'    => '#506776',
         'yangsheep_checkout_button_hover_text'  => '#ffffff',
 
         // 區塊樣式
-        'yangsheep_checkout_section_border_color'   => '#c5d1d8',
+        'yangsheep_checkout_section_border_color'   => '#7d929e',
         'yangsheep_checkout_section_bg_color'       => '#f5f8fa',
         'yangsheep_checkout_form_field_bg_color'    => '#ffffff',
-        'yangsheep_checkout_form_field_border_color' => '#c5d1d8',
+        'yangsheep_checkout_form_field_border_color' => '#7d929e',
         'yangsheep_checkout_coupon_block_bg_color'  => '#f5f8fa',
         'yangsheep_checkout_order_items_bg_color'   => '#f5f8fa',
+        'yangsheep_checkout_text_color'              => '#2d3748',
+        'yangsheep_checkout_heading_color'           => '#1f2937',
+        'yangsheep_checkout_secondary_text_color'    => '#4b5563',
+        'yangsheep_checkout_muted_text_color'        => '#667085',
 
         // 付款區塊樣式
         'yangsheep_checkout_payment_bg_color'    => '#e8eff5',
         'yangsheep_payment_method_bg'            => '#ffffff',
         'yangsheep_payment_method_bg_active'     => '#e8eff5',
-        'yangsheep_payment_method_border'        => '#c5d1d8',
-        'yangsheep_payment_method_border_active' => '#8fa8b8',
+        'yangsheep_payment_method_border'        => '#7d929e',
+        'yangsheep_payment_method_border_active' => '#5f7482',
         'yangsheep_payment_method_desc_bg'       => '#f5f8fa',
 
         // 物流卡片樣式
-        'yangsheep_shipping_card_radio_color'   => '#8fa8b8',
-        'yangsheep_shipping_card_border_active' => '#8fa8b8',
+        'yangsheep_shipping_card_radio_color'   => '#5f7482',
+        'yangsheep_shipping_card_border_active' => '#5f7482',
         'yangsheep_shipping_card_bg_color'      => '#ffffff',
         'yangsheep_shipping_card_bg_active'     => '#e8eff5',
         'yangsheep_sidebar_bg_color'            => '#ffffff',

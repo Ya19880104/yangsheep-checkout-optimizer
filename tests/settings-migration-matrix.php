@@ -59,6 +59,10 @@ final class YSTestRepository {
         return true;
     }
 
+    public function exists( $key ) {
+        return array_key_exists( $key, $this->values );
+    }
+
     public function delete_many( array $keys ) {
         if ( $this->fail_delete ) {
             return false;
@@ -173,6 +177,23 @@ check_case(
     0 === $GLOBALS['ys_test_options'][ YSSettingsMigrator::MIGRATION_VERSION_KEY ],
     'failed migration does not advance version'
 );
+
+// v2 manual migration backfills only a fallback-only key and never overwrites
+// the table's current value.
+$GLOBALS['ys_test_options'] = array(
+    YSSettingsMigrator::MIGRATION_VERSION_KEY => 2,
+    $current_key => '#fallback-only',
+    'yangsheep_checkout_button_bg_color' => '#stale-option',
+);
+$repository = new YSTestRepository();
+$repository->values['yangsheep_checkout_button_bg_color'] = '#current-table';
+$migrator = make_migrator( $repository );
+$result = $migrator->migrate();
+
+check_case( true === $result['success'], 'v2 manual migration can repair a partial custom table' );
+check_case( '#fallback-only' === $repository->values[ $current_key ], 'fallback-only value is copied before cleanup' );
+check_case( '#current-table' === $repository->values['yangsheep_checkout_button_bg_color'], 'current table row is never overwritten by stale option' );
+check_case( true === $migrator->can_cleanup_wp_options(), 'cleanup becomes safe only after fallback-only rows are backfilled' );
 
 echo "SUMMARY total={$total} failed={$failed}\n";
 exit( $failed > 0 ? 1 : 0 );

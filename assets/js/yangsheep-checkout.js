@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.4';
+    window.__ysCheckoutOptimizerBuild = '1.7.5';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -358,6 +358,18 @@ jQuery(function ($) {
     // 移動 WooCommerce Loyalty Rewards (WLR) 購物金訊息到購物金區塊
     // 注意：如果啟用了 WPLoyalty 整合（yangsheep_wployalty 變數存在且 enabled），
     //       會完全交由 yangsheep-wployalty.js 處理，這裡不再干預
+    function isYithIntegrationEnabled() {
+        if (typeof yangsheep_yith_points === 'undefined') {
+            return false;
+        }
+
+        // wp_localize_script() serializes booleans as "1" / "" on current
+        // WordPress versions. Accept the explicit enabled forms only; arbitrary
+        // truthy strings must not activate a disabled integration.
+        var enabled = yangsheep_yith_points.enabled;
+        return enabled === true || enabled === 1 || enabled === '1';
+    }
+
     function eachYithPreservableCheckoutField(callback) {
         $('form.checkout')
             .first()
@@ -387,6 +399,10 @@ jQuery(function ($) {
      * Payment controls and hidden credentials/nonces are deliberately excluded.
      */
     function mirrorCheckoutFieldsIntoYithForm(redeemForm) {
+        if (!isYithIntegrationEnabled()) {
+            return;
+        }
+
         var $redeemForm  = $(redeemForm);
         var $checkoutForm = $('form.checkout').first();
 
@@ -439,6 +455,9 @@ jQuery(function ($) {
 
     var yithCheckoutFieldRestoreTimer = null;
     var yithCheckoutFieldRestoreCompleted = false;
+    var yithCheckoutFieldRestoreStartedAt = Date.now();
+    var YITH_FIELD_RESTORE_WINDOW_MS = 6000;
+    var YITH_FIELD_RESTORE_INTERVAL_MS = 500;
 
     function restoreYithCheckoutFields() {
         if (yithCheckoutFieldRestoreCompleted) {
@@ -453,13 +472,20 @@ jQuery(function ($) {
             return;
         }
 
+        var preservedFieldNames = Object.keys(yangsheep_yith_points.preservedFields);
+        if (!preservedFieldNames.length) {
+            yithCheckoutFieldRestoreCompleted = true;
+            return;
+        }
+
         var $fields = $('form.checkout')
             .first()
             .find('#customer_details :input, .woocommerce-additional-fields :input');
-        Object.keys(yangsheep_yith_points.preservedFields).forEach(function (name) {
+        preservedFieldNames.forEach(function (name) {
             var value = yangsheep_yith_points.preservedFields[name];
+            var normalizedName = String(name).replace(/\[\]$/, '');
             var $matching = $fields.filter(function () {
-                return $(this).attr('name') === name;
+                return String($(this).attr('name') || '').replace(/\[\]$/, '') === normalizedName;
             });
 
             if (!$matching.length || $matching.closest('.woocommerce-checkout-payment').length) {
@@ -467,18 +493,33 @@ jQuery(function ($) {
             }
 
             var type = String($matching.first().attr('type') || '').toLowerCase();
+            var expectedValues = Array.isArray(value)
+                ? value.map(function (item) { return String(item); })
+                : [String(value)];
             if (type === 'radio') {
                 $matching.prop('checked', false).filter(function () {
-                    return String($(this).val()) === String(value);
+                    return expectedValues.indexOf(String($(this).val())) !== -1;
                 }).prop('checked', true);
             } else if (type === 'checkbox') {
-                $matching.prop('checked', String(value) !== '' && String(value) !== '0');
+                if (Array.isArray(value) || $matching.length > 1) {
+                    $matching.prop('checked', false).filter(function () {
+                        return expectedValues.indexOf(String($(this).val())) !== -1;
+                    }).prop('checked', true);
+                } else {
+                    $matching.prop('checked', expectedValues[0] !== '' && expectedValues[0] !== '0');
+                }
             } else {
                 $matching.val(value);
             }
         });
 
-        yithCheckoutFieldRestoreCompleted = true;
+        if (Date.now() - yithCheckoutFieldRestoreStartedAt >= YITH_FIELD_RESTORE_WINDOW_MS) {
+            yithCheckoutFieldRestoreCompleted = true;
+            return;
+        }
+
+        clearTimeout(yithCheckoutFieldRestoreTimer);
+        yithCheckoutFieldRestoreTimer = setTimeout(restoreYithCheckoutFields, YITH_FIELD_RESTORE_INTERVAL_MS);
     }
 
     function scheduleYithCheckoutFieldRestore(delay) {
@@ -489,7 +530,7 @@ jQuery(function ($) {
         yithCheckoutFieldRestoreTimer = setTimeout(restoreYithCheckoutFields, delay);
     }
 
-    scheduleYithCheckoutFieldRestore(2500);
+    scheduleYithCheckoutFieldRestore(250);
     $(document.body).on('updated_checkout.ysYithFieldRestore', function () {
         scheduleYithCheckoutFieldRestore(300);
     });
@@ -547,43 +588,99 @@ jQuery(function ($) {
         var typedValue = $old.find('.ys-yith-proxy-points').val();
         $old.remove();
 
-        var $clone = $source.clone(false);
+        var i18n = (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.i18n) || {};
+        var $realInput = $source.find('input[name="ywpar_input_points"]').first();
+        var $realAction = $source.find(
+            'button[name="ywpar_apply_discounts"], input[type="submit"][name="ywpar_apply_discounts"], #ywpar_apply_discounts'
+        ).first();
+        var $realForm = $realInput.closest('form.ywpar_apply_discounts');
 
-        // 淨化：拆掉 <form>（改 div）、移除 hidden 欄位與所有 id/name，
-        // 讓代理節點放在 form.checkout 內也絕不參與任何提交
-        $clone.find('input[type="hidden"]').remove();
-        $clone.find('form').each(function () {
-            var $f = $(this);
-            // 用 proxy 專屬 class（不借用第三方 .ywpar_apply_discounts）：
-            // 版面樣式只作用於 YS 自有結構，不硬改 YITH 原始 class（v1.7.1 P2）
-            var $div = $('<div class="ys-yith-proxy-form"></div>').append($f.contents());
-            $f.replaceWith($div);
-        });
-        $clone.find('[id]').addBack('[id]').removeAttr('id');
-
-        var $pointsInput = $clone.find('input[name="ywpar_input_points"]');
-        $pointsInput.removeAttr('name').addClass('ys-yith-proxy-points');
-        if (typedValue) {
-            $pointsInput.val(typedValue);
+        // 完整 provider contract 不存在就不建立 proxy、不隱藏原生。
+        if (!$realInput.length || !$realAction.length || !$realForm.length) {
+            console.warn('[YS Checkout] YITH native redeem contract incomplete; keeping native UI');
+            return $();
+        }
+        var parsePoints = function(value) {
+            var parsed = parseInt(String(value || '').replace(/[^\d]/g, ''), 10);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+        var minimum = Math.max(1, parsePoints($realInput.attr('min')) || 1);
+        var maximum = parsePoints($realInput.attr('max')) || parsePoints($realInput.val());
+        var current = parsePoints(typedValue);
+        if (!current) {
+            current = maximum || minimum;
         }
 
-        var $applyBtn = $clone.find('button[name="ywpar_apply_discounts"], button.ywpar_apply_discounts');
-        $applyBtn
-            .attr('type', 'button')
-            .removeAttr('name')
-            .removeClass('ywpar_apply_discounts ywpar-fixed-discount')
-            .addClass('ys-yith-proxy-apply');
-        $clone.find('input, button, select, textarea').removeAttr('name');
+        // 只建立 YS 自有、無 name/id/form 的視覺代理。原生 YITH form 永遠留在
+        // checkout form 外並持有真正提交資料，避免代理按鈕誤觸 Woo 下單。
+        var $proxy = $('<div class="ys-yith-proxy ys-loyalty-provider ys-loyalty-provider--yith" role="group"></div>')
+            .attr('aria-label', i18n.title || '購物金折抵');
+        var $title = $('<h3 class="yangsheep-h3-title ys-loyalty-title"></h3>')
+            .text(i18n.title || '購物金折抵');
+        var $row = $('<div class="ys-loyalty-redeem-row"></div>');
+        var $label = $('<span class="ys-loyalty-field-label"></span>')
+            .text(i18n.points_label || '折抵點數');
+        var $pointsInput = $('<input>', {
+            type: 'number',
+            class: 'ys-yith-proxy-points',
+            min: minimum,
+            step: 1,
+            inputmode: 'numeric',
+            value: current,
+            'aria-label': i18n.points_label || '折抵點數'
+        });
+        if (maximum > 0) {
+            $pointsInput.attr('max', maximum);
+        }
+        var $applyBtn = $('<button>', {
+            type: 'button',
+            class: 'button ys-yith-proxy-apply'
+        }).text(i18n.apply || '套用折抵');
+        var $useAll = $('<button>', {
+            type: 'button',
+            class: 'button ys-yith-use-all'
+        }).text(i18n.use_all || '全部使用');
+        var $limit = $('<p class="ys-yith-limit"></p>');
+        if (maximum > 0) {
+            $limit
+                .append(document.createTextNode((i18n.maximum_prefix || '本次最多可使用') + ' '))
+                .append($('<strong></strong>').text(maximum.toLocaleString()))
+                .append(document.createTextNode(' ' + (i18n.points_unit || '點')));
+        }
+        var $feedback = $('<p class="ys-yith-feedback" role="alert" aria-live="polite"></p>');
 
-        var $proxy = $('<div class="ys-yith-proxy"></div>').append($clone.contents());
+        $row.append($label, $pointsInput, $applyBtn);
+        $proxy.append($title, $row);
+        if (maximum > 0) {
+            $proxy.append($useAll, $limit);
+        }
+        $proxy.append($feedback);
         $pointBlock.append($proxy);
-
-        // 原生介面隱藏（僅在代理掛載成功後；JS 失效時原生介面維持可見 = fail-open）
-        $source.addClass('ys-yith-points-proxied').attr('aria-hidden', 'true').hide();
-        $source.data('ysYithProxied', true);
+        $proxy.data('ysYithMaximum', maximum);
 
         return $proxy;
     }
+
+    $(document).on('click', '.ys-yith-use-all', function () {
+        var $proxy = $(this).closest('.ys-yith-proxy');
+        var maximum = parseInt($proxy.data('ysYithMaximum'), 10) || 0;
+        if (maximum > 0) {
+            $proxy.find('.ys-yith-proxy-points')
+                .val(maximum)
+                .attr('aria-invalid', 'false')
+                .trigger('input');
+            $proxy.find('.ys-yith-feedback').empty();
+        }
+    });
+
+    $(document).on('keydown', '.ys-yith-proxy-points', function (event) {
+        if (event.key !== 'Enter') {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        $(this).closest('.ys-yith-proxy').find('.ys-yith-proxy-apply').trigger('click');
+    });
 
     // 代理按鈕 → 同步點數值到原生輸入 → 觸發原生按鈕（document capture 的
     // mirrorCheckoutFieldsIntoYithForm 會先執行，欄位快照照常運作）
@@ -601,15 +698,47 @@ jQuery(function ($) {
             return;
         }
         var $realInput = $source.find('input[name="ywpar_input_points"]');
-        var $realBtn = $source.find('button[name="ywpar_apply_discounts"], #ywpar_apply_discounts').first();
-        var val = $proxy.find('.ys-yith-proxy-points').val();
-        if ($realInput.length && typeof val !== 'undefined') {
+        var $realBtn = $source.find(
+            'button[name="ywpar_apply_discounts"], input[type="submit"][name="ywpar_apply_discounts"], #ywpar_apply_discounts'
+        ).first();
+        var $realForm = $source.find('form.ywpar_apply_discounts').first();
+        var $proxyInput = $proxy.find('.ys-yith-proxy-points');
+        var rawValue = String($proxyInput.val() || '').trim();
+        var val = parseInt(rawValue, 10);
+        var minimum = parseInt($proxyInput.attr('min'), 10) || 0;
+        var maximum = parseInt($proxyInput.attr('max'), 10) || 0;
+        var i18n = (typeof yangsheep_yith_points !== 'undefined' && yangsheep_yith_points.i18n) || {};
+        var $feedback = $proxy.find('.ys-yith-feedback');
+
+        if (!/^\d+$/.test(rawValue) || !Number.isFinite(val) || val < minimum) {
+            $proxyInput.attr('aria-invalid', 'true').trigger('focus');
+            $feedback.text(i18n.invalid || '請輸入有效的整數點數。');
+            return;
+        }
+        if (maximum > 0 && val > maximum) {
+            $proxyInput.attr('aria-invalid', 'true').trigger('focus');
+            $feedback.text(i18n.over_limit || '輸入點數不可超過本次可使用上限。');
+            return;
+        }
+
+        $proxyInput.attr('aria-invalid', 'false');
+        $feedback.empty();
+        if ($realInput.length) {
             $realInput.val(val);
         }
+
+        // Do not rely on YITH dispatching a native submit event. Some versions
+        // call form.submit() from their click handler, which bypasses both the
+        // jQuery submit listener and the browser submit event. Mirror the
+        // checkout fields deterministically before invoking the provider.
+        if ($realForm.length) {
+            mirrorCheckoutFieldsIntoYithForm($realForm[0]);
+        }
+
         if ($realBtn.length) {
             $realBtn[0].click();
         } else {
-            var realForm = $source.find('form.ywpar_apply_discounts')[0];
+            var realForm = $realForm[0];
             if (realForm && realForm.requestSubmit) {
                 realForm.requestSubmit();
             }
@@ -641,30 +770,32 @@ jQuery(function ($) {
             return;
         }
 
-        var pointBlockInsideForm = $pointBlock.closest('form.checkout').length > 0;
-
-        if (!wployaltyEnabled) {
-            var $wlrMessage = $('.wlr_point_redeem_message:visible').first();
-            // P0 防線：含 <form> 的節點不得移入 form.checkout（見 buildYithProxy 註解）
-            if ($wlrMessage.length && !$wlrMessage.closest($pointBlock).length) {
-                if (pointBlockInsideForm && ($wlrMessage.is('form') || $wlrMessage.find('form').length)) {
-                    console.warn('[YS Checkout] WLR block contains a form; leaving it at its native position');
-                } else {
-                    $wlrMessage.detach().appendTo($pointBlock);
-                }
-            }
-        }
-
         if (yithEnabled && Array.isArray(yangsheep_yith_points.selectors)) {
             var yithMessages = selectVisibleYithMessage(yangsheep_yith_points.selectors);
             var $yithMessage = yithMessages.selected;
             if ($yithMessage.length) {
                 // YITH 介面含 <form>：留在原位（事實源），coupon 區放視覺 proxy
-                buildYithProxy($yithMessage, $pointBlock);
-                yithMessages.duplicates
-                    .addClass('ys-yith-points-duplicate')
-                    .attr('aria-hidden', 'true')
-                    .hide();
+                $pointBlock.addClass('has-content').css('display', 'block');
+                $couponBlock.addClass('has-point');
+                var $yithProxy = buildYithProxy($yithMessage, $pointBlock);
+
+                // 替代介面確實掛載且可見後才隱藏原生；任何樣式或容器故障
+                // 都撤回 proxy 並保留原生介面（fail-open）。
+                if ($yithProxy.length && $yithProxy.is(':visible')) {
+                    $yithMessage.addClass('ys-yith-points-proxied').attr('aria-hidden', 'true').hide();
+                    $yithMessage.data('ysYithProxied', true);
+                    yithMessages.duplicates
+                        .addClass('ys-yith-points-duplicate')
+                        .attr('aria-hidden', 'true')
+                        .hide();
+                } else {
+                    $yithProxy.remove();
+                    $yithMessage.removeClass('ys-yith-points-proxied').removeAttr('aria-hidden').show();
+                }
+            } else if (!$('.ys-yith-points-proxied').length) {
+                // Provider fragment no longer exposes a redeem surface (for
+                // example after points are exhausted): remove stale proxy UI.
+                $pointBlock.children('.ys-yith-proxy').remove();
             }
         }
 
@@ -695,8 +826,26 @@ jQuery(function ($) {
         setTimeout(initPointRedeemBlock, 100);
     });
 
+    // YITH renders or replaces its redeem form through a provider-specific
+    // wc-ajax call that does not consistently emit WooCommerce's
+    // updated_checkout event. Re-evaluate only after that known response so an
+    // initially late surface and the post-removal surface are both enhanced.
+    $(document).on('ajaxComplete.ysYithRedeemSurface', function (event, xhr, settings) {
+        if (
+            settings
+            && typeof settings.url === 'string'
+            && settings.url.indexOf('ywpar_update_cart_rewards_messages') !== -1
+        ) {
+            setTimeout(initPointRedeemBlock, 50);
+            scheduleYithCheckoutFieldRestore(50);
+        }
+    });
+
     // YITH Points and Rewards 同步
     $(document).on('change', 'input[name="ywpar_input_points"]', function () {
+        if (!isYithIntegrationEnabled()) {
+            return;
+        }
         $('#yith-par-message-reward-cart input[name="ywpar_input_points"]').val(this.value || 0);
     });
 

@@ -13,7 +13,7 @@
 
 /* ===== 訂單金額摘要 ===== */
 .yangsheep-order-summary {
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
     background-color: var(--yangsheep-sidebar-bg, #ffffff);
     border-radius: var(--block-border-radius, 8px);
     padding: 20px;
@@ -25,7 +25,7 @@
     font-size: 16px;
     font-weight: 600;
     margin: 0 0 15px 0;
-    color: var(--ys-text-heading, #2d3748);
+    color: var(--ys-text-heading, #1f2937);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -42,7 +42,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--theme-section-border-color, #7d929e);
 }
 
 /* 最後一個以及總計前一個（運費）都不要底線 */
@@ -61,14 +61,14 @@
 .yangsheep-summary-label {
     font-size: 14px;
     font-weight: 500;
-    color: var(--ys-text-secondary, #5a6570);
+    color: var(--ys-text-secondary, #4b5563);
 }
 
 /* 金額 */
 .yangsheep-summary-value {
     font-size: 14px;
     font-weight: 600;
-    color: var(--ys-text-primary, #3d4852);
+    color: var(--ys-text-primary, #2d3748);
 }
 
 /* 總計行特殊樣式 */
@@ -83,7 +83,7 @@
 .yangsheep-summary-row.yangsheep-total .yangsheep-summary-label {
     font-size: 14px;
     font-weight: 600;
-    color: var(--ys-text-secondary, #5a6570);
+    color: var(--ys-text-secondary, #4b5563);
 }
 
 .yangsheep-total-amount {
@@ -94,14 +94,14 @@
 
 .yangsheep-currency {
     font-size: 14px;
-    color: var(--theme-button-background-initial-color, #c9a86c);
+    color: var(--theme-button-background-initial-color, #5f7482);
 }
 
 /* 應付總額 金額 24px */
 .yangsheep-amount {
     font-size: 24px;
     font-weight: 700;
-    color: var(--theme-button-background-initial-color, #c9a86c);
+    color: var(--theme-button-background-initial-color, #5f7482);
     line-height: 1;
 }
 
@@ -161,7 +161,7 @@
 
 /* ===== 運輸方式顯示區塊 ===== */
 .yangsheep-shipping-display {
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
     background-color: var(--yangsheep-sidebar-bg, #ffffff);
     border-radius: var(--block-border-radius, 8px);
     padding: 15px 20px;
@@ -175,19 +175,19 @@
 .yangsheep-shipping-display-label {
     font-size: 16px;
     font-weight: 600;
-    color: var(--ys-text-heading, #2d3748);
+    color: var(--ys-text-heading, #1f2937);
 }
 
 /* 運輸方式名稱 */
 .yangsheep-shipping-display-name {
     font-size: 14px;
     font-weight: 500;
-    color: var(--ys-text-primary, #3d4852);
+    color: var(--ys-text-primary, #2d3748);
 }
 
 /* ===== 購物車內容 ===== */
 .yangsheep-cart-contents {
-    border: 2px solid var(--theme-section-border-color, #e0e0e0);
+    border: 2px solid var(--theme-section-border-color, #7d929e);
     background-color: var(--yangsheep-sidebar-bg, #ffffff);
     border-radius: var(--block-border-radius, 8px);
     padding: 20px;
@@ -209,12 +209,12 @@
     font: inherit;
     font-size: 16px;
     font-weight: 600;
-    color: var(--ys-text-heading, #2d3748);
+    color: var(--ys-text-heading, #1f2937);
     text-align: left;
 }
 
 .yangsheep-collapsible:focus-visible {
-    outline: 2px solid var(--theme-button-background-initial-color, #6b7a95);
+    outline: 2px solid var(--theme-button-background-initial-color, #5f7482);
     outline-offset: 2px;
 }
 
@@ -246,7 +246,7 @@
     padding: 10px 0;
     background: transparent;
     border: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--theme-section-border-color, #7d929e);
 }
 
 .yangsheep-cart-item:last-child,
@@ -271,7 +271,7 @@
 .yangsheep-item-name {
     font-size: 14px;
     font-weight: 500;
-    color: var(--ys-text-primary, #3d4852);
+    color: var(--ys-text-primary, #2d3748);
     line-height: 1.5;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -287,14 +287,14 @@
 /* 購物車數量 */
 .yangsheep-item-qty {
     font-size: 14px;
-    color: var(--ys-text-secondary, #5a6570);
+    color: var(--ys-text-secondary, #4b5563);
 }
 
 /* 合計有X項商品 - 與應付總額一致 */
 .yangsheep-cart-summary {
     font-size: 14px;
     font-weight: 600;
-    color: var(--ys-text-secondary, #5a6570);
+    color: var(--ys-text-secondary, #4b5563);
     margin-top: 10px;
     padding-top: 10px;
     border-top: none;
