@@ -99,6 +99,47 @@ check(
 );
 check(!str_contains($bootstrap, "remove_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment'"), 'core payment remains on the standard order-review hook');
 check(str_contains($checkoutJs, 'ys-checkout-enhanced'), 'layout is gated by a successful JavaScript enhancement class');
+check(
+    str_contains($checkoutJs, 'yangsheep-checkout-notice-host')
+    && str_contains($checkoutJs, 'function syncCheckoutNotices()')
+    && str_contains($checkoutJs, 'function handleCheckoutError()')
+    && str_contains($checkoutJs, '.woocommerce-NoticeGroup-checkout')
+    && str_contains($checkoutJs, 'Math.max(0, $host.offset().top - 100)')
+    && str_contains($checkoutJs, "on('checkout_error', handleCheckoutError)"),
+    'checkout notices are synchronized and re-focused inside a dedicated main-column host'
+);
+check(
+    str_contains($bootstrap, "\$('.yangsheep-checkout-notice-host').first()")
+    && !str_contains($bootstrap, "\$('.woocommerce-notices-wrapper').html(r)"),
+    'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
+);
+check(
+    str_contains($bootstrap, 'Version:           1.7.4')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.4'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.4'")
+    && str_contains($readme, '**當前版本**：1.7.4')
+    && str_contains($readme, '### v1.7.4 (2026-07-24)'),
+    'v1.7.4 candidate version markers stay synchronized'
+);
+check(
+    str_contains($bootstrap, "add_filter( 'body_class', 'yangsheep_checkout_pending_body_class' )")
+    && str_contains($bootstrap, "'ys-checkout-pending'")
+    && str_contains($bootstrap, 'body.woocommerce-checkout.ys-checkout-pending form.checkout.woocommerce-checkout')
+    && str_contains($bootstrap, 'visibility:hidden')
+    && str_contains($bootstrap, '@keyframes ys-checkout-preflight-fallback')
+    && str_contains($bootstrap, 'animation:ys-checkout-preflight-fallback 0s 2s forwards')
+    && str_contains($bootstrap, '<noscript>')
+    && str_contains($bootstrap, 'window.setTimeout')
+    && str_contains($bootstrap, '2000'),
+    'a bounded critical preflight cloak prevents native checkout first-paint without breaking no-JS fallback'
+);
+check(
+    str_contains($checkoutJs, 'function releaseCheckoutPresentation(mode)')
+    && str_contains($checkoutJs, "window.__ysCheckoutRelease(mode)")
+    && str_contains($checkoutJs, "releaseCheckoutPresentation('enhanced')")
+    && str_contains($checkoutJs, "releaseCheckoutPresentation('native')"),
+    'checkout enhancement releases the preflight cloak on success and final load failure'
+);
 check(!str_contains($shippingPhp, "removeAttr('name')") && !str_contains($shippingPhp, "prop('disabled', true)"), 'native shipping radios are never disabled or stripped');
 check(!str_contains($shippingTemplate, 'name="shipping_method['), 'shipping cards do not submit duplicate shipping radios');
 check(str_contains($shippingJs, 'input.shipping_method') && str_contains($shippingJs, ".trigger('change')"), 'shipping cards proxy selection to native Woo radios');

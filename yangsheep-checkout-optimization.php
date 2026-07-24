@@ -3,7 +3,7 @@
  * Plugin Name:     YANGSHEEP 結帳強化
  * Plugin URI:      https://yangsheep.com.tw
  * Description:     強化 WooCommerce 結帳頁面、我的帳號、訂單頁面；包含自訂佈局、TWzipcode 台灣郵遞區號、後台可調色和圓角、物流卡片選擇、第三方物流相容（綠界 ECPay / PayNow 超取）。
- * Version:           1.7.3
+ * Version:           1.7.4
  * Author:          羊羊數位科技有限公司
  * Author URI:      https://yangsheep.com.tw
  * Text Domain:     yangsheep-checkout-optimization
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.3' );
+define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.4' );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_DIR', plugin_dir_path( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_URL', plugin_dir_url( __FILE__ ) );
 define( 'YANGSHEEP_CHECKOUT_OPTIMIZATION_FILE', __FILE__ );
@@ -158,6 +158,75 @@ add_action( 'init', function(){
 });
 
 // 前端 CSS/JS
+function yangsheep_checkout_is_main_page() {
+    return function_exists( 'is_checkout' )
+        && is_checkout()
+        && ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url() );
+}
+
+add_filter( 'body_class', 'yangsheep_checkout_pending_body_class' );
+function yangsheep_checkout_pending_body_class( $classes ) {
+    if ( yangsheep_checkout_is_main_page() ) {
+        $classes[] = 'ys-checkout-pending';
+    }
+
+    return array_values( array_unique( $classes ) );
+}
+
+add_action( 'wp_head', 'yangsheep_checkout_render_preflight', 1 );
+function yangsheep_checkout_render_preflight() {
+    if ( ! yangsheep_checkout_is_main_page() ) {
+        return;
+    }
+    ?>
+    <style id="yangsheep-checkout-preflight-css">
+    @keyframes ys-checkout-preflight-fallback{to{visibility:visible}}
+    body.woocommerce-checkout.ys-checkout-pending form.checkout.woocommerce-checkout{
+        visibility:hidden;
+        animation:ys-checkout-preflight-fallback 0s 2s forwards;
+    }
+    </style>
+    <script id="yangsheep-checkout-preflight-js">
+    (function(window,document){
+        'use strict';
+        var timer;
+
+        function release(mode) {
+            if (!document.body) {
+                document.addEventListener('DOMContentLoaded', function () {
+                    release(mode);
+                }, { once: true });
+                return;
+            }
+
+            window.clearTimeout(timer);
+            document.body.classList.remove('ys-checkout-pending', 'ys-checkout-presentation-native', 'ys-checkout-presentation-enhanced');
+            document.body.classList.add(mode === 'enhanced' ? 'ys-checkout-presentation-enhanced' : 'ys-checkout-presentation-native');
+        }
+
+        window.__ysCheckoutRelease = release;
+        function armFallback() {
+            timer = window.setTimeout(function () {
+                release('native');
+            }, 2000);
+        }
+
+        if ('loading' === document.readyState) {
+            document.addEventListener('DOMContentLoaded', armFallback, { once: true });
+        } else {
+            armFallback();
+        }
+    }(window,document));
+    </script>
+    <noscript><style>
+    body.woocommerce-checkout.ys-checkout-pending form.checkout.woocommerce-checkout{
+        visibility:visible!important;
+        animation:none!important;
+    }
+    </style></noscript>
+    <?php
+}
+
 add_action( 'wp_enqueue_scripts', function(){
     if ( ! function_exists( 'is_checkout' ) ) {
         return;
@@ -244,7 +313,7 @@ add_action( 'wp_footer', function(){
         return;
     }
     if ( is_checkout() && ! is_wc_endpoint_url() ) { ?>
-<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';var $scope=$('.yangsheep_checkout_coupon');$scope.on('input','#ys_coupon_code',function(){cc=$(this).val();});$scope.on('click','button[name=apply_coupon]',function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$scope.find('#ys_coupon_code').val('');cc='';$('.woocommerce-notices-wrapper').html(r);});});});</script>
+<script>jQuery(function($){if(!window.wc_checkout_params)return;var cc='';var ysNonce=(window.yangsheep_checkout_params&&yangsheep_checkout_params.nonce)?yangsheep_checkout_params.nonce:'';var $scope=$('.yangsheep_checkout_coupon');$scope.on('input','#ys_coupon_code',function(){cc=$(this).val();});$scope.on('click','button[name=apply_coupon]',function(){$.post(wc_checkout_params.ajax_url,{action:'apply_checkout_coupon',coupon_code:cc,nonce:ysNonce},function(r){$(document.body).trigger('update_checkout');$('.woocommerce-error,.woocommerce-message').remove();$scope.find('#ys_coupon_code').val('');cc='';var $noticeHost=$('.yangsheep-checkout-notice-host').first();var $fallbackNotice=$('.woocommerce-notices-wrapper').first();($noticeHost.length?$noticeHost:$fallbackNotice).html(r);});});});</script>
 <?php } } );
 add_action('wp_ajax_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');
 add_action('wp_ajax_nopriv_apply_checkout_coupon','yangsheep_apply_checkout_coupon_ajax');

@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.3';
+    window.__ysCheckoutOptimizerBuild = '1.7.4';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -56,6 +56,53 @@ jQuery(function ($) {
                 stylesheet.media = 'all';
             }
         });
+    }
+
+    function releaseCheckoutPresentation(mode) {
+        if (typeof window.__ysCheckoutRelease === 'function') {
+            window.__ysCheckoutRelease(mode);
+            return;
+        }
+
+        $('body').removeClass('ys-checkout-pending');
+    }
+
+    function syncCheckoutNotices() {
+        var $form = $('form.checkout.woocommerce-checkout.ys-checkout-enhanced').first();
+        var $host = $form.find('.yangsheep-form-column > .yangsheep-checkout-notice-host');
+
+        if (!$form.length || $host.length !== 1) {
+            return false;
+        }
+
+        var $checkoutScope = $form.closest('.woocommerce');
+        var $externalWrappers = $checkoutScope.find('.woocommerce-notices-wrapper').filter(function () {
+            return !$.contains($form[0], this);
+        });
+        var $formWrappers = $form.children('.woocommerce-notices-wrapper');
+        var $checkoutGroups = $form.children('.woocommerce-NoticeGroup-checkout');
+
+        $externalWrappers.add($formWrappers).each(function () {
+            $(this).contents().detach().appendTo($host);
+        });
+        $checkoutGroups.detach().appendTo($host);
+
+        return true;
+    }
+
+    function handleCheckoutError() {
+        if (!syncCheckoutNotices()) {
+            return;
+        }
+
+        var $host = $('.yangsheep-checkout-notice-host').first();
+        if (!$host.length || !$host.children().length) {
+            return;
+        }
+
+        $('html, body').stop(true).animate({
+            scrollTop: Math.max(0, $host.offset().top - 100)
+        }, 350);
     }
 
     function ensureCheckoutLayout() {
@@ -108,6 +155,7 @@ jQuery(function ($) {
         $sidebarWrapper.detach();
 
         var $mainColumn = $('<div class="yangsheep-form-column"></div>');
+        var $noticeHost = $('<div class="yangsheep-checkout-notice-host" aria-live="polite"></div>');
         $form.children().each(function () {
             if (!reviewHostIsForm && this === $reviewHost[0]) {
                 $reviewHost.children().appendTo($mainColumn);
@@ -115,6 +163,7 @@ jQuery(function ($) {
             }
             $(this).appendTo($mainColumn);
         });
+        $mainColumn.prepend($noticeHost);
         if (!reviewHostIsForm) {
             $reviewHost.remove();
         }
@@ -148,7 +197,9 @@ jQuery(function ($) {
         $form.find('.yangsheep-same-as-billing, .yangsheep-order-notes-toggle')
             .removeAttr('hidden');
         enableEnhancedStyles();
+        syncCheckoutNotices();
         syncSidebarPlacement();
+        releaseCheckoutPresentation('enhanced');
 
         return true;
     }
@@ -187,7 +238,11 @@ jQuery(function ($) {
     // CSS 於 DOM ready 可能尚未載完（readiness 會擋下）→ window.load 時
     // 所有樣式表已定案，做最終重試；已增強時直接 early-return
     $(window).on('load', function () {
-        ensureCheckoutLayout();
+        var enhanced = ensureCheckoutLayout();
+        syncCheckoutNotices();
+        if (!enhanced) {
+            releaseCheckoutPresentation('native');
+        }
     });
 
     $(document.body).on('updated_checkout', function () {
@@ -195,8 +250,11 @@ jQuery(function ($) {
         // 已增強時 ensureCheckoutLayout 會直接 early-return
         ensureCheckoutLayout();
         syncCorePaymentPlacement();
+        syncCheckoutNotices();
         syncSidebarPlacement();
     });
+
+    $(document.body).on('checkout_error', handleCheckoutError);
 
     $(window).on('resize', syncSidebarPlacement);
 

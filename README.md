@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.3
-**最後更新**：2026-07-23
+**當前版本**：1.7.4
+**最後更新**：2026-07-24
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -228,6 +228,12 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.4 (2026-07-24)
+
+- **避免原生結帳首屏閃現**：主結帳 body 先進入 `ys-checkout-pending`，以 head 內極小 critical CSS 暫時隱藏原生 form；YS 增強成功後立即顯示最終版面。主 JS／CSS／DOM 契約失敗時由 `window.load`、2 秒 timeout、CSS animation 與 `<noscript>` 多路徑自動恢復原生結帳，不會形成白頁。
+- **結帳通知固定於主欄**：漸進增強成功後建立 `.yangsheep-checkout-notice-host`，統一收納頁面初始通知、折扣 AJAX 回應及 WooCommerce `checkout_error`，避免通知維持整頁寬度而穿過左側 sticky sidebar；未增強時仍寫入第一個原生 notice wrapper。
+- **錯誤後重新對準通知**：WooCommerce 原生送單錯誤原本會先依尚未搬移的 notice group 捲動；同步至主欄後重新計算位置，確保錯誤內容留在可見範圍。
 
 ### v1.7.3 (2026-07-23)
 

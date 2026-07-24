@@ -96,6 +96,15 @@
     min-width: 0;
 }
 
+.yangsheep-checkout-notice-host {
+    width: 100%;
+    min-width: 0;
+}
+
+.yangsheep-checkout-notice-host:empty {
+    display: none;
+}
+
 /* ===== Progressive checkout layout ===== */
 @media (min-width: 1000px) {
     form.checkout.woocommerce-checkout.yangsheep-checkout-layout {
