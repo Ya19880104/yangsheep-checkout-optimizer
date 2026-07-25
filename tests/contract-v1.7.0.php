@@ -120,13 +120,30 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.6')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.6'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.6'")
-    && str_contains($readme, '**當前版本**：1.7.6')
-    && str_contains($readme, '### v1.7.6 (2026-07-25)')
+    str_contains($bootstrap, 'Version:           1.7.7')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.7'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.7'")
+    && str_contains($readme, '**當前版本**：1.7.7')
+    && str_contains($readme, '### v1.7.7 (2026-07-25)')
     && str_contains($readme, '**最後更新**：2026-07-25'),
-    'v1.7.6 candidate version markers stay synchronized'
+    'v1.7.7 candidate version markers stay synchronized'
+);
+// v1.7.7 電商工具箱命名（開發準則 §4）：Hub Client 2.0.3 中央統一為「電商工具箱」
+// （dashicons-store / 位置 56，與外掛自建一致）；外掛端另備 label 校正，
+// 對付同站尚未更新的舊版 Hub Client（≤2.0.2 先註冊成「YS Plugin」）。
+$hubClientSrc = source($root . '/vendor/yangsheep/ys-plugin-hub-client/src/YSPluginHubClient.php');
+$hubClientLoader = source($root . '/vendor/yangsheep/ys-plugin-hub-client/ys-plugin-hub-client.php');
+check(
+    !str_contains($hubClientSrc, "'YS Plugin'")
+    && str_contains($hubClientSrc, '電商工具箱')
+    && str_contains($hubClientSrc, 'dashicons-store')
+    && str_contains($hubClientLoader, "YS_HUB_CLIENT_VERSION', '2.0.3'"),
+    'vendored hub client 2.0.3 registers ys-toolbox as 電商工具箱 (store icon), never YS Plugin'
+);
+check(
+    str_contains($settings, "\$menu[ \$menu_key ][0] = __( '電商工具箱', 'yangsheep-checkout-optimization' )")
+    && str_contains($settings, "\$menu[ \$menu_key ][3] = __( '電商工具箱', 'yangsheep-checkout-optimization' )"),
+    'plugin normalizes a pre-registered ys-toolbox label back to 電商工具箱 (stale sibling hub clients)'
 );
 // v1.7.6 使用者指定版面：無文字 label（aria-label 保留）、上限文字在標題列
 // 靠右垂直置中、全部使用與套用折抵同列。
@@ -139,6 +156,20 @@ check(
     && preg_match('/\.ys-loyalty-header\s*\{[^}]*justify-content:\s*space-between[^}]*\}/s', $checkoutCss)
     && preg_match('/\.ys-loyalty-header\s*\{[^}]*align-items:\s*center[^}]*\}/s', $checkoutCss),
     'YITH proxy layout: no text label, limit sits right of the title, use-all shares the redeem row'
+);
+check(
+    preg_match("/STANDALONE_PAGE_SLUG\\s*=\\s*'yangsheep_checkout_optimization'/", $settings)
+    && preg_match("/TOOLBOX_PAGE_SLUG\\s*=\\s*'ys-checkout-optimizer'/", $settings)
+    && str_contains($settings, 'add_menu_page(')
+    && str_contains($settings, 'add_submenu_page(')
+    && substr_count($settings, "array( \$this, 'settings_page' )") >= 2,
+    'historical standalone and current toolbox admin endpoints render the same settings page'
+);
+check(
+    str_contains($settings, 'resolve_settings_page_slug')
+    && str_contains($settings, 'ys_settings_page')
+    && str_contains($settings, "toplevel_page_' . self::STANDALONE_PAGE_SLUG"),
+    'both admin endpoints preserve their route while sharing settings assets and save handling'
 );
 check(
     str_contains($bootstrap, 'Requires PHP:     8.0'),

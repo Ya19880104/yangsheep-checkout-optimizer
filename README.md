@@ -4,7 +4,7 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.6
+**當前版本**：1.7.7
 **最後更新**：2026-07-25
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
@@ -243,6 +243,12 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.7 (2026-07-25)
+
+- **父選單正名「電商工具箱」**：Hub Client 升級 2.0.3，`ys-toolbox` 頂層選單中央統一註冊為「電商工具箱」（`dashicons-store`、位置 56，與開發準則 §4 及各外掛自建選單完全一致）；外掛端另備 label 校正，同站若有尚未更新的舊版 Hub Client（≤2.0.2 先註冊成「YS Plugin」）也會被統一回「電商工具箱」。
+- **恢復獨立「結帳強化」入口**：重新註冊舊版頂層端點 `admin.php?page=yangsheep_checkout_optimization`，同時保留 `電商工具箱 → 結帳強化` 的 `admin.php?page=ys-checkout-optimizer` 子入口；兩者共用相同設定頁、權限與資料來源。
+- **雙入口導覽相容**：設定頁完整載入色彩及匯入匯出資產，表單儲存後留在管理員原先開啟的入口；未知或偽造 page slug 會回到現行電商工具箱子入口。
 
 ### v1.7.6 (2026-07-25)
 

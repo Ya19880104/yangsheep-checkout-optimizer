@@ -13,7 +13,12 @@ use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
 
 class YSCheckoutSettings {
 
+    private const STANDALONE_PAGE_SLUG = 'yangsheep_checkout_optimization';
+    private const TOOLBOX_PAGE_SLUG    = 'ys-checkout-optimizer';
+
     private static $instance = null;
+
+    private $settings_page_hooks = array();
 
     public static function get_instance() {
         if ( is_null( self::$instance ) ) {
@@ -60,7 +65,7 @@ class YSCheckoutSettings {
             'version' => YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION,
             'icon'    => 'dashicons-cart',
             'desc'    => '優化 WooCommerce 結帳頁面，提供物流卡片、地址自動完成、訂單頁強化等功能。',
-            'url'     => admin_url( 'admin.php?page=ys-checkout-optimizer' ),
+            'url'     => admin_url( 'admin.php?page=' . self::TOOLBOX_PAGE_SLUG ),
         );
         return $plugins;
     }
@@ -136,11 +141,12 @@ class YSCheckoutSettings {
 
         // 取得當前 tab
         $active_tab = isset( $_POST['active_tab'] ) ? sanitize_text_field( wp_unslash( $_POST['active_tab'] ) ) : 'general';
+        $settings_page_slug = $this->resolve_settings_page_slug();
 
         // 重定向回設定頁面（帶成功訊息）
         wp_safe_redirect( add_query_arg(
             array(
-                'page'    => 'ys-checkout-optimizer',
+                'page'    => $settings_page_slug,
                 'tab'     => $active_tab,
                 'updated' => $result['success'] ? 'true' : 'false',
                 'settings_error' => count( $validation_errors ),
@@ -154,12 +160,29 @@ class YSCheckoutSettings {
     public function add_admin_menu() {
         global $menu;
 
+        $standalone_hook = add_menu_page(
+            __( '結帳強化設定', 'yangsheep-checkout-optimization' ),
+            __( '結帳強化', 'yangsheep-checkout-optimization' ),
+            'manage_options',
+            self::STANDALONE_PAGE_SLUG,
+            array( $this, 'settings_page' ),
+            'dashicons-cart',
+            60
+        );
+        if ( is_string( $standalone_hook ) && '' !== $standalone_hook ) {
+            $this->settings_page_hooks[] = $standalone_hook;
+        }
+
         // 檢查「電商工具箱」頂層選單是否已存在
         $toolbox_exists = false;
         if ( is_array( $menu ) ) {
-            foreach ( $menu as $item ) {
+            foreach ( $menu as $menu_key => $item ) {
                 if ( isset( $item[2] ) && 'ys-toolbox' === $item[2] ) {
                     $toolbox_exists = true;
+                    // 同站的舊版 Hub Client（≤2.0.2）可能先以「YS Plugin」註冊
+                    // 同一 slug；統一校正為既有產品名稱（開發準則 §4）。
+                    $menu[ $menu_key ][0] = __( '電商工具箱', 'yangsheep-checkout-optimization' );
+                    $menu[ $menu_key ][3] = __( '電商工具箱', 'yangsheep-checkout-optimization' );
                     break;
                 }
             }
@@ -191,14 +214,17 @@ class YSCheckoutSettings {
         }
 
         // 註冊子選單
-        add_submenu_page(
+        $toolbox_hook = add_submenu_page(
             'ys-toolbox',
             __( '結帳強化設定', 'yangsheep-checkout-optimization' ),
             __( '結帳強化',      'yangsheep-checkout-optimization' ),
             'manage_options',
-            'ys-checkout-optimizer',
+            self::TOOLBOX_PAGE_SLUG,
             array( $this, 'settings_page' )
         );
+        if ( is_string( $toolbox_hook ) && '' !== $toolbox_hook ) {
+            $this->settings_page_hooks[] = $toolbox_hook;
+        }
     }
 
     /**
@@ -323,13 +349,19 @@ class YSCheckoutSettings {
     }
 
     public function enqueue_admin_scripts( $hook ) {
-        if ( false === strpos( $hook, 'ys-toolbox' ) && false === strpos( $hook, 'ys-checkout-optimizer' ) ) {
+        $standalone_hook = 'toplevel_page_' . self::STANDALONE_PAGE_SLUG;
+        $is_settings_page = in_array( $hook, $this->settings_page_hooks, true )
+            || $standalone_hook === $hook
+            || false !== strpos( $hook, self::TOOLBOX_PAGE_SLUG );
+        $is_toolbox_page = false !== strpos( $hook, 'ys-toolbox' );
+
+        if ( ! $is_settings_page && ! $is_toolbox_page ) {
             return;
         }
         wp_enqueue_style( 'wp-color-picker' );
         wp_enqueue_script( 'wp-color-picker' );
 
-        if ( false !== strpos( $hook, 'ys-checkout-optimizer' ) ) {
+        if ( $is_settings_page ) {
             wp_enqueue_script(
                 'yangsheep-admin-settings',
                 YANGSHEEP_CHECKOUT_URL . 'assets/js/yangsheep-admin-settings.js',
@@ -354,6 +386,27 @@ class YSCheckoutSettings {
                 )
             );
         }
+    }
+
+    /**
+     * Keep saves on the endpoint the administrator opened.
+     *
+     * @return string
+     */
+    private function resolve_settings_page_slug() {
+        $requested_page = '';
+
+        if ( isset( $_POST['ys_settings_page'] ) ) {
+            $requested_page = sanitize_key( wp_unslash( $_POST['ys_settings_page'] ) );
+        } elseif ( isset( $_GET['page'] ) ) {
+            $requested_page = sanitize_key( wp_unslash( $_GET['page'] ) );
+        }
+
+        if ( in_array( $requested_page, array( self::STANDALONE_PAGE_SLUG, self::TOOLBOX_PAGE_SLUG ), true ) ) {
+            return $requested_page;
+        }
+
+        return self::TOOLBOX_PAGE_SLUG;
     }
 
     // Checkbox 選項清單 (用於處理未勾選情況)
@@ -1264,6 +1317,7 @@ class YSCheckoutSettings {
             return;
         }
 
+        $settings_page_slug = $this->resolve_settings_page_slug();
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'general';
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $updated = isset( $_GET['updated'] ) && 'true' === $_GET['updated'];
@@ -1332,8 +1386,9 @@ class YSCheckoutSettings {
                 </a>
             </nav>
 
-            <form action="<?php echo esc_url( admin_url( 'admin.php?page=ys-checkout-optimizer' ) ); ?>" method="post" class="ys-settings-form">
+            <form action="<?php echo esc_url( admin_url( 'admin.php?page=' . $settings_page_slug ) ); ?>" method="post" class="ys-settings-form">
                 <?php wp_nonce_field( 'ys_save_settings', 'ys_settings_nonce' ); ?>
+                <input type="hidden" name="ys_settings_page" value="<?php echo esc_attr( $settings_page_slug ); ?>" />
                 <input type="hidden" name="active_tab" id="ys_active_tab" value="<?php echo esc_attr( $active_tab ); ?>" />
 
                 <div class="ys-tab-content" id="ys-tab-general" style="<?php echo $active_tab !== 'general' ? 'display:none;' : ''; ?>">
