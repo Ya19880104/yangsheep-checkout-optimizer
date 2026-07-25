@@ -105,7 +105,7 @@ $reflection = new ReflectionClass(\YangSheep\CheckoutOptimizer\Admin\YSCheckoutS
 $settings = $reflection->newInstanceWithoutConstructor();
 
 $GLOBALS['menu'] = [
-    ['YS Plugin', 'manage_options', 'ys-toolbox'],
+    59 => ['YS Plugin', 'manage_options', 'ys-toolbox', 'YS Plugin', '', '', 'dashicons-admin-plugins'],
 ];
 
 $settings->add_admin_menu();
@@ -122,6 +122,10 @@ $toolbox = array_values(array_filter(
 
 check_result(count($standalone) === 1, 'historical standalone endpoint is registered once');
 check_result(count($toolbox) === 1, 'toolbox child endpoint remains registered once');
+check_result(
+    isset($standalone[0][6]) && 55.95 === $standalone[0][6],
+    'standalone endpoint is placed immediately above the toolbox'
+);
 check_result(
     isset($standalone[0][4], $toolbox[0][5])
         && $standalone[0][4] === $toolbox[0][5],
@@ -172,6 +176,15 @@ if ($resolveMethodExists) {
         'unknown route falls back to the canonical toolbox endpoint'
     );
 }
+
+$settingsSource = file_get_contents(dirname(__DIR__) . '/src/Admin/YSCheckoutSettings.php');
+check_result(
+    1 === preg_match(
+        '/<div class="ys-submit-wrap"[^>]*>.*?id="ys-reset-colors"/s',
+        (string) $settingsSource
+    ),
+    'restore-colors control is grouped in the form action footer'
+);
 
 $failed = $GLOBALS['ys_admin_test_failed'] ?? 0;
 $total = $GLOBALS['ys_admin_test_total'] ?? 0;

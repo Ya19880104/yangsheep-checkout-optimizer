@@ -167,7 +167,7 @@ class YSCheckoutSettings {
             self::STANDALONE_PAGE_SLUG,
             array( $this, 'settings_page' ),
             'dashicons-cart',
-            60
+            55.95
         );
         if ( is_string( $standalone_hook ) && '' !== $standalone_hook ) {
             $this->settings_page_hooks[] = $standalone_hook;
@@ -1356,12 +1356,6 @@ class YSCheckoutSettings {
                 <p class="ys-settings-desc">強化 WooCommerce 結帳流程與訂單管理體驗</p>
             </div>
 
-            <div class="ys-settings-actions">
-                <button type="button" id="ys-reset-colors" class="button">
-                    <span class="dashicons dashicons-image-rotate"></span> 一鍵恢復預設配色
-                </button>
-            </div>
-
             <nav class="nav-tab-wrapper ys-settings-tabs">
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>" data-tab="general">
                     <span class="dashicons dashicons-admin-generic"></span> <?php _e( '基本設定', 'yangsheep-checkout-optimization' ); ?>
@@ -1501,6 +1495,9 @@ class YSCheckoutSettings {
 
                 <div class="ys-submit-wrap" id="ys-submit-button" style="<?php echo ( $active_tab === 'docs' || $active_tab === 'database' ) ? 'display:none;' : ''; ?>">
                     <?php submit_button( __( '儲存設定', 'yangsheep-checkout-optimization' ), 'primary large', 'submit', false ); ?>
+                    <button type="button" id="ys-reset-colors" class="button ys-reset-colors-button">
+                        <span class="dashicons dashicons-image-rotate"></span> 一鍵恢復預設配色
+                    </button>
                 </div>
             </form>
         </div>
@@ -1546,17 +1543,6 @@ class YSCheckoutSettings {
             margin: 0;
             opacity: 0.9;
             font-size: 15px;
-        }
-        .ys-settings-actions {
-            margin-bottom: 15px;
-            text-align: right;
-        }
-        .ys-settings-actions .button {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            height: auto;
         }
         .ys-settings-tabs {
             border-bottom: 2px solid #c5d1d8;
@@ -1718,20 +1704,52 @@ class YSCheckoutSettings {
         }
         /* Submit */
         .ys-submit-wrap {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #c5d1d8;
         }
-        .ys-submit-wrap .button-primary {
+        /* 兩顆按鈕共用同一明確高度；選擇器維持 (0,3,0) 以蓋過
+           WP core 的 .wp-core-ui .button.button-large（P1：實測 46px/54px 不等高的根因）。 */
+        .ys-submit-wrap .button.button-primary,
+        .ys-submit-wrap .button.ys-reset-colors-button {
+            box-sizing: border-box;
+            height: 44px;
+            min-height: 44px;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .ys-submit-wrap .button.button-primary {
             background: #8fa8b8;
             border-color: #7a95a6;
-            padding: 8px 30px;
-            height: auto;
+            padding-left: 30px;
+            padding-right: 30px;
             font-size: 15px;
+            line-height: 42px; /* 44px − 上下邊框，input[type=submit] 垂直置中 */
         }
-        .ys-submit-wrap .button-primary:hover {
+        .ys-submit-wrap .button.button-primary:hover {
             background: #7a95a6;
             border-color: #6a8596;
+        }
+        .ys-submit-wrap .button.ys-reset-colors-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-left: auto;
+            padding-left: 16px;
+            padding-right: 16px;
+            border-color: #c5d1d8;
+            color: #5a7080;
+            line-height: 1;
+        }
+        .ys-submit-wrap .ys-reset-colors-button:hover,
+        .ys-submit-wrap .ys-reset-colors-button:focus {
+            border-color: #8fa8b8;
+            color: #4a6a7a;
         }
         /* Loyalty providers */
         .ys-provider-notice {

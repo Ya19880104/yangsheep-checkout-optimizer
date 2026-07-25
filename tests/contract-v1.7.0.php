@@ -120,15 +120,15 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.7')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.7'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.7'")
-    && str_contains($readme, '**當前版本**：1.7.7')
-    && str_contains($readme, '### v1.7.7 (2026-07-25)')
+    str_contains($bootstrap, 'Version:           1.7.8')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.8'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.8'")
+    && str_contains($readme, '**當前版本**：1.7.8')
+    && str_contains($readme, '### v1.7.8 (2026-07-25)')
     && str_contains($readme, '**最後更新**：2026-07-25'),
-    'v1.7.7 candidate version markers stay synchronized'
+    'v1.7.8 candidate version markers stay synchronized'
 );
-// v1.7.7 電商工具箱命名（開發準則 §4）：Hub Client 2.0.3 中央統一為「電商工具箱」
+// v1.7.8 電商工具箱命名（開發準則 §4）：Hub Client 2.0.4 中央統一為「電商工具箱」
 // （dashicons-store / 位置 56，與外掛自建一致）；外掛端另備 label 校正，
 // 對付同站尚未更新的舊版 Hub Client（≤2.0.2 先註冊成「YS Plugin」）。
 $hubClientSrc = source($root . '/vendor/yangsheep/ys-plugin-hub-client/src/YSPluginHubClient.php');
@@ -137,13 +137,20 @@ check(
     !str_contains($hubClientSrc, "'YS Plugin'")
     && str_contains($hubClientSrc, '電商工具箱')
     && str_contains($hubClientSrc, 'dashicons-store')
-    && str_contains($hubClientLoader, "YS_HUB_CLIENT_VERSION', '2.0.3'"),
-    'vendored hub client 2.0.3 registers ys-toolbox as 電商工具箱 (store icon), never YS Plugin'
+    && str_contains($hubClientLoader, "YS_HUB_CLIENT_VERSION', '2.0.4'"),
+    'vendored hub client 2.0.4 registers ys-toolbox as 電商工具箱 (store icon), never YS Plugin'
 );
 check(
     str_contains($settings, "\$menu[ \$menu_key ][0] = __( '電商工具箱', 'yangsheep-checkout-optimization' )")
     && str_contains($settings, "\$menu[ \$menu_key ][3] = __( '電商工具箱', 'yangsheep-checkout-optimization' )"),
     'plugin normalizes a pre-registered ys-toolbox label back to 電商工具箱 (stale sibling hub clients)'
+);
+// P1（2026-07-26）：footer 兩顆按鈕須以 (0,3,0) 選擇器共用同一明確高度，
+// 否則 WP core 的 .wp-core-ui .button.button-large 會蓋回 46px/54px 不等高。
+check(
+    preg_match('/\.ys-submit-wrap \.button\.button-primary,\s*\n\s*\.ys-submit-wrap \.button\.ys-reset-colors-button\s*\{[^}]*height:\s*44px[^}]*\}/s', $settings)
+    && !preg_match('/\.ys-submit-wrap \.button-primary\s*\{[^}]*height:\s*auto/s', $settings),
+    'footer save/reset buttons share one explicit 44px height via (0,3,0) selectors'
 );
 // v1.7.6 使用者指定版面：無文字 label（aria-label 保留）、上限文字在標題列
 // 靠右垂直置中、全部使用與套用折抵同列。

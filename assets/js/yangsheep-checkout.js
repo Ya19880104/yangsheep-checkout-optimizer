@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.7';
+    window.__ysCheckoutOptimizerBuild = '1.7.8';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
