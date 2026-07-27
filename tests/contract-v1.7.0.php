@@ -120,13 +120,13 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.8')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.8'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.8'")
-    && str_contains($readme, '**當前版本**：1.7.8')
-    && str_contains($readme, '### v1.7.8 (2026-07-25)')
-    && str_contains($readme, '**最後更新**：2026-07-25'),
-    'v1.7.8 candidate version markers stay synchronized'
+    str_contains($bootstrap, 'Version:           1.7.9')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.9'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.9'")
+    && str_contains($readme, '**當前版本**：1.7.9')
+    && str_contains($readme, '### v1.7.9 (2026-07-28)')
+    && str_contains($readme, '**最後更新**：2026-07-28'),
+    'v1.7.9 candidate version markers stay synchronized'
 );
 // v1.7.8 電商工具箱命名（開發準則 §4）：Hub Client 2.0.4 中央統一為「電商工具箱」
 // （dashicons-store / 位置 56，與外掛自建一致）；外掛端另備 label 校正，
@@ -137,8 +137,9 @@ check(
     !str_contains($hubClientSrc, "'YS Plugin'")
     && str_contains($hubClientSrc, '電商工具箱')
     && str_contains($hubClientSrc, 'dashicons-store')
-    && str_contains($hubClientLoader, "YS_HUB_CLIENT_VERSION', '2.0.4'"),
-    'vendored hub client 2.0.4 registers ys-toolbox as 電商工具箱 (store icon), never YS Plugin'
+    && str_contains($hubClientLoader, "YS_HUB_CLIENT_VERSION', '2.0.5'")
+    && !str_contains($hubClientLoader, 'FeaturesUtil::declare_compatibility'),
+    'vendored hub client 2.0.5 registers ys-toolbox without claiming host HPOS compatibility'
 );
 check(
     str_contains($settings, "\$menu[ \$menu_key ][0] = __( '電商工具箱', 'yangsheep-checkout-optimization' )")

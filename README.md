@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.8
-**最後更新**：2026-07-25
+**當前版本**：1.7.9
+**最後更新**：2026-07-28
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -243,6 +243,11 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.9 (2026-07-28)
+
+- **HPOS 宣告歸位**：由結帳強化主外掛使用已註冊的主檔宣告相容性。
+- **Hub Client 2.0.5**：vendor library 不再以自己的檔案路徑宣告 HPOS，避免 WooCommerce 持續寫入 `Invalid plugin file` 錯誤。
 
 ### v1.7.8 (2026-07-25)
 
