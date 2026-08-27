@@ -120,13 +120,13 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.9')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.9'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.9'")
-    && str_contains($readme, '**當前版本**：1.7.9')
-    && str_contains($readme, '### v1.7.9 (2026-07-28)')
-    && str_contains($readme, '**最後更新**：2026-07-28'),
-    'v1.7.9 candidate version markers stay synchronized'
+    str_contains($bootstrap, 'Version:           1.7.11')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.11'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.11'")
+    && str_contains($readme, '**當前版本**：1.7.11')
+    && str_contains($readme, '### v1.7.11 (2026-08-27)')
+    && str_contains($readme, '**最後更新**：2026-08-27'),
+    'v1.7.11 candidate version markers stay synchronized'
 );
 // v1.7.8 電商工具箱命名（開發準則 §4）：Hub Client 2.0.4 中央統一為「電商工具箱」
 // （dashicons-store / 位置 56，與外掛自建一致）；外掛端另備 label 校正，
@@ -234,6 +234,41 @@ check(
     && str_contains($shippingCompat, 'selectedMethods.some(function(selectedValue)')
     && str_contains($shippingCompat, "selectedValue.split(':')[0] === methodList[i]"),
     'third-party CVS controls inspect every selected package including hidden rates with exact base-id matching'
+);
+// v1.7.11：WooCommerce 8.9+ address-i18n.js 以 locale 的 phone 條目蓋寫前端欄位
+// 並依 locale priority 重排 DOM。locale phone 必須對齊 YS 契約（priority 15）、
+// 拿掉 label/class/placeholder（label 蓋寫會把兩側電話統一改名「聯絡電話」、
+// class 蓋寫會換回 form-row-wide），且「不可」動 required（缺 required 時
+// address-i18n 會把欄位視覺降為選填並拔掉前端必填驗證 class）。
+check(
+    str_contains($checkoutFields, "add_filter( 'woocommerce_get_country_locale_default', array( \$this, 'align_locale_phone_entry' )")
+    && str_contains($checkoutFields, "add_filter( 'woocommerce_get_country_locale_base', array( \$this, 'align_locale_phone_entry' )")
+    && str_contains($checkoutFields, "\$fields['phone']['priority'] = 15;")
+    && str_contains($checkoutFields, "unset( \$fields['phone']['label'], \$fields['phone']['class'], \$fields['phone']['placeholder'] );")
+    && !str_contains($checkoutFields, "unset( \$fields['phone']['required']"),
+    'locale phone entry is aligned to priority 15 with label/class returned to server-side definitions and required left intact'
+);
+// v1.7.10：wc-paynow-shipping 在非 PayNow 物流時 hide 全部 .paynow-shipping-field，
+// shipping_phone 掛該 class 被連坐 — 強制顯示規則必須「不」以 enhanced gate 前綴，
+// native 模式（含 CSS 優化外掛攤平 media gate 的情境）也要生效。
+check(
+    preg_match(
+        '/body\.woocommerce-checkout\s+#shipping_phone_field\.paynow-shipping-field\s*\{\s*display:\s*block\s*!important;/s',
+        $shippingCompat
+    ) === 1
+    && !str_contains($shippingCompat, 'ys-checkout-enhanced #shipping_phone_field.paynow-shipping-field'),
+    'shipping phone stays visible in every shipping mode despite PayNow field-family hides'
+);
+check(
+    preg_match(
+        '/body\.woocommerce-checkout\s+button\.ys-cvs-btn\s*\{[^}]*width:\s*100%\s*!important;/s',
+        $shippingCompat
+    ) === 1
+    && preg_match(
+        '/body\.ys-checkout-enhanced\s+button\.ys-cvs-btn\s*\{\s*display:\s*none\s*!important;/s',
+        $shippingCompat
+    ) === 1,
+    'site-duplicated store button is full-width in native mode and hidden (plain selector, no :has dependency) once the YS store panel exists'
 );
 check(
     str_contains($shippingCompat, 'function isEnhancedCheckout()')
@@ -583,6 +618,21 @@ check(
     && str_contains($checkoutJs, '$field.slideUp')
     && !str_contains($checkoutJs, "$('.woocommerce-additional-fields__field-wrapper').slide"),
     'order-note toggle only controls the native order-comments field'
+);
+// v1.7.10：切換器跟著 #order_comments_field 走（電子發票等第三方模組插入
+// additional-fields 時維持「發票 → 切換器 → 備註」順序），且顯示同步閘門
+// 為「enhanced 或切換器實際可見」— 切換器隱藏時 fail-open 不動備註欄位。
+check(
+    str_contains($checkoutJs, 'function placeOrderNotesToggle()')
+    && str_contains($checkoutJs, '$toggle.detach().insertBefore($field)')
+    && str_contains($checkoutJs, "\$field.prev().is(\$toggle)")
+    && str_contains($checkoutJs, 'placeOrderNotesToggle();'),
+    'order-note toggle is re-anchored directly above the order-comments field, idempotently, on load and checkout updates'
+);
+check(
+    str_contains($checkoutJs, "var toggleVisible = \$toggle.closest('.yangsheep-order-notes-toggle').is(':visible')")
+    && str_contains($checkoutJs, "!\$('form.checkout').hasClass('ys-checkout-enhanced') && !toggleVisible"),
+    'order-note visibility sync engages when the toggle is visible even outside enhanced mode, and stays fail-open when hidden'
 );
 check(
     str_contains($checkoutJs, 'var $redeemSurfaces')

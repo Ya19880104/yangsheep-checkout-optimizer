@@ -6,7 +6,7 @@ jQuery(function ($) {
 
     // runtime build 探針：部署迭代間 ver 參數不變時，瀏覽器 memory cache 可能黏著舊版，
     // 驗證前先比對此值可即刻判定 runtime 實際載入的版本
-    window.__ysCheckoutOptimizerBuild = '1.7.9';
+    window.__ysCheckoutOptimizerBuild = '1.7.11';
     console.log('[YS Checkout] build ' + window.__ysCheckoutOptimizerBuild + ' 初始化');
 
     var ysCheckoutNonce = (typeof yangsheep_checkout_params !== 'undefined' && yangsheep_checkout_params.nonce)
@@ -997,15 +997,38 @@ jQuery(function ($) {
     $(document.body).on('updated_checkout', syncAccountFields);
 
     // ===== 6. 訂單備註 checkbox =====
+    // 相容（v1.7.10）：切換器永遠緊貼「訂單備註」欄位正上方。電子發票等
+    // 第三方模組會把自己的區塊插進 additional-fields（含直接 prepend 到
+    // field wrapper），切換器若固定在區塊最上方會被隔在發票模組之前 —
+    // 因此跟著 #order_comments_field 走，插入順序與第三方腳本執行先後無關。
+    function placeOrderNotesToggle() {
+        var $toggle = $('.yangsheep-order-notes-toggle');
+        var $field  = $('#order_comments_field');
+
+        if ($toggle.length !== 1 || !$field.length) {
+            return;
+        }
+
+        if (!$field.prev().is($toggle)) {
+            $toggle.detach().insertBefore($field);
+        }
+    }
+
     function syncOrderCommentsVisibility(animate) {
         var $toggle = $('#yangsheep_show_order_notes');
         var $field  = $('#order_comments_field');
 
-        if (
-            !$('form.checkout').hasClass('ys-checkout-enhanced')
-            || !$toggle.length
-            || !$field.length
-        ) {
+        if (!$toggle.length || !$field.length) {
+            return;
+        }
+
+        // v1.7.10：閘門由「僅 enhanced」放寬為「enhanced 或切換器實際可見」。
+        // CSS 優化外掛（如 WP Rocket RUCSS）可能把 media="not all" 的增強樣式
+        // 攤平成無條件載入，讓切換器在 native 模式也顯示 — 此時必須接管備註
+        // 欄位顯示，否則出現「看得到勾選框但勾了沒反應」。未增強且切換器仍
+        // 隱藏時維持 Woo 原生行為（fail-open，備註欄位不被藏走）。
+        var toggleVisible = $toggle.closest('.yangsheep-order-notes-toggle').is(':visible');
+        if (!$('form.checkout').hasClass('ys-checkout-enhanced') && !toggleVisible) {
             return;
         }
 
@@ -1020,7 +1043,12 @@ jQuery(function ($) {
     $(document).on('change', '#yangsheep_show_order_notes', function () {
         syncOrderCommentsVisibility(true);
     });
+    placeOrderNotesToggle();
     syncOrderCommentsVisibility(false);
+    $(document.body).on('updated_checkout', function () {
+        placeOrderNotesToggle();
+        syncOrderCommentsVisibility(false);
+    });
 
     // ===== 7. 台灣地址 Twzipcode 模組 =====
     /**

@@ -21,7 +21,7 @@
  *    - 修正電話欄位位置被第三方外掛影響的問題
  *
  * @package YANGSHEEP_Checkout_Optimization
- * @version 1.7.2
+ * @version 1.7.10
  * @since 2026-01-12
  *
  * 實作說明：
@@ -803,6 +803,54 @@ class YSThirdPartyShippingCompat {
         body.ys-checkout-enhanced table.cvs-info td:nth-child(n+4),
         body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info th:nth-child(n+4),
         body.ys-checkout-enhanced .woocommerce-shipping-fields .cvs-info td:nth-child(n+4) {
+            display: none !important;
+        }
+
+        /* ===== 6. PayNow 官方外掛（wc-paynow-shipping）相容（v1.7.10）===== */
+
+        /*
+         * 6a. 收件人電話永遠顯示
+         * wc-paynow-shipping 將 shipping_phone 註冊為自家欄位（class 帶
+         * paynow-shipping-field），其前端 JS 在選到「非 PayNow 物流」時會
+         * jQuery.hide() 所有 .paynow-shipping-field，電話欄位被連坐隱藏。
+         * 電話是台灣化收件欄位、任何物流方式都需要 — 以 !important 蓋過
+         * inline display:none。不分 enhanced / native 模式皆生效；
+         * 收件區塊整體收合時（ship-to-different 未勾）由祖先元素隱藏，不受影響。
+         */
+        body.woocommerce-checkout #shipping_phone_field.paynow-shipping-field {
+            display: block !important;
+        }
+
+        /*
+         * 6b. 站方自訂「選擇門市」複製鈕（button.ys-cvs-btn）
+         * 部分站點以自訂片段把 #choose-cvs-btn 複製一顆到
+         * .woocommerce-shipping-fields__field-wrapper（class 掛 ys-cvs-btn 供樣式客製）。
+         * 未增強（native）時修正為全寬按鈕，避免被欄位 Grid 擠成窄條斷行。
+         */
+        body.woocommerce-checkout button.ys-cvs-btn {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            text-align: center !important;
+        }
+
+        /* 複製鈕的 wrapper 在 Grid 版面下獨占整列（瀏覽器不支援 :has 時，上一條仍生效） */
+        body.woocommerce-checkout p.form-row:has(> button.ys-cvs-btn) {
+            grid-column: 1 / -1 !important;
+            float: none !important;
+            width: 100% !important;
+        }
+
+        /*
+         * 6c. 增強模式已有 YS 超商門市面板（tr.choose_cvs → ys-paynow-store-selector，
+         * 含全寬選店按鈕與門市摘要），複製鈕重複且 PayNow 事件只綁第一顆 → 隱藏。
+         * 兩條分開寫：不支援 :has 的瀏覽器至少隱藏按鈕本體。
+         * （寫在 6b 之後，同特異性由後者勝出。）
+         */
+        body.ys-checkout-enhanced button.ys-cvs-btn {
+            display: none !important;
+        }
+        body.ys-checkout-enhanced p.form-row:has(> button.ys-cvs-btn) {
             display: none !important;
         }
         </style>

@@ -394,6 +394,13 @@ h3#order_review_heading,
     position: relative;
 }
 
+/* v1.7.10：切換器由 JS 移到 #order_comments_field 正上方（電子發票等第三方
+   模組插入 additional-fields 時保持「發票 → 切換器 → 備註」順序）；
+   欄位 wrapper 若為 Grid 版面則獨占整列 */
+.woocommerce-additional-fields__field-wrapper .yangsheep-order-notes-toggle {
+    grid-column: 1 / -1;
+}
+
 /* 取貨超商 - 樣式已移至 class-yangsheep-third-party-shipping-compat.php */
 
 /* 隱藏超取欄位的「選填」文字 */

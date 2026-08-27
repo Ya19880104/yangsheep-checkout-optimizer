@@ -4,8 +4,8 @@
 
 ## 版本資訊
 
-**當前版本**：1.7.9
-**最後更新**：2026-07-28
+**當前版本**：1.7.11
+**最後更新**：2026-08-27
 **開發者**：羊羊數位科技有限公司
 **網站**：https://yangsheep.com.tw
 
@@ -243,6 +243,17 @@ if ( ! preg_match( '/^09\d{8}$/', $phone_numeric ) ) {
 ## 版本紀錄
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
+
+### v1.7.11 (2026-08-27)
+
+- **收件人電話位置被 WooCommerce 前端 locale 重排修正**：WooCommerce 8.9+ 將 phone 納入 address-i18n.js 的 locale 欄位——頁面載入與切換國家時，前端會用 core locale 的 phone 條目（priority 100、label「聯絡電話」、class `form-row-wide`）蓋掉伺服器輸出並依 locale priority 重排 DOM，導致電話欄位掉到詳細地址之後、「訂購人電話／收件人電話」被統一改名「聯絡電話」（伺服器端 HTML 順序其實正確，是前端 JS 事後搬動）。新增 `woocommerce_get_country_locale_default` / `_base` filter 將 locale phone 條目對齊 YS 契約：priority 15（同 `force_phone_fields`）、label / class / placeholder 交還伺服器端欄位定義、required 保留原值（避免 address-i18n 把欄位視覺降為選填並拔掉前端必填驗證 class）。
+
+### v1.7.10 (2026-08-27)
+
+- **PayNow 官方物流（wc-paynow-shipping）相容**：修正選「非 PayNow 物流」（宅配等）時收件人電話被 PayNow 前端 JS 連坐隱藏 — `shipping_phone` 掛有 `paynow-shipping-field` class，該外掛切換物流時會 hide 全部自家欄位；改以永遠載入的 `!important` 規則強制顯示，enhanced / native 模式皆生效。
+- **站方自訂選店複製鈕（`button.ys-cvs-btn`）樣式接管**：站點以自訂片段複製第二顆 `#choose-cvs-btn` 到收件欄位區時，native 模式修正為全寬按鈕（不再被欄位 Grid 擠成窄條斷行）；enhanced 模式已有 YS 超商門市面板、且 PayNow 點擊事件只綁第一顆按鈕，複製鈕屬重複死鈕 → 直接隱藏。
+- **訂單備註切換器跟隨備註欄位**：切換器改由 JS 固定插在 `#order_comments_field` 正上方，電子發票（速買配等）模組插入其他資訊區塊時維持「發票模組 → 切換器 → 備註欄位」順序，與第三方腳本執行先後無關；Grid 版面下切換器獨占整列。
+- **備註顯示同步閘門放寬**：由「僅 enhanced」放寬為「enhanced 或切換器實際可見」— CSS 優化外掛（WP Rocket RUCSS 等）把 `media="not all"` 增強樣式攤平時，native 模式也會顯示切換器，此時同樣接管備註欄位顯示，修正「勾選框看得到但勾了沒反應」；切換器隱藏時維持 Woo 原生行為（fail-open）。
 
 ### v1.7.9 (2026-07-28)
 

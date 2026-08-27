@@ -31,11 +31,51 @@ class YSCheckoutFields {
         add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'force_phone_fields' ), 9999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'enforce_checkout_field_compatibility' ), PHP_INT_MAX );
+        // v1.7.11：WooCommerce 8.9+ 把 phone 納入前端 locale 欄位（address-i18n.js），
+        // 頁面載入/切國家時會用 locale 的 phone 條目（core 預設 priority 100、label「聯絡電話」、
+        // class form-row-wide）蓋掉伺服器輸出並「依 locale priority 重排 DOM」——
+        // 電話因此被搬到地址之後、label 被統一改名。這裡把 locale 的 phone 條目對齊
+        // YS 契約：priority 15（同 force_phone_fields）、label/class/placeholder 交還
+        // 伺服器端欄位定義（billing=訂購人側、shipping=收件人側，不可被 locale 統一改名）。
+        // default 條目會被複製給 base country（TW），base filter 再補一層保險。
+        add_filter( 'woocommerce_get_country_locale_default', array( $this, 'align_locale_phone_entry' ), 100 );
+        add_filter( 'woocommerce_get_country_locale_base', array( $this, 'align_locale_phone_entry' ), 100 );
         add_filter( 'woocommerce_ship_to_different_address_checked', array( $this, 'force_separate_shipping_address' ), 999 );
         add_filter( 'woocommerce_billing_fields', array( $this, 'force_billing_phone' ), 9999 );
         // v1.6.20：兩個電話驗證 hook 都註冊，內部依設定決定是否實際執行
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_shipping_phone' ) );
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_billing_phone' ) );
+    }
+
+    /**
+     * Align the locale phone entry with the YS field contract (v1.7.11).
+     *
+     * address-i18n.js applies each locale entry verbatim on load and on
+     * country change: a present label/class overwrites the server-rendered
+     * markup for BOTH billing_phone and shipping_phone, and a present
+     * priority feeds the client-side DOM re-sort. Keep only what must win
+     * (priority 15, required untouched so the field is not visually
+     * demoted to optional) and drop the rest so the server-side field
+     * definitions stay authoritative.
+     *
+     * Hooked on woocommerce_get_country_locale_default (copied to the base
+     * country by WC_Countries) and woocommerce_get_country_locale_base.
+     *
+     * @param array $fields Locale field entries.
+     * @return array
+     */
+    public function align_locale_phone_entry( $fields ) {
+        if ( isset( $fields['phone'] ) && is_array( $fields['phone'] ) ) {
+            // 與 force_phone_fields 的排序契約一致：姓名(5/10) 之後、地址(40+) 之前
+            $fields['phone']['priority'] = 15;
+            // label/class/placeholder 交還伺服器端欄位定義（兩側電話名稱可不同，
+            // locale 蓋寫會把 billing/shipping 的電話 label 統一改成同一個字串，
+            // 例如把「收件人電話」蓋成「聯絡電話」；class 蓋寫會把 form-row 換回
+            // form-row-wide）；required 保留原值，
+            // 否則 address-i18n 會把欄位視覺降為「選填」並拔掉前端必填驗證 class。
+            unset( $fields['phone']['label'], $fields['phone']['class'], $fields['phone']['placeholder'] );
+        }
+        return $fields;
     }
 
     /**

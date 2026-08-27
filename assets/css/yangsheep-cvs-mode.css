@@ -21,3 +21,11 @@ body.yangsheep-cvs-mode #shipping_address_2_field,
 body.yangsheep-cvs-mode #shipping-zipcode-fields {
     display: none !important;
 }
+
+/* ===== v1.7.10 永遠載入的版面守則 =====
+   訂單備註切換器由 JS 移到 #order_comments_field 正上方；主 CSS 在
+   native 模式是 media="not all" 不生效，此條需永遠載入 —
+   第三方欄位 Grid（Blocksy 等）下讓切換器獨占整列，避免被擠成窄欄。 */
+.woocommerce-additional-fields__field-wrapper .yangsheep-order-notes-toggle {
+    grid-column: 1 / -1;
+}
