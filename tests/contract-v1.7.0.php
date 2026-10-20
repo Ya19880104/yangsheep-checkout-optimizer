@@ -120,13 +120,13 @@ check(
     'coupon AJAX writes once to the enhanced notice host instead of every page wrapper'
 );
 check(
-    str_contains($bootstrap, 'Version:           1.7.11')
-    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.11'")
-    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.11'")
-    && str_contains($readme, '**當前版本**：1.7.11')
-    && str_contains($readme, '### v1.7.11 (2026-08-27)')
-    && str_contains($readme, '**最後更新**：2026-08-27'),
-    'v1.7.11 candidate version markers stay synchronized'
+    str_contains($bootstrap, 'Version:           1.7.12')
+    && str_contains($bootstrap, "YANGSHEEP_CHECKOUT_OPTIMIZATION_VERSION', '1.7.12'")
+    && str_contains($checkoutJs, "__ysCheckoutOptimizerBuild = '1.7.12'")
+    && str_contains($readme, '**當前版本**：1.7.12')
+    && str_contains($readme, '### v1.7.12 (2026-10-20)')
+    && str_contains($readme, '**最後更新**：2026-10-20'),
+    'v1.7.12 candidate version markers stay synchronized'
 );
 // v1.7.8 電商工具箱命名（開發準則 §4）：Hub Client 2.0.4 中央統一為「電商工具箱」
 // （dashicons-store / 位置 56，與外掛自建一致）；外掛端另備 label 校正，
