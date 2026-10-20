@@ -28,9 +28,12 @@ class YSCheckoutFields {
         add_filter( 'woocommerce_shipping_fields', array( $this, 'add_shipping_phone' ), 20 );
         add_filter( 'woocommerce_customer_meta_fields', array( $this, 'add_customer_meta_fields' ), 20 );
         add_filter( 'woocommerce_address_to_edit', array( $this, 'filter_address_to_edit' ), 20, 2 );
-        add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), 999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'force_phone_fields' ), 9999 );
         add_filter( 'woocommerce_checkout_fields', array( $this, 'enforce_checkout_field_compatibility' ), PHP_INT_MAX );
+        // Narrow CVS address rules must survive field editors even when the broader
+        // field-compatibility mode is disabled (ThemeHigh uses priority 1000).
+        add_filter( 'woocommerce_checkout_fields', array( $this, 'maybe_remove_address_required_for_cvs' ), PHP_INT_MAX );
+        add_action( 'woocommerce_checkout_process', array( $this, 'refresh_cvs_checkout_fields' ), PHP_INT_MAX );
         // v1.7.11：WooCommerce 8.9+ 把 phone 納入前端 locale 欄位（address-i18n.js），
         // 頁面載入/切國家時會用 locale 的 phone 條目（core 預設 priority 100、label「聯絡電話」、
         // class form-row-wide）蓋掉伺服器輸出並「依 locale priority 重排 DOM」——
@@ -160,6 +163,31 @@ class YSCheckoutFields {
             }
         }
         return $fields;
+    }
+
+    /**
+     * Repair a checkout field cache populated before our filters were registered.
+     *
+     * Country seeding in field editors can call get_checkout_fields() before
+     * checkout_process. Re-running the entire filter chain can repeat unrelated
+     * customizations; update the CVS address requirements and preserve our phone
+     * contract before WooCommerce reads and validates the submitted fields.
+     */
+    public function refresh_cvs_checkout_fields() {
+        if ( ! $this->is_cvs_shipping_selected() ) {
+            return;
+        }
+
+        $checkout = WC()->checkout();
+        $fields = $this->maybe_remove_address_required_for_cvs( $checkout->get_checkout_fields() );
+        // Provider filters may also cache optional phones before checkout_process.
+        // Match force_phone_fields() without changing field labels, layout or keys.
+        foreach ( array( 'billing', 'shipping' ) as $group ) {
+            if ( isset( $fields[ $group ][ $group . '_phone' ] ) ) {
+                $fields[ $group ][ $group . '_phone' ]['required'] = true;
+            }
+        }
+        $checkout->checkout_fields = $fields;
     }
 
     private function is_cvs_shipping_selected() {

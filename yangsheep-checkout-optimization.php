@@ -103,6 +103,7 @@ use YangSheep\CheckoutOptimizer\Checkout\YSCheckoutSidebar;
 use YangSheep\CheckoutOptimizer\Checkout\YSShippingCards;
 use YangSheep\CheckoutOptimizer\Order\YSOrderEnhancer;
 use YangSheep\CheckoutOptimizer\Compat\YSThirdPartyShippingCompat;
+use YangSheep\CheckoutOptimizer\Compat\YSCvsCheckoutGuard;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 use YangSheep\CheckoutOptimizer\Compat\YSYithCouponDisplay;
 use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
@@ -165,6 +166,7 @@ add_action( 'init', function(){
     YSCheckoutSidebar::get_instance();
     YSOrderEnhancer::get_instance();
     YSThirdPartyShippingCompat::get_instance();
+    YSCvsCheckoutGuard::get_instance();
     YSWPLoyaltyIntegration::get_instance();
     YSYithCouponDisplay::get_instance();
     YSYithPointsIntegration::get_instance();
@@ -265,6 +267,12 @@ add_action( 'wp_enqueue_scripts', function(){
             'nonce'                => wp_create_nonce( 'yangsheep_checkout_nonce' ),
         ) );
 
+        wp_enqueue_script( 'yangsheep-cvs-checkout-guard', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/cvs-checkout-guard.js', array( 'jquery', 'wc-checkout' ), yangsheep_checkout_asset_version( 'assets/js/cvs-checkout-guard.js' ), true );
+        wp_localize_script( 'yangsheep-cvs-checkout-guard', 'ysCvsCheckoutGuard', array(
+            'contracts' => yangsheep_checkout_cvs_store_contracts(),
+            'message'   => __( '尚未選擇超商取貨門市，或門市與運送方式不符，請重新選擇門市。', 'yangsheep-checkout-optimization' ),
+        ) );
+
         // 物流卡片 CSS/JS（僅結帳頁主表單）
         wp_enqueue_style( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-shipping-cards.css', [ 'yangsheep-checkout-optimization' ], yangsheep_checkout_asset_version( 'assets/css/yangsheep-shipping-cards.css' ), 'not all' );
         wp_enqueue_script( 'yangsheep-shipping-cards', YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-shipping-cards.js', [ 'jquery' ], yangsheep_checkout_asset_version( 'assets/js/yangsheep-shipping-cards.js' ), true );
@@ -291,6 +299,37 @@ add_action( 'wp_enqueue_scripts', function(){
         }
     }
 });
+
+/** Available rates, rather than only the initial choice, allow switching carriers. */
+function yangsheep_checkout_cvs_store_contracts() {
+    $methods = array();
+    $shipping = WC()->shipping();
+    foreach ( $shipping ? $shipping->get_packages() : array() as $package ) {
+        foreach ( $package['rates'] ?? array() as $rate ) {
+            $methods[] = $rate->get_id();
+        }
+    }
+    $chosen = WC()->session ? WC()->session->get( 'chosen_shipping_methods', array() ) : array();
+    foreach ( is_array( $chosen ) ? $chosen : array() as $method ) {
+        if ( is_string( $method ) ) {
+            $methods[] = $method;
+        }
+    }
+    return YSCvsCheckoutGuard::get_store_contracts( array_values( array_unique( $methods ) ) );
+}
+
+/** Keep contract data in an inert fragment; country/zone changes can replace rates. */
+function yangsheep_checkout_cvs_contracts_markup() {
+    return '<div id="ys-cvs-checkout-contracts" hidden data-contracts="' . esc_attr( wp_json_encode( yangsheep_checkout_cvs_store_contracts() ) ) . '"></div>';
+}
+
+add_action( 'woocommerce_checkout_after_order_review', function () {
+    echo yangsheep_checkout_cvs_contracts_markup(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+} );
+add_filter( 'woocommerce_update_order_review_fragments', function ( $fragments ) {
+    $fragments['#ys-cvs-checkout-contracts'] = yangsheep_checkout_cvs_contracts_markup();
+    return $fragments;
+} );
 
 // 保留 WooCommerce 原生模板、標準 checkout hooks、付款與折扣入口。
 // YS 只有在前端 layout 初始化成功後才隱藏原生折扣入口；JS 失敗時仍可使用 Woo 原生流程。
