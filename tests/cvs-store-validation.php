@@ -57,8 +57,9 @@ namespace {
 
 namespace RY\WooCommerce {
     final class Main {
-        public static function get_option( $key, $default = null ) {
-            return 'ecpay_shipping_cvs_type' === $key ? $GLOBALS['test_mode'] : $default;
+        // A null test mode means the store never saved the option.
+        public static function get_option( $key, $default = false ) {
+            return 'ecpay_shipping_cvs_type' === $key ? ( $GLOBALS['test_mode'] ?? $default ) : $default;
         }
     }
 }
@@ -116,8 +117,8 @@ namespace {
         class RY_ECPay_Shipping_CVS_Hilife { const Shipping_Sub_Type = 'HILIFE'; }
     } elseif ( 'legacy' === $provider ) {
         class RY_WT {
-            public static function get_option( $key, $default = null ) {
-                return 'ecpay_shipping_cvs_type' === $key ? $GLOBALS['test_mode'] : $default;
+            public static function get_option( $key, $default = false ) {
+                return 'ecpay_shipping_cvs_type' === $key ? ( $GLOBALS['test_mode'] ?? $default ) : $default;
             }
         }
         class RY_ECPay_Shipping {
@@ -334,6 +335,18 @@ namespace {
                 $c2c_frozen = YSCvsCheckoutGuard::get_store_contracts( array( $seven ) );
                 check( 'UNIMARTC2C' === ( $c2c_frozen[0]['expected'] ?? null ), 'C2C subtype follows native mode despite product temperature' );
             }
+            // Unsaved option: modern RY defaults to C2C, legacy RY opens the map without a suffix.
+            $GLOBALS['test_mode'] = null;
+            WC()->session->values = array( 'chosen_shipping_methods' => array( $family ), 'ry_ecpay_cvs_info' => $session );
+            $unsaved = YSCvsCheckoutGuard::get_store_contracts( array( $family ) );
+            $native_default = 'legacy' === $provider ? 'FAMI' : 'FAMIC2C';
+            check( $native_default === ( $unsaved[0]['expected'] ?? null ), 'unsaved CVS type follows the provider native default' );
+            $test = $data;
+            if ( 'modern' === $provider ) WC()->session->values['ry_ecpay_cvs_info']['LogisticsSubType'] = $native_default;
+            else $test[ $contract['fields']['service'] ] = $native_default;
+            check( ! blocked( $test ), 'store chosen before the CVS type was saved is accepted' );
+            $GLOBALS['test_mode'] = 'C2C';
+            WC()->session->values = array( 'chosen_shipping_methods' => array( $family ), 'ry_ecpay_cvs_info' => $session );
         }
         WC()->cart->physical = false;
         check( ! blocked( array( 'shipping_method' => array( $family ) ) ), 'virtual carts are not affected by stale shipping form data' );

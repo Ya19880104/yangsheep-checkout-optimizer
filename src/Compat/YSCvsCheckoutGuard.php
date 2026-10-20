@@ -127,7 +127,9 @@ class YSCvsCheckoutGuard {
                 return null;
             }
             $subtype = $properties['LogisticsSubType'];
-            $mode = \RY_WT::get_option( 'ecpay_shipping_cvs_type', 'C2C' );
+            // Legacy RY reads this option without a default: until the store saves its
+            // settings the map is opened without the C2C suffix (UNIMART, not UNIMARTC2C).
+            $mode = \RY_WT::get_option( 'ecpay_shipping_cvs_type' );
         }
         if ( ! is_string( $subtype ) || '' === $subtype ) {
             return null;
