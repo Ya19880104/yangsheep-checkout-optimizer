@@ -40,13 +40,13 @@ class YSCustomFieldsSettingsTab {
     public function enqueue_assets(): void {
         wp_enqueue_style(
             'yangsheep-admin-custom-fields',
-            YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/css/yangsheep-admin-custom-fields.css',
+            YANGSHEEP_CHECKOUT_URL . 'assets/css/yangsheep-admin-custom-fields.css',
             array(),
             yangsheep_checkout_asset_version( 'assets/css/yangsheep-admin-custom-fields.css' )
         );
         wp_enqueue_script(
             'yangsheep-admin-custom-fields',
-            YANGSHEEP_CHECKOUT_OPTIMIZATION_URL . 'assets/js/yangsheep-admin-custom-fields.js',
+            YANGSHEEP_CHECKOUT_URL . 'assets/js/yangsheep-admin-custom-fields.js',
             array( 'jquery' ),
             yangsheep_checkout_asset_version( 'assets/js/yangsheep-admin-custom-fields.js' ),
             true

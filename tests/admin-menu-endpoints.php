@@ -100,6 +100,9 @@ function check_result(bool $condition, string $message): void
 }
 
 require dirname(__DIR__) . '/src/Admin/YSCheckoutSettings.php';
+// v1.8.0：設定頁同時載入「自訂欄位」分頁的資源
+require dirname(__DIR__) . '/src/CustomFields/YSCustomFieldDefinitions.php';
+require dirname(__DIR__) . '/src/Admin/YSCustomFieldsSettingsTab.php';
 
 $reflection = new ReflectionClass(\YangSheep\CheckoutOptimizer\Admin\YSCheckoutSettings::class);
 $settings = $reflection->newInstanceWithoutConstructor();
@@ -144,6 +147,17 @@ $settings->enqueue_admin_scripts('ys-plugin_page_ys-checkout-optimizer');
 check_result(
     in_array('yangsheep-admin-settings', $GLOBALS['ys_enqueued_scripts'], true),
     'toolbox endpoint loads the complete settings script'
+);
+check_result(
+    in_array('yangsheep-admin-custom-fields', $GLOBALS['ys_enqueued_scripts'], true),
+    'settings endpoint loads the custom fields editor script'
+);
+
+$GLOBALS['ys_enqueued_scripts'] = [];
+$settings->enqueue_admin_scripts('edit.php');
+check_result(
+    !in_array('yangsheep-admin-custom-fields', $GLOBALS['ys_enqueued_scripts'], true),
+    'unrelated admin screens do not load the custom fields editor'
 );
 
 $resolveMethodExists = method_exists($settings, 'resolve_settings_page_slug');
