@@ -401,6 +401,17 @@ h3#order_review_heading,
     grid-column: 1 / -1;
 }
 
+/* v1.8.0：備註切換器本身不帶下方間距——備註收起時卡片上下留白一致；展開時
+   由緊接在後的備註欄位提供同樣 15px 間距（jQuery slideDown／slideUp 會一併
+   動畫 margin，展開收起不跳動）。 */
+.yangsheep-order-notes-toggle {
+    margin-bottom: 0;
+}
+
+.woocommerce-additional-fields__field-wrapper .yangsheep-order-notes-toggle + #order_comments_field {
+    margin-top: 15px;
+}
+
 /* 取貨超商 - 樣式已移至 class-yangsheep-third-party-shipping-compat.php */
 
 /* 隱藏超取欄位的「選填」文字 */
@@ -771,6 +782,111 @@ a.woocommerce-remove-coupon {
 #account_username_field.ys-show {
     grid-column: 1 / -1;
     width: 100% !important;
+}
+
+/* ===== 建立帳號：併入帳單資訊卡片的提示框（v1.8.0）=====
+   JS 在版面增強成功後把 .woocommerce-account-fields 移入帳單資訊卡片並加上
+   .yangsheep-account-prompt；未增強時維持 WooCommerce 原生位置與樣式。 */
+.woocommerce-billing-fields .yangsheep-account-prompt {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border: 1px solid var(--yangsheep-shipping-border-active, #5f7482);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: var(--yangsheep-shipping-card-active-bg, #e8eff5);
+}
+
+.yangsheep-account-prompt p.create-account {
+    margin: 0;
+    padding: 0;
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    margin: 0;
+    cursor: pointer;
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox span {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ys-text-heading);
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+    opacity: 0;
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox::before {
+    content: '';
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--theme-form-field-border-initial-color, #7d929e);
+    border-radius: 4px;
+    background: var(--form-field-bg-color, #ffffff);
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    margin-top: -7px;
+    width: 6px;
+    height: 11px;
+    border: solid var(--theme-button-text-initial-color, #ffffff);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    transition: all 0.2s ease;
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox:hover::before {
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox:has(input:checked)::before {
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+    background: var(--theme-button-background-initial-color, #5f7482);
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox:has(input:checked)::after {
+    transform: rotate(45deg) scale(1);
+}
+
+.yangsheep-account-prompt .woocommerce-form__label-for-checkbox:has(input:focus-visible)::before {
+    outline: 2px solid var(--theme-button-background-initial-color, #5f7482);
+    outline-offset: 2px;
+}
+
+.yangsheep-account-prompt .yangsheep-account-hint {
+    margin: 6px 0 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ys-text-secondary);
+}
+
+/* 有勾選框時，提示文字對齊勾選框右側的文字 */
+.yangsheep-account-prompt p.create-account + .yangsheep-account-hint {
+    margin-left: 34px;
+}
+
+.yangsheep-account-prompt div.create-account {
+    margin-top: 12px;
 }
 
 /* RWD: <=999.9px（平板以下通用） */

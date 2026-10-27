@@ -12,14 +12,17 @@ body.ys-checkout-enhanced .ry-shipping-store-selector {
     margin-top: 15px;
 }
 
-/* PayNow renders the chooser in a two-cell table row. JS marks only the
- * verified PayNow row so generic RY/ECPay rows keep their native contract. */
+/* PayNow and RY Tools for WooCommerce render the chooser in a two-cell table
+ * row. JS marks only verified rows (ys-paynow-store-selector /
+ * ys-ry-store-selector), so legacy woomp rows keep their native contract. */
+body.ys-checkout-enhanced tr.ys-ry-store-selector,
 body.ys-checkout-enhanced tr.ys-paynow-store-selector {
     display: block !important;
     width: 100% !important;
     margin: 16px 0 0;
 }
 
+body.ys-checkout-enhanced tr.ys-ry-store-selector > th.ys-cvs-store-title,
 body.ys-checkout-enhanced tr.ys-paynow-store-selector > th.ys-cvs-store-title {
     display: block !important;
     width: 100% !important;
@@ -30,6 +33,7 @@ body.ys-checkout-enhanced tr.ys-paynow-store-selector > th.ys-cvs-store-title {
     font-weight: 600;
 }
 
+body.ys-checkout-enhanced tr.ys-ry-store-selector > td.ys-cvs-store-panel,
 body.ys-checkout-enhanced tr.ys-paynow-store-selector > td.ys-cvs-store-panel {
     display: block !important;
     width: 100% !important;
@@ -77,6 +81,7 @@ body.ys-checkout-enhanced .payuni-store-selector .payuni-store-map-btn,
 body.ys-checkout-enhanced #choose-cvs-btn,
 body.ys-checkout-enhanced .paynow-choose-cvs,
 body.ys-checkout-enhanced .ry-shipping-store-selector button,
+body.ys-checkout-enhanced tr.ys-ry-store-selector .ry-choose-cvs,
 body.ys-checkout-enhanced button.choose_cvs,
 body.ys-checkout-enhanced a.choose_cvs {
     display: block;
@@ -95,6 +100,7 @@ body.ys-checkout-enhanced a.choose_cvs {
     cursor: pointer;
 }
 
+body.ys-checkout-enhanced tr.ys-ry-store-selector .ry-choose-cvs,
 body.ys-checkout-enhanced tr.ys-paynow-store-selector #choose-cvs-btn {
     width: 100%;
     margin-top: 0;
@@ -104,6 +110,7 @@ body.ys-checkout-enhanced .payuni-store-selector .payuni-store-map-btn:hover,
 body.ys-checkout-enhanced #choose-cvs-btn:hover,
 body.ys-checkout-enhanced .paynow-choose-cvs:hover,
 body.ys-checkout-enhanced .ry-shipping-store-selector button:hover,
+body.ys-checkout-enhanced tr.ys-ry-store-selector .ry-choose-cvs:hover,
 body.ys-checkout-enhanced button.choose_cvs:hover,
 body.ys-checkout-enhanced a.choose_cvs:hover {
     opacity: 0.9;
@@ -113,6 +120,7 @@ body.ys-checkout-enhanced .payuni-store-selector .payuni-store-map-btn:focus-vis
 body.ys-checkout-enhanced #choose-cvs-btn:focus-visible,
 body.ys-checkout-enhanced .paynow-choose-cvs:focus-visible,
 body.ys-checkout-enhanced .ry-shipping-store-selector button:focus-visible,
+body.ys-checkout-enhanced tr.ys-ry-store-selector .ry-choose-cvs:focus-visible,
 body.ys-checkout-enhanced button.choose_cvs:focus-visible,
 body.ys-checkout-enhanced a.choose_cvs:focus-visible {
     outline: 2px solid currentColor;
@@ -120,6 +128,7 @@ body.ys-checkout-enhanced a.choose_cvs:focus-visible {
 }
 
 @media (max-width: 767.9px) {
+    body.ys-checkout-enhanced tr.ys-ry-store-selector > td.ys-cvs-store-panel,
     body.ys-checkout-enhanced tr.ys-paynow-store-selector > td.ys-cvs-store-panel {
         padding: 15px;
     }

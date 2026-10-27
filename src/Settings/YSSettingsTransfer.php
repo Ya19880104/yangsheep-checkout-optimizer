@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use YangSheep\CheckoutOptimizer\CustomFields\YSCustomFieldDefinitions;
+
 /**
  * Validates a complete settings package before applying any writes.
  *
@@ -21,7 +23,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class YSSettingsTransfer {
 
     public const FORMAT = 'yangsheep-checkout-optimizer-settings';
-    public const SCHEMA_VERSION = 1;
+    public const SCHEMA_VERSION = 2;
+
+    /**
+     * Keys introduced by schema 2 (v1.8.0). A schema 1 package (v1.7.x export)
+     * does not carry them; importing it keeps their current values.
+     */
+    public const KEYS_ADDED_IN_SCHEMA_2 = array(
+        'yangsheep_checkout_account_hint',
+        'yangsheep_checkout_custom_fields',
+    );
     public const MAX_JSON_BYTES = 1048576;
     public const LOCK_OPTION = 'ys_checkout_settings_write_lock';
     public const LOCK_TTL = 300;
@@ -199,9 +210,13 @@ class YSSettingsTransfer {
         if ( ( $package['format'] ?? null ) !== self::FORMAT ) {
             $errors[] = 'Invalid package format.';
         }
-        if ( ( $package['schema_version'] ?? null ) !== self::SCHEMA_VERSION ) {
+        $schema_version = $package['schema_version'] ?? null;
+        if ( ! in_array( $schema_version, array( 1, self::SCHEMA_VERSION ), true ) ) {
             $errors[] = 'Unsupported schema version.';
         }
+        $expected_setting_keys = 1 === $schema_version
+            ? array_values( array_diff( YSSettingsManager::ALL_SETTING_KEYS, self::KEYS_ADDED_IN_SCHEMA_2 ) )
+            : YSSettingsManager::ALL_SETTING_KEYS;
         if ( ! isset( $package['plugin_version'] ) || ! is_string( $package['plugin_version'] ) || '' === trim( $package['plugin_version'] ) ) {
             $errors[] = 'Invalid plugin version.';
         }
@@ -213,8 +228,8 @@ class YSSettingsTransfer {
         if ( ! isset( $package['settings'] ) || ! is_array( $package['settings'] ) ) {
             $errors[] = 'Settings must be an object.';
         } else {
-            self::validate_exact_keys( $package['settings'], YSSettingsManager::ALL_SETTING_KEYS, 'settings', $errors );
-            foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+            self::validate_exact_keys( $package['settings'], $expected_setting_keys, 'settings', $errors );
+            foreach ( $expected_setting_keys as $key ) {
                 if ( ! array_key_exists( $key, $package['settings'] ) ) {
                     continue;
                 }
@@ -322,6 +337,10 @@ class YSSettingsTransfer {
 
         $changed_keys = array();
         foreach ( YSSettingsManager::ALL_SETTING_KEYS as $key ) {
+            // Keys absent from an older schema keep their current values.
+            if ( ! array_key_exists( $key, $data['settings'] ) ) {
+                continue;
+            }
             $next = $data['settings'][ $key ];
             if ( $snapshot_settings[ $key ] === $next ) {
                 continue;
@@ -405,6 +424,15 @@ class YSSettingsTransfer {
     public static function normalize_setting_value( string $key, $value ): array {
         $default = YSSettingsManager::get_default( $key );
 
+        if ( YSCustomFieldDefinitions::SETTING_KEY === $key ) {
+            return YSCustomFieldDefinitions::normalize_list( $value );
+        }
+
+        if ( 'yangsheep_checkout_account_hint' === $key ) {
+            $text = self::normalize_plain_text( $value, 200 );
+            return array( 'valid' => null !== $text, 'value' => $text );
+        }
+
         if ( is_array( $default ) ) {
             if ( ! is_array( $value ) ) {
                 return array( 'valid' => false, 'value' => null );
@@ -447,6 +475,25 @@ class YSSettingsTransfer {
         }
 
         return array( 'valid' => false, 'value' => null );
+    }
+
+    /**
+     * Plain text that may be empty (empty disables the related hint).
+     *
+     * @param mixed $value
+     * @return string|null
+     */
+    private static function normalize_plain_text( $value, int $max_chars ): ?string {
+        if ( ! is_string( $value ) || strip_tags( $value ) !== $value ) {
+            return null;
+        }
+        $normalized = preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', trim( $value ) );
+        if ( ! is_string( $normalized ) ) {
+            return null;
+        }
+        $length = function_exists( 'mb_strlen' ) ? mb_strlen( $normalized, 'UTF-8' ) : strlen( $normalized );
+
+        return $length > $max_chars ? null : $normalized;
     }
 
     /**

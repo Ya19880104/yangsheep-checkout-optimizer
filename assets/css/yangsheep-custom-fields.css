@@ -1,0 +1,207 @@
+/* 結帳自訂欄位與同意事項（v1.8.0）
+   這支不加 media gate：未增強時欄位照樣可用；body.ys-checkout-enhanced
+   開頭的規則只在結帳強化版面成功套用後生效。 */
+.ys-cf-group {
+    margin: 0 0 14px;
+}
+
+.ys-cf-group .ys-cf-field {
+    margin: 0 0 10px;
+}
+
+.ys-cf-group .ys-cf-field:last-child {
+    margin-bottom: 0;
+}
+
+.ys-cf-checkbox-label {
+    display: inline;
+    cursor: pointer;
+    line-height: 1.6;
+}
+
+.ys-cf-checkbox-label .ys-cf-input {
+    margin: 0 8px 0 0;
+    vertical-align: middle;
+}
+
+.ys-cf-popup-link {
+    margin: 0 0.2em;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+/* 彈出視窗 */
+.ys-cf-dialog {
+    width: min(640px, calc(100vw - 32px));
+    max-height: min(80vh, 720px);
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1f2937;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.ys-cf-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.ys-cf-dialog__panel {
+    display: flex;
+    flex-direction: column;
+    max-height: min(80vh, 720px);
+}
+
+.ys-cf-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ys-cf-dialog__title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.ys-cf-dialog__close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 24px;
+    line-height: 36px;
+    cursor: pointer;
+}
+
+.ys-cf-dialog__close:hover,
+.ys-cf-dialog__close:focus-visible {
+    background: #f1f5f9;
+}
+
+.ys-cf-dialog__body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    line-height: 1.7;
+}
+
+.ys-cf-dialog__body > :first-child {
+    margin-top: 0;
+}
+
+.ys-cf-dialog__body > :last-child {
+    margin-bottom: 0;
+}
+
+.ys-cf-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* 沒有 JavaScript 時，連結的錨點讓視窗直接顯示 */
+.ys-cf-dialog:target:not([open]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    z-index: 100000;
+}
+
+html:has(.ys-cf-dialog[open]) {
+    overflow: hidden;
+}
+
+/* ===== 結帳強化版面：與「同訂購人」「訂單備註」相同的勾選樣式 ===== */
+body.ys-checkout-enhanced .ys-cf-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label .ys-cf-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+    opacity: 0;
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label::before {
+    content: '';
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    margin-top: 1px;
+    border: 2px solid var(--theme-form-field-border-initial-color, #7d929e);
+    border-radius: 4px;
+    background: var(--form-field-bg-color, #ffffff);
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 5px;
+    width: 6px;
+    height: 11px;
+    border: solid var(--theme-button-text-initial-color, #ffffff);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    transition: all 0.2s ease;
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label:hover::before {
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label:has(.ys-cf-input:checked)::before {
+    border-color: var(--theme-button-background-initial-color, #5f7482);
+    background: var(--theme-button-background-initial-color, #5f7482);
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label:has(.ys-cf-input:checked)::after {
+    transform: rotate(45deg) scale(1);
+}
+
+body.ys-checkout-enhanced .ys-cf-checkbox-label:has(.ys-cf-input:focus-visible)::before {
+    outline: 2px solid var(--theme-button-background-initial-color, #5f7482);
+    outline-offset: 2px;
+}
+
+body.ys-checkout-enhanced .woocommerce-invalid .ys-cf-checkbox-label::before {
+    border-color: #e2401c;
+}
+
+body.ys-checkout-enhanced .ys-cf-label-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ys-text-primary, #2d3748);
+}
+
+body.ys-checkout-enhanced .ys-cf-popup-link {
+    color: var(--theme-button-background-initial-color, #5f7482);
+    font-weight: 600;
+}
+
+body.ys-checkout-enhanced .ys-cf-dialog__agree {
+    border-radius: var(--block-border-radius, 8px);
+    background: var(--theme-button-background-initial-color, #5f7482);
+    color: var(--theme-button-text-initial-color, #ffffff);
+}

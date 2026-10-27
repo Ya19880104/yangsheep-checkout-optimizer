@@ -13,6 +13,7 @@ if (!is_file($transferPath)) {
     exit(1);
 }
 
+require_once dirname(__DIR__) . '/src/CustomFields/YSCustomFieldDefinitions.php';
 require_once $transferPath;
 
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
@@ -126,6 +127,114 @@ check_transfer(YSSettingsTransfer::validate_package($badRadius)['valid'] === fal
 $badCvs = $package;
 $badCvs['settings']['yangsheep_cvs_shipping_methods'] = ['flat_rate:1', ['nested']];
 check_transfer(YSSettingsTransfer::validate_package($badCvs)['valid'] === false, 'non-scalar CVS rate ids are rejected');
+
+// v1.8.0 schema 2：建立帳號提示與結帳自訂欄位
+check_transfer(
+    $package['settings']['yangsheep_checkout_account_hint'] === YSSettingsManager::DEFAULT_VALUES['yangsheep_checkout_account_hint']
+    && $package['settings']['yangsheep_checkout_custom_fields'] === [],
+    'export carries the account hint and an empty custom field list by default'
+);
+
+$emptyHint = $package;
+$emptyHint['settings']['yangsheep_checkout_account_hint'] = '';
+check_transfer(YSSettingsTransfer::validate_package($emptyHint)['valid'] === true, 'an empty account hint is valid and disables the hint');
+
+$htmlHint = $package;
+$htmlHint['settings']['yangsheep_checkout_account_hint'] = '<b>建立帳號</b>';
+check_transfer(YSSettingsTransfer::validate_package($htmlHint)['valid'] === false, 'the account hint rejects HTML');
+
+$longHint = $package;
+$longHint['settings']['yangsheep_checkout_account_hint'] = str_repeat('字', 201);
+check_transfer(YSSettingsTransfer::validate_package($longHint)['valid'] === false, 'the account hint is limited to 200 characters');
+
+$consent = [
+    'id'            => 'cf_abc123',
+    'type'          => 'checkbox',
+    'label'         => '  我已閱讀並同意{popup}  ',
+    'popup_link'    => '購買須知',
+    'popup_content' => '商品出貨前會先確認庫存。',
+    'placeholder'   => '不應保留',
+    'position'      => 'before_submit',
+    'required'      => 'yes',
+    'enabled'       => 'yes',
+];
+$withFields = $package;
+$withFields['settings']['yangsheep_checkout_custom_fields'] = [$consent];
+$fieldValidation = YSSettingsTransfer::validate_package($withFields);
+$normalizedConsent = $fieldValidation['data']['settings']['yangsheep_checkout_custom_fields'][0] ?? [];
+check_transfer(
+    $fieldValidation['valid'] === true
+    && ($normalizedConsent['label'] ?? null) === '我已閱讀並同意{popup}'
+    && ($normalizedConsent['placeholder'] ?? null) === ''
+    && array_keys($normalizedConsent) === \YangSheep\CheckoutOptimizer\CustomFields\YSCustomFieldDefinitions::FIELD_KEYS,
+    'a consent checkbox normalizes label whitespace, drops checkbox placeholders and keeps canonical keys'
+);
+
+foreach ([
+    'unknown type'           => ['type' => 'select'],
+    'unknown position'       => ['position' => 'header'],
+    'empty label'            => ['label' => '   '],
+    'two popup tokens'       => ['label' => '{popup}與{popup}'],
+    'invalid id'             => ['id' => 'CF-1'],
+    'non-flag required'      => ['required' => 'maybe'],
+    'array label'            => ['label' => ['x']],
+    'oversized label'        => ['label' => str_repeat('字', 201)],
+] as $case => $override) {
+    $badFields = $package;
+    $badFields['settings']['yangsheep_checkout_custom_fields'] = [array_merge($consent, $override)];
+    check_transfer(YSSettingsTransfer::validate_package($badFields)['valid'] === false, "custom fields reject {$case}");
+}
+
+$unknownFieldKey = $package;
+$unknownFieldKey['settings']['yangsheep_checkout_custom_fields'] = [array_merge($consent, ['onclick' => 'x'])];
+check_transfer(YSSettingsTransfer::validate_package($unknownFieldKey)['valid'] === false, 'custom fields reject unknown keys');
+
+$duplicateIds = $package;
+$duplicateIds['settings']['yangsheep_checkout_custom_fields'] = [$consent, $consent];
+check_transfer(YSSettingsTransfer::validate_package($duplicateIds)['valid'] === false, 'custom fields reject duplicate ids');
+
+$tooMany = $package;
+$tooMany['settings']['yangsheep_checkout_custom_fields'] = [];
+for ($i = 0; $i < 21; $i++) {
+    $tooMany['settings']['yangsheep_checkout_custom_fields'][] = array_merge($consent, ['id' => 'cf_many' . $i]);
+}
+check_transfer(YSSettingsTransfer::validate_package($tooMany)['valid'] === false, 'custom fields are limited to 20 entries');
+
+$scriptContent = $package;
+$scriptContent['settings']['yangsheep_checkout_custom_fields'] = [array_merge($consent, ['popup_content' => '須知<script>alert(1)</script>'])];
+$scriptValidation = YSSettingsTransfer::validate_package($scriptContent);
+check_transfer(
+    $scriptValidation['valid'] === true
+    && !str_contains($scriptValidation['data']['settings']['yangsheep_checkout_custom_fields'][0]['popup_content'], '<script'),
+    'popup content is reduced to allowed markup'
+);
+
+// v1.7.x（schema 1）匯出檔仍可匯入；新鍵不在檔案裡就保持現值
+$schemaOne = $package;
+$schemaOne['schema_version'] = 1;
+unset($schemaOne['settings']['yangsheep_checkout_account_hint'], $schemaOne['settings']['yangsheep_checkout_custom_fields']);
+check_transfer(YSSettingsTransfer::validate_package($schemaOne)['valid'] === true, 'a schema 1 package without the new keys validates');
+
+$schemaOneWithNewKey = $schemaOne;
+$schemaOneWithNewKey['settings']['yangsheep_checkout_custom_fields'] = [];
+check_transfer(YSSettingsTransfer::validate_package($schemaOneWithNewKey)['valid'] === false, 'a schema 1 package cannot carry schema 2 keys');
+
+$schemaTwoMissing = $package;
+unset($schemaTwoMissing['settings']['yangsheep_checkout_custom_fields']);
+check_transfer(YSSettingsTransfer::validate_package($schemaTwoMissing)['valid'] === false, 'a schema 2 package must carry every key');
+
+$state['yangsheep_checkout_account_hint'] = '保留這段提示';
+$state['yangsheep_checkout_custom_fields'] = [$normalizedConsent];
+$schemaOne['settings']['yangsheep_checkout_button_bg_color'] = '#0a0b0c';
+$schemaOneResult = $transfer->import_package($schemaOne);
+check_transfer(
+    $schemaOneResult['success'] === true
+    && $state['yangsheep_checkout_button_bg_color'] === '#0a0b0c'
+    && $state['yangsheep_checkout_account_hint'] === '保留這段提示'
+    && $state['yangsheep_checkout_custom_fields'] === [$normalizedConsent],
+    'importing a schema 1 package updates its keys and keeps schema 2 keys unchanged'
+);
+$state = YSSettingsManager::DEFAULT_VALUES;
 
 $badIntegration = $package;
 $badIntegration['integrations']['wployalty']['extra'] = 'unknown';

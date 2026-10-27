@@ -3,7 +3,8 @@
  * 第三方物流外掛相容性處理類別
  *
  * 支援外掛：
- * - 好用版 RY Tools for WooCommerce (綠界 ECPay CVS 超取)
+ * - 好用版（woomp）內建的舊版 RY（綠界 ECPay CVS 超取）
+ * - RY Tools for WooCommerce 獨立外掛（新版綠界；v1.8.0 起套用「超商門市」面板）
  * - 好用版 PayNow Shipping (PayNow 超取)
  *
  * 功能說明：
@@ -461,6 +462,83 @@ class YSThirdPartyShippingCompat {
             }
 
             /**
+             * RY Tools for WooCommerce（獨立外掛、新版綠界）的選店列：
+             * tr > th（標題）+ td（button.ry-choose-cvs、.ry-cvs-store-info 與 RY_CVS* 隱藏欄位）。
+             * 套用與 PayNow 相同的「超商門市」面板；門市資料讀 RY 的隱藏欄位，原生按鈕
+             * 與隱藏欄位保留為選店與送單來源。RY 只在選了自家超取時才輸出這一列。
+             *
+             * @return {boolean} Whether the enhanced selector mounted successfully.
+             */
+            function enhanceRyToolsStoreSelector() {
+                var $button = $('button.ry-choose-cvs');
+                if ($button.length !== 1) {
+                    return false;
+                }
+
+                var $panel = $button.parent('td');
+                var $row = $panel.parent('tr');
+                var $title = $row.children('th');
+                if (!$panel.length || !$row.length || $title.length !== 1) {
+                    return false;
+                }
+
+                $row.addClass('ys-ry-store-selector');
+                $title.addClass('ys-cvs-store-title').text('超商門市');
+                $panel.addClass('ys-cvs-store-panel');
+
+                var $status = $panel.children('.ys-cvs-store-status');
+                if (!$status.length) {
+                    $status = $('<div class="ys-cvs-store-status" role="status" aria-live="polite"></div>');
+                    $button.before($status);
+                }
+
+                var storeName = $.trim($('#RY_CVSStoreName').val() || '');
+                var storeId = $.trim($('#RY_CVSStoreID').val() || '');
+                var storeAddress = $.trim($('#RY_CVSAddress').val() || '');
+                var hasStore = !!(storeName || storeId || storeAddress);
+
+                $status.empty().toggleClass('has-store', hasStore);
+                if (hasStore) {
+                    $('<span class="ys-cvs-store-primary"></span>')
+                        .text(storeName || '已選擇取貨門市')
+                        .appendTo($status);
+                    if (storeId) {
+                        $('<span class="ys-cvs-store-meta"></span>')
+                            .text('門市編號 ' + storeId)
+                            .appendTo($status);
+                    }
+                    if (storeAddress) {
+                        $('<span class="ys-cvs-store-address"></span>')
+                            .text(storeAddress)
+                            .appendTo($status);
+                    }
+                    $button.text('重新選擇門市');
+                } else {
+                    $('<span class="ys-cvs-store-empty"></span>')
+                        .text('尚未選擇取貨門市')
+                        .appendTo($status);
+                    $button.text('選擇門市');
+                }
+
+                // RY 自己的門市文字與摘要重複；只隱藏顯示用的區塊，裡面的隱藏欄位照常送出。
+                $panel.children('.ry-cvs-store-info').hide();
+
+                return $row.is(':visible') && $status.is(':visible');
+            }
+
+            function toggleRyToolsStoreSelector() {
+                if (!$('button.ry-choose-cvs').length) {
+                    return;
+                }
+                if (enhanceRyToolsStoreSelector()) {
+                    console.log('[YS Compat] RY Tools store selector enhanced; native fields preserved');
+                } else {
+                    // Fail open when RY changes its chooser markup.
+                    console.warn('[YS Compat] RY Tools selector contract missing; native chooser remains visible');
+                }
+            }
+
+            /**
              * 切換 PayNow CVS 欄位顯示狀態
              *
              * 欄位：paynow_storename, paynow_storeid, paynow_storeaddress
@@ -511,6 +589,7 @@ class YSThirdPartyShippingCompat {
                 // 再切換顯示狀態
                 toggleEcpayCvsFields();
                 togglePaynowCvsFields();
+                toggleRyToolsStoreSelector();
             }
 
             // ===== 事件綁定 =====
@@ -863,8 +942,11 @@ class YSThirdPartyShippingCompat {
      * @return bool
      */
     public static function is_ecpay_shipping_active() {
-        // 檢查 RY Tools for WooCommerce 外掛
-        return class_exists( 'RY_WT' ) || class_exists( 'RY_ECPay_Shipping' );
+        // 好用版（woomp）內建的舊版 RY：RY_WT／RY_ECPay_Shipping；
+        // 獨立外掛 RY Tools for WooCommerce（新版）：RY_WT_WC_ECPay_Shipping（woocommerce_init 載入）。
+        return class_exists( 'RY_WT' )
+            || class_exists( 'RY_ECPay_Shipping' )
+            || class_exists( 'RY_WT_WC_ECPay_Shipping' );
     }
 
     /**

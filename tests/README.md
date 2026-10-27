@@ -12,7 +12,11 @@ php tests/cvs-store-validation.php
 php tests/cvs-guard-bootstrap.php
 php tests/cvs-match-matrix.php
 php tests/checkout-fields-compat-matrix.php
+php tests/custom-fields-matrix.php
+php tests/settings-transfer-matrix.php
 ```
+
+`custom-fields-matrix.php` 載入實際的自訂欄位類別（定義、結帳輸出／驗證／寫入訂單、訂單顯示），以替身取代 WordPress／WooCommerce，不連資料庫、不建立訂單。
 
 地址測試涵蓋欄位編輯器較晚覆寫、初始化快取、兩家超商、PayNow、POST 優先於舊 session、郵寄／混合包裹與電話必填。門市矩陣覆蓋實際 provider 的欄位與 session 契約；bootstrap 測試只檢查實際主檔的接線，不以替身當作 provider 驗證證據。
 

@@ -1006,7 +1006,8 @@ check(
 );
 check(
     str_contains($settingsTransfer, "FORMAT = 'yangsheep-checkout-optimizer-settings'")
-    && str_contains($settingsTransfer, 'SCHEMA_VERSION = 1')
+    && str_contains($settingsTransfer, 'SCHEMA_VERSION = 2')
+    && str_contains($settingsTransfer, 'KEYS_ADDED_IN_SCHEMA_2')
     && str_contains($settingsTransfer, 'validate_package')
     && str_contains($settingsTransfer, 'rollback')
     && str_contains($settingsTransfer, 'unknown'),

@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsManager;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsMigrator;
 use YangSheep\CheckoutOptimizer\Settings\YSSettingsTransfer;
+use YangSheep\CheckoutOptimizer\CustomFields\YSCustomFieldDefinitions;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
 
@@ -104,6 +105,22 @@ class YSCheckoutSettings {
             // Checkbox 處理：未勾選時不會出現在 POST 中
             if ( in_array( $key, $this->checkbox_options, true ) ) {
                 $package['settings'][ $key ] = isset( $_POST[ $key ] ) ? 'yes' : 'no';
+                continue;
+            }
+
+            // 結帳自訂欄位：分頁有輸出（帶標記）才更新；沒有任何列時就是清空。
+            if ( YSCustomFieldDefinitions::SETTING_KEY === $key ) {
+                if ( empty( $_POST[ YSCustomFieldsSettingsTab::SUBMITTED_MARKER ] ) ) {
+                    continue;
+                }
+                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- normalized by YSCustomFieldDefinitions.
+                $raw_value  = isset( $_POST[ $key ] ) && is_array( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : array();
+                $normalized = YSSettingsTransfer::normalize_setting_value( $key, array_values( $raw_value ) );
+                if ( $normalized['valid'] ) {
+                    $package['settings'][ $key ] = $normalized['value'];
+                } else {
+                    $validation_errors[] = $key;
+                }
                 continue;
             }
 
@@ -385,6 +402,7 @@ class YSCheckoutSettings {
                     ),
                 )
             );
+            YSCustomFieldsSettingsTab::get_instance()->enqueue_assets();
         }
     }
 
@@ -539,6 +557,8 @@ class YSCheckoutSettings {
             'ys_checkout_fields_section'
         );
         $this->add_checkbox_field( 'yangsheep_checkout_order_note', __( '訂單備註開關', 'yangsheep-checkout-optimization' ), __( '用戶勾選才顯示備註欄位', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
+        // v1.8.0：「建立帳號」併入帳單資訊卡片時顯示的提示文字
+        $this->add_text_field( 'yangsheep_checkout_account_hint', __( '建立帳號提示文字', 'yangsheep-checkout-optimization' ), __( '留空即不顯示提示', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
 
         // v1.6.20：台灣手機號碼驗證（09 開頭 + 10 碼）
         $this->add_checkbox_field( 'yangsheep_validate_phone_shipping', __( '收件人電話 台灣手機驗證', 'yangsheep-checkout-optimization' ), __( '啟用後，收件人電話必須為 09 開頭的 10 碼台灣手機號碼（自動忽略空白、連字號）', 'yangsheep-checkout-optimization' ), 'yangsheep_tab_checkout', 'ys_checkout_fields_section' );
@@ -589,6 +609,11 @@ class YSCheckoutSettings {
         $this->add_color_field( 'yangsheep_shipping_card_border_active', __( '選中邊框色', 'yangsheep-checkout-optimization' ), self::get_default_colors()['yangsheep_shipping_card_border_active'], 'yangsheep_tab_checkout', 'ys_checkout_shipping_section' );
 
         // 超商區域設定已移至 PayNow 物流外掛
+
+        // --- Tab：結帳自訂欄位與同意事項（v1.8.0；介面在 YSCustomFieldsSettingsTab）---
+        $custom_fields_tab = YSCustomFieldsSettingsTab::get_instance();
+        add_settings_section( 'ys_custom_fields_section', '', array( $custom_fields_tab, 'render_section_header' ), 'yangsheep_tab_fields' );
+        add_settings_field( 'yangsheep_checkout_custom_fields', __( '欄位清單', 'yangsheep-checkout-optimization' ), array( $custom_fields_tab, 'render_field' ), 'yangsheep_tab_fields', 'ys_custom_fields_section' );
 
 
         // --- Tab 3: 我的帳號樣式 ---
@@ -1363,6 +1388,9 @@ class YSCheckoutSettings {
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'checkout' ? 'nav-tab-active' : ''; ?>" data-tab="checkout">
                     <span class="dashicons dashicons-cart"></span> <?php _e( '結帳頁面', 'yangsheep-checkout-optimization' ); ?>
                 </a>
+                <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'fields' ? 'nav-tab-active' : ''; ?>" data-tab="fields">
+                    <span class="dashicons dashicons-feedback"></span> <?php _e( '自訂欄位', 'yangsheep-checkout-optimization' ); ?>
+                </a>
                 <a href="#" class="nav-tab ys-tab-link <?php echo $active_tab == 'account' ? 'nav-tab-active' : ''; ?>" data-tab="account">
                     <span class="dashicons dashicons-id-alt"></span> <?php _e( '我的帳號', 'yangsheep-checkout-optimization' ); ?>
                 </a>
@@ -1392,6 +1420,11 @@ class YSCheckoutSettings {
 
                 <div class="ys-tab-content" id="ys-tab-checkout" style="<?php echo $active_tab !== 'checkout' ? 'display:none;' : ''; ?>">
                     <?php do_settings_sections( 'yangsheep_tab_checkout' ); ?>
+                    </div><!-- close ys-section-card -->
+                </div>
+
+                <div class="ys-tab-content" id="ys-tab-fields" style="<?php echo $active_tab !== 'fields' ? 'display:none;' : ''; ?>">
+                    <?php do_settings_sections( 'yangsheep_tab_fields' ); ?>
                     </div><!-- close ys-section-card -->
                 </div>
 
@@ -1470,6 +1503,19 @@ class YSCheckoutSettings {
                                 </li>
                                 <li><strong>訂單備註開關</strong>：用戶需勾選「我需要填寫訂單備註」才顯示備註欄位，其他欄位（如身分證字號）不受影響</li>
                                 <li><strong>收件人電話</strong>：收件人區塊的電話欄位預設為必填</li>
+                                <li><strong>建立帳號</strong>：版面套用後，「建立帳號？」移入帳單資訊卡片並以提示框呈現，提示文字可在「結帳頁面」分頁修改（留空不顯示）</li>
+                            </ul>
+                        </div>
+
+                        <div class="ys-docs-section">
+                            <h3><span class="dashicons dashicons-feedback"></span> 7. 自訂欄位與同意事項</h3>
+                            <ul>
+                                <li><strong>類型</strong>：勾選框（同意事項）、單行文字、多行文字</li>
+                                <li><strong>位置</strong>：下單按鈕上方（付款區）、帳單資訊下方、收件資訊下方、訂單備註上方或下方</li>
+                                <li><strong>彈出視窗</strong>：填入「彈出視窗連結文字」與內容後，欄位文字中會出現可點開的連結；用 {popup} 指定連結位置</li>
+                                <li><strong>必填</strong>：勾選框未勾、文字未填時無法下單，結帳頁會顯示錯誤訊息</li>
+                                <li><strong>紀錄</strong>：下單當時的欄位文字與內容存在訂單上，顯示於後台訂單頁、訂單 Email 與顧客的訂單明細</li>
+                                <li><strong>範圍</strong>：適用 WooCommerce 傳統結帳頁；區塊結帳（Checkout Block）不顯示這些欄位</li>
                             </ul>
                         </div>
 

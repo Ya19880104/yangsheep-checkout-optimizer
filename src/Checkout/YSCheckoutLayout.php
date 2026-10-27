@@ -38,6 +38,8 @@ class YSCheckoutLayout {
         add_action( 'woocommerce_checkout_before_order_review_heading', array( $this, 'render_sidebar_target' ), 5 );
         add_action( 'woocommerce_before_checkout_shipping_form', array( $this, 'render_same_as_billing_control' ), 5 );
         add_action( 'woocommerce_before_order_notes', array( $this, 'render_order_notes_control' ), 5 );
+        // v1.8.0：「建立帳號？」勾選框正下方的提示；版面套用後整塊由 JS 移入帳單資訊卡片
+        add_action( 'woocommerce_before_checkout_registration_form', array( $this, 'render_account_hint' ), 5 );
     }
 
     private function is_main_checkout() {
@@ -133,6 +135,27 @@ class YSCheckoutLayout {
             <input type="checkbox" id="yangsheep_copy_billing" name="yangsheep_copy_billing" value="1">
             <span><?php esc_html_e( '同訂購人姓名電話', 'yangsheep-checkout-optimization' ); ?></span>
         </label>
+        <?php
+    }
+
+    /**
+     * 建立帳號提示：只在 WooCommerce 輸出註冊區塊時出現（訪客且商店開放註冊）。
+     * 未套用版面時以原生樣式顯示，文字本身不依賴增強。
+     */
+    public function render_account_hint() {
+        if ( ! $this->is_main_checkout() ) {
+            return;
+        }
+
+        $hint = YSSettingsManager::get(
+            'yangsheep_checkout_account_hint',
+            YSSettingsManager::get_default( 'yangsheep_checkout_account_hint' )
+        );
+        if ( ! is_string( $hint ) || '' === trim( $hint ) ) {
+            return;
+        }
+        ?>
+        <p class="yangsheep-account-hint"><?php echo esc_html( $hint ); ?></p>
         <?php
     }
 

@@ -1,0 +1,116 @@
+/* 後台「自訂欄位」分頁（只在結帳強化設定頁載入） */
+.ys-cf-admin-intro {
+    margin: 0 0 15px;
+    color: #50575e;
+}
+
+.ys-cf-admin-help {
+    margin: 0 0 14px;
+    color: #646970;
+}
+
+.ys-cf-admin-list {
+    display: grid;
+    gap: 12px;
+}
+
+.ys-cf-admin-row {
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #fff;
+    padding: 12px 16px 16px;
+}
+
+.ys-cf-admin-row.is-disabled {
+    background: #f6f7f7;
+}
+
+.ys-cf-admin-row.is-disabled .ys-cf-admin-row__title {
+    color: #8c8f94;
+}
+
+.ys-cf-admin-row__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ys-cf-admin-row__title {
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.ys-cf-admin-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f0f6fc;
+    color: #2271b1;
+    font-size: 12px;
+}
+
+.ys-cf-admin-row__actions {
+    display: inline-flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.ys-cf-admin-remove {
+    color: #b32d2e;
+}
+
+.ys-cf-admin-row__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+}
+
+.ys-cf-admin-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ys-cf-admin-control > span {
+    font-weight: 600;
+}
+
+.ys-cf-admin-control input[type="text"],
+.ys-cf-admin-control select,
+.ys-cf-admin-control textarea {
+    width: 100%;
+    max-width: none;
+}
+
+.ys-cf-admin-control--wide {
+    grid-column: 1 / -1;
+}
+
+.ys-cf-admin-row[data-type="checkbox"] .ys-cf-admin-placeholder {
+    display: none;
+}
+
+.ys-cf-admin-flags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    grid-column: 1 / -1;
+}
+
+.ys-cf-admin-add .dashicons {
+    margin-top: 3px;
+}
+
+@media (max-width: 782px) {
+    .ys-cf-admin-row__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ys-cf-admin-row__actions {
+        margin-left: 0;
+    }
+}

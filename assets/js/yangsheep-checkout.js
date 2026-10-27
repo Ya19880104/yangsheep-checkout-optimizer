@@ -188,6 +188,13 @@ jQuery(function ($) {
         if ($('#coupons_list').length && $regions.children('.yangsheep-smart-coupon').length) {
             $('#coupons_list').detach().appendTo($regions.children('.yangsheep-smart-coupon'));
         }
+        // v1.8.0：「建立帳號？」併入帳單資訊卡片並以提示框呈現。仍在 form.checkout 內，
+        // Woo 綁在表單上的 #createaccount change（展開密碼欄位）照常運作。
+        var $accountFields = $form.find('.woocommerce-account-fields').first();
+        var $billingCard = $form.find('.woocommerce-billing-fields').first();
+        if ($accountFields.length && $billingCard.length && !$.contains($billingCard[0], $accountFields[0])) {
+            $accountFields.addClass('yangsheep-account-prompt').appendTo($billingCard);
+        }
 
         $regions.removeAttr('hidden');
         $sidebarWrapper.removeAttr('hidden');

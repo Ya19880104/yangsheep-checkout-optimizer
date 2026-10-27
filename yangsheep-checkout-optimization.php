@@ -104,6 +104,8 @@ use YangSheep\CheckoutOptimizer\Checkout\YSShippingCards;
 use YangSheep\CheckoutOptimizer\Order\YSOrderEnhancer;
 use YangSheep\CheckoutOptimizer\Compat\YSThirdPartyShippingCompat;
 use YangSheep\CheckoutOptimizer\Compat\YSCvsCheckoutGuard;
+use YangSheep\CheckoutOptimizer\CustomFields\YSCustomFieldsCheckout;
+use YangSheep\CheckoutOptimizer\CustomFields\YSCustomFieldsOrderDisplay;
 use YangSheep\CheckoutOptimizer\Compat\YSWPLoyaltyIntegration;
 use YangSheep\CheckoutOptimizer\Compat\YSYithCouponDisplay;
 use YangSheep\CheckoutOptimizer\Compat\YSYithPointsIntegration;
@@ -167,6 +169,8 @@ add_action( 'init', function(){
     YSOrderEnhancer::get_instance();
     YSThirdPartyShippingCompat::get_instance();
     YSCvsCheckoutGuard::get_instance();
+    YSCustomFieldsCheckout::get_instance();
+    YSCustomFieldsOrderDisplay::get_instance();
     YSWPLoyaltyIntegration::get_instance();
     YSYithCouponDisplay::get_instance();
     YSYithPointsIntegration::get_instance();

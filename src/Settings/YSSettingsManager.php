@@ -69,6 +69,8 @@ class YSSettingsManager {
 
         // 文字設定
         'yangsheep_checkout_block_border_radius',
+        // 建立帳號提示文字（v1.8.0；空字串＝不顯示）
+        'yangsheep_checkout_account_hint',
 
         // 結帳按鈕樣式
         'yangsheep_checkout_button_bg_color',
@@ -125,6 +127,8 @@ class YSSettingsManager {
 
         // 陣列設定
         'yangsheep_cvs_shipping_methods',
+        // 結帳自訂欄位與同意事項（v1.8.0）
+        'yangsheep_checkout_custom_fields',
     );
 
     /**
@@ -152,6 +156,7 @@ class YSSettingsManager {
 
         // 文字設定
         'yangsheep_checkout_block_border_radius' => '12px',
+        'yangsheep_checkout_account_hint'        => '建立帳號後，下次結帳免重填資料，也能隨時查詢訂單紀錄。',
 
         // 結帳按鈕樣式
         'yangsheep_checkout_button_bg_color'    => '#5f7482',
@@ -208,6 +213,7 @@ class YSSettingsManager {
 
         // 陣列設定
         'yangsheep_cvs_shipping_methods' => array(),
+        'yangsheep_checkout_custom_fields' => array(),
     );
 
     /**
