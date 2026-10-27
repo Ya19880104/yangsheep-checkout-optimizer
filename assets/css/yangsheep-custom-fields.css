@@ -9,7 +9,8 @@
     margin: 0 0 10px;
 }
 
-.ys-cf-group .ys-cf-field:last-child {
+/* 最後一個欄位後面可能接著它的彈出視窗（欄位是 p、視窗是 dialog），所以用 last-of-type */
+.ys-cf-group .ys-cf-field:last-of-type {
     margin-bottom: 0;
 }
 
@@ -119,6 +120,28 @@
 
 html:has(.ys-cf-dialog[open]) {
     overflow: hidden;
+}
+
+/* ===== 結帳強化版面：沿用欄位格線的 15px 間距 =====
+   群組只留上方間距，下方間距交給緊接在後的元素（備註欄位、下單按鈕等），
+   群組在卡片最後時底部不會多出空白。關閉的 dialog 不佔格線位置，
+   開啟時在 top layer，不影響排版。 */
+body.ys-checkout-enhanced .ys-cf-group {
+    display: grid;
+    gap: 15px;
+    margin: 15px 0 0;
+}
+
+body.ys-checkout-enhanced .ys-cf-group:first-child {
+    margin-top: 0;
+}
+
+body.ys-checkout-enhanced .ys-cf-group .ys-cf-field {
+    margin: 0;
+}
+
+body.ys-checkout-enhanced .ys-cf-group + * {
+    margin-top: 15px;
 }
 
 /* ===== 結帳強化版面：與「同訂購人」「訂單備註」相同的勾選樣式 ===== */

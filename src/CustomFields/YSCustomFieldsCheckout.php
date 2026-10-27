@@ -147,8 +147,9 @@ class YSCustomFieldsCheckout {
         );
 
         if ( 'checkbox' === $field['type'] ) {
+            // 必填記號放在文字 span 內：強化版面的 label 是 flex，放在外面會被 gap 拉開。
             printf(
-                '<label class="ys-cf-checkbox-label checkbox" for="%1$s"><input type="checkbox" class="input-checkbox ys-cf-input" name="%1$s" id="%1$s" value="1"%2$s%3$s /> <span class="ys-cf-label-text">%4$s</span>%5$s</label>',
+                '<label class="ys-cf-checkbox-label checkbox" for="%1$s"><input type="checkbox" class="input-checkbox ys-cf-input" name="%1$s" id="%1$s" value="1"%2$s%3$s /> <span class="ys-cf-label-text">%4$s%5$s</span></label>',
                 esc_attr( $name ),
                 checked( '1', $value, false ),
                 $aria_required, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed attribute string.
